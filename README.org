@@ -1,0 +1,20 @@
+* Hardware
+** LED - PWM - STM32 - (slave) SPI (master) - something
+** ESP8266 - SPI - STM32
+** Raspberry Pi - SPI - STM32
+* Software
+** SPI interface
+   msg_type
+   size
+   payload
+*** have the same interface for setting/getting config and leds?
+*** allow to just write memory?
+*** Messages
+    - set one led
+    - set all leds
+    - set some configuration?
+    - get led value?
+    - get configuration value(s)
+** ESP WiFi interface
+*** Same as SPI over UDP
+*** OSC
