@@ -1,3 +1,25 @@
+* Get started
+** Software
+   - openocd
+   - gcc-arm-none-eabi
+** CKS32 bluepill clone
+   copy openocd files to:
+   /usr/share/openocd/scripts/target/cs32f1x.cfg
+   /usr/share/openocd/scripts/board/cs32f103c8t6.cfg
+
+** Make and flash
+   Connect st-link
+
+   make -C my-project
+   make flash -C my-project
+** Debug
+   start openocd:
+   openocd -f /usr/share/openocd/scripts/board/cs32f103c8t6.cfg
+
+   connect to it via gdb:
+   gdb-multiarch --eval-command="target remote localhost:3333" my-project/your-file.elf
+
+   You can also connect to openocd via 'telnet localhost 4444' and send some commands to it
 * Hardware
 ** LED - PWM - STM32 - (slave) SPI (master) - something
 ** ESP8266 - SPI - STM32
