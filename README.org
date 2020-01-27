@@ -1,4 +1,7 @@
 * Get started
+** bluepill
+*** Weird power issue
+    doesn't work if stm32 connected by itself, works if ground is connected to rpi group (???)
 ** Software
    - openocd
    - gcc-arm-none-eabi
@@ -40,3 +43,23 @@
 ** ESP WiFi interface
 *** Same as SPI over UDP
 *** OSC
+* stm32 notes
+** Timers
+*** General
+    Clock / Prescaler / ARR = timer frequency
+
+    clock / desired timer frequency = prescaler * ARR
+
+*** timer prescaler
+    timer_set_prescaler
+    TIM_PSC
+
+    divides the clock
+*** period / auto reload
+    timer_set_period
+    ARR
+
+    sets timer ?
+*** output compare
+    - TIM_OC?: Output Compare channel
+    - TIM_OC?N: ?
