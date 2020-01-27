@@ -38,7 +38,9 @@ void fade_test(int fd) {
   printf("fade in...\n");
   fflush(stdout);
 
-  for(buf = 0; buf < (0xFFFF - step); buf += step) {
+  uint16_t max = 0x1000;
+
+  for(buf = 0; buf < (max - step); buf += step) {
     write_16(fd, buf);
     if (sleep_us > 0)
       usleep(sleep_us);
@@ -47,7 +49,7 @@ void fade_test(int fd) {
   printf("fade out...\n");
   fflush(stdout);
 
-  for(buf = 0xFFFF; buf > step; buf -= step) {
+  for(buf = max; buf > step; buf -= step) {
     write_16(fd, buf);
     if (sleep_us > 0)
       usleep(sleep_us);
@@ -56,14 +58,14 @@ void fade_test(int fd) {
   printf("fade end.\n");
   fflush(stdout);
 
-  for(uint32_t i = 0; i < 0xFFFF; i++) {
-    write_16(fd, buf);
-    if (sleep_us > 0)
-      usleep(sleep_us);
-  }
+  /* for(uint32_t i = 0; i < 0xFFFF; i++) { */
+  /*   write_16(fd, buf); */
+  /*   if (sleep_us > 0) */
+  /*     usleep(sleep_us); */
+  /* } */
 
-  printf("end test.\n");
-  fflush(stdout);
+  /* printf("end test.\n"); */
+  /* fflush(stdout); */
 }
 
 int main(int argc, char *argv[]) {
