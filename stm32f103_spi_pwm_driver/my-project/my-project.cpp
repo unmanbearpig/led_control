@@ -108,13 +108,6 @@ void spi_setup() {
   spi_reset(SPI1);
   spi_disable_ss_output(SPI1);
 
-  // spi_init_master(SPI1,
-  //                 SPI_CR1_BAUDRATE_FPCLK_DIV_2,
-  //                 SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
-  //                 SPI_CR1_CPHA_CLK_TRANSITION_1,
-  //                 SPI_CR1_DFF_8BIT,
-  //                 SPI_CR1_MSBFIRST);
-
   spi_set_slave_mode(SPI1);
   // spi_set_receive_only_mode(SPI1);
 
@@ -153,22 +146,19 @@ void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
   uint8_t channel = DMA_CHANNEL2;
 
   dma_set_memory_address(dma, channel, (uint32_t)rx_buf);
-  // linux doesn't support 16 bits?
+  // Linux doesn't support 16 bits?
   dma_set_memory_size(dma, channel, DMA_CCR_MSIZE_8BIT);
   dma_set_peripheral_size(dma, channel, DMA_CCR_PSIZE_8BIT);
   dma_set_number_of_data(dma, channel, rx_len);
-  dma_set_priority(dma, channel, DMA_CCR_PL_LOW); // whatever I guess
+  dma_set_priority(dma, channel, DMA_CCR_PL_LOW);
   dma_set_read_from_peripheral(dma, channel);
 
   dma_enable_memory_increment_mode(dma, channel);
-  // dma_disable_memory_increment_mode(dma, channel);
-
   dma_enable_channel(dma, channel);
   dma_enable_circular_mode(dma, channel);
 
   spi_enable_rx_dma(SPI1);
 
-  // this actually works
   dma_enable_transfer_complete_interrupt(dma, channel);
   // dma_enable_half_transfer_interrupt(dma, channel);
   // dma_enable_transfer_error_interrupt(dma, channel);
@@ -212,10 +202,8 @@ void restart_dma() {
 static void set_msg_values_task(void *_value) {
   LedValuesMessage *msg = (LedValuesMessage *)_value;
 
+  // we don't need it do we?
   if (!is_msg_valid(msg)) {
-    // uint16_t value = 0x1111;
-    // set_all_leds(value, value, value, value);
-
     restart_dma();
     set_msg_to_error_state(msg);
     return;
@@ -275,16 +263,7 @@ extern "C" int main(void) {
 
   pwm_setup(TIM_OCM_PWM2);
 
-	// xTaskCreate(task1,"LED",100,NULL,configMAX_PRIORITIES-1,NULL);
-
-  // turn off LEDs 2, 3, 4
-  timer_set_oc_value(TIM1, TIM_OC2, 0xFFFF);
-  timer_set_oc_value(TIM1, TIM_OC3, 0xFFFF);
-  timer_set_oc_value(TIM1, TIM_OC4, 0xFFFF);
-
-  // first
-  xTaskCreate(fade_task,"FADE1", 100, (void *) &led_fade_values[0], configMAX_PRIORITIES-1, NULL);
-
+  // xTaskCreate(fade_task,"FADE1", 100, (void *) &led_fade_values[0], configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(set_led_value_task, "SET_LED_VALUE", 100, (void *)&led_value, configMAX_PRIORITIES-1, NULL);
 
   xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
