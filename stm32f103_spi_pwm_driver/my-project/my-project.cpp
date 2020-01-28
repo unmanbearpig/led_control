@@ -1,6 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
+#include <string.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
@@ -10,6 +11,7 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/timer.h>
+#include "../../common_headers/structs.h"
 
 #include "pwm.h"
 
@@ -21,12 +23,24 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 
 uint32_t led_delay_ms = 1500;
 
-// static void task1(void *args __attribute((unused))) {
-// 	for (;;) {
-// 		gpio_toggle(GPIOC,GPIO13);
-// 		vTaskDelay(pdMS_TO_TICKS(led_delay_ms));
-// 	}
-// }
+LedValuesMessage tmp_msg =
+  {
+   .magic = 0,
+   .led1_value = 0,
+   .led2_value = 0,
+   .led3_value = 0,
+   .led4_value = 0,
+  };
+
+
+LedValuesMessage msg =
+  {
+   .magic = led_values_message_magic,
+   .led1_value = 0,
+   .led2_value = 0,
+   .led3_value = 0,
+   .led4_value = 0,
+  };
 
 struct LedFadeValue {
   tim_oc_id channel; // e.g. TIM_OC2
@@ -56,14 +70,14 @@ struct LedValue {
   uint16_t value;
 };
 
-static void set_led_value_task(void *_value) {
-  struct LedValue *led_value = (LedValue *)_value;
+// static void set_led_value_task(void *_value) {
+//   struct LedValue *led_value = (LedValue *)_value;
 
-  for(;;) {
-    timer_set_oc_value(TIM1, led_value->channel, (0xFFFF-led_value->value));
-    vTaskDelay(pdMS_TO_TICKS(10));
-  }
-}
+//   for(;;) {
+//     timer_set_oc_value(TIM1, led_value->channel, (0xFFFF-led_value->value));
+//     vTaskDelay(pdMS_TO_TICKS(10));
+//   }
+// }
 
 // SPI1
 // clock: RCC_SPI1
@@ -92,6 +106,7 @@ void spi_setup() {
 
   spi_disable(SPI1);
   spi_reset(SPI1);
+  spi_disable_ss_output(SPI1);
 
   // spi_init_master(SPI1,
   //                 SPI_CR1_BAUDRATE_FPCLK_DIV_2,
@@ -115,7 +130,6 @@ void spi_setup() {
   spi_set_clock_phase_0(SPI1);
   spi_send_msb_first(SPI1);
   spi_enable(SPI1);
-  // spi_reset(SPI1);
   spi_enable_rx_buffer_not_empty_interrupt(SPI1);
   spi_enable_error_interrupt(SPI1);
 }
@@ -134,7 +148,7 @@ void spi_dma_setup() {
 	nvic_enable_irq(NVIC_DMA1_CHANNEL2_IRQ);
 }
 
-void read_from_spi_dma(uint16_t *rx_buf, uint32_t rx_len) {
+void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
   uint32_t dma = DMA1;
   uint8_t channel = DMA_CHANNEL2;
 
@@ -154,7 +168,8 @@ void read_from_spi_dma(uint16_t *rx_buf, uint32_t rx_len) {
 
   spi_enable_rx_dma(SPI1);
 
-  // dma_enable_transfer_complete_interrupt(dma, channel);
+  // this actually works
+  dma_enable_transfer_complete_interrupt(dma, channel);
   // dma_enable_half_transfer_interrupt(dma, channel);
   // dma_enable_transfer_error_interrupt(dma, channel);
 }
@@ -168,30 +183,76 @@ struct LedFadeValue led_fade_values[4] =
 struct LedValue led_value =
   { TIM_OC3, 0x0030 };
 
-void spi1_isr() {
-  // led_value.value = 0xFFFF;
-  // gpio_toggle(GPIOC,GPIO13);
+struct LedValue tmp_led_value =
+  { TIM_OC3, 0x0030 };
 
+// void spi1_isr() {
+//   // led_value.value = 0xFFFF;
+//   // gpio_toggle(GPIOC,GPIO13);
+// }
+
+void start_dma() {
+  read_from_spi_dma(&tmp_msg, sizeof(tmp_msg));
 }
 
-void dma_channel2_isr() {
-  //xTaskCreate(set_led_value_task, "SET_LED_VALUE", 100, (void *)&led_value, configMAX_PRIORITIES-1, NULL);
-  // led_value.value = 0xFFFF;
-  // gpio_toggle(GPIOC,GPIO13);
-  // dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
+void stop_dma() {
+  spi_disable_rx_dma(SPI1);
+  dma_disable_channel(DMA1, DMA_CHANNEL2);
+  spi_clean_disable(SPI1);
+  spi_disable(SPI1);
+}
 
+void restart_dma() {
+  stop_dma();
+  spi_setup();
+  spi_dma_setup();
+  start_dma();
+}
+
+static void set_msg_values_task(void *_value) {
+  LedValuesMessage *msg = (LedValuesMessage *)_value;
+
+  if (!is_msg_valid(msg)) {
+    // uint16_t value = 0x1111;
+    // set_all_leds(value, value, value, value);
+
+    restart_dma();
+    set_msg_to_error_state(msg);
+    return;
+  }
+
+  for(;;) {
+    set_all_leds(msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+}
+
+void dma1_channel2_isr() {
+  if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
+    if (is_msg_valid(&tmp_msg)) {
+      memcpy(&msg, &tmp_msg, sizeof(tmp_msg));
+    } else {
+      // We (the slave) might go out of sync with the host,
+      // i.e. we incorrectly assume the start of the message
+      // it might happen if the slave was (re)started in the middle of communication
+      // Here we try to resynchronize with the host by just restarting SPI DMA
+      // Eventually we should catch the correct start of the message and stop receiving errors
+      // There probably is a better way, but it works for now
+      restart_dma();
+      // Debugging, so I notice the errors better.
+      // Should change it no not changing state
+      set_msg_to_error_state(&msg);
+    }
+
+    dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
+  } else {
+    restart_dma();
+  }
 }
 
 // static void read_spi_task(void *args __attribute((unused))) {
 //   for (;;) {
 //     led_value.value = spi_read(SPI1);
-//     vTaskDelay(pdMS_TO_TICKS(5));
-//   }
-// }
-
-// static void read_spi_dma_task(void *args __attribute((unused))) {
-//   for (;;) {
-//     read_from_spi_dma(&led_value.value, sizeof(led_value.value));
 //     vTaskDelay(pdMS_TO_TICKS(5));
 //   }
 // }
@@ -221,29 +282,14 @@ extern "C" int main(void) {
   timer_set_oc_value(TIM1, TIM_OC3, 0xFFFF);
   timer_set_oc_value(TIM1, TIM_OC4, 0xFFFF);
 
-  // blocks here, doesn't seem to receive anything
-  // led_value.value = spi_read(SPI1);
-
   // first
   xTaskCreate(fade_task,"FADE1", 100, (void *) &led_fade_values[0], configMAX_PRIORITIES-1, NULL);
 
-  xTaskCreate(set_led_value_task, "SET_LED_VALUE", 100, (void *)&led_value, configMAX_PRIORITIES-1, NULL);
+  // xTaskCreate(set_led_value_task, "SET_LED_VALUE", 100, (void *)&led_value, configMAX_PRIORITIES-1, NULL);
 
-  // this works, but instead of fading in and out, it's kind of flickering
-  // when I changed the delay to 0 from 50, it flickers differently
-  // xTaskCreate(read_spi_task, "READ_SPI_TASK", 100, NULL, configMAX_PRIORITIES-1, NULL);
+  xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
-  // xTaskCreate(read_spi_dma_task, "READ_SPI_DMA_TASK", 100, NULL, configMAX_PRIORITIES-1, NULL);
-  read_from_spi_dma(&led_value.value, sizeof(led_value.value));
-
-  // second
-  // xTaskCreate(fade_task,"FADE2", 100, (void *) &led_fade_values[1], configMAX_PRIORITIES-1, NULL);
-
-  // // third, aka small
-  // xTaskCreate(fade_task,"FADE3", 100, (void *) &led_fade_values[2], configMAX_PRIORITIES-1, NULL);
-
-  // // fourth
-  // xTaskCreate(fade_task,"FADE4", 100, (void *) &led_fade_values[3], configMAX_PRIORITIES-1, NULL);
+  start_dma();
 
 	vTaskStartScheduler();
 

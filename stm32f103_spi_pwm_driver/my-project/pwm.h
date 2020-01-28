@@ -86,3 +86,10 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
   /* Start the Counter. */
 	timer_enable_counter(TIM1);
 }
+
+void set_all_leds(uint16_t led1, uint16_t led2, uint16_t led3, uint16_t led4) {
+  timer_set_oc_value(TIM1, TIM_OC1, (0xFFFF-led1));
+  timer_set_oc_value(TIM1, TIM_OC2, (0xFFFF-led2));
+  timer_set_oc_value(TIM1, TIM_OC3, (0xFFFF-led3));
+  timer_set_oc_value(TIM1, TIM_OC4, (0xFFFF-led4));
+}

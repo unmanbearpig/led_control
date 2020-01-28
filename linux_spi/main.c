@@ -1,13 +1,13 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <stdlib.h>
+#include "../common_headers/structs.h"
 
 const char *default_device = "/dev/spidev0.0";
 
@@ -29,6 +29,17 @@ ssize_t write_16(int fd, uint16_t value) {
   return write(fd, &value, sizeof(value));
 }
 
+ssize_t write_msg(int fd, LedValuesMessage *msg) {
+  char buf[sizeof(*msg)] = { 0 };
+
+  memcpy(buf, msg, sizeof(buf));
+
+  /* printf("%x %x %x %x %x\n", buf[0], buf[1], buf[2], buf[3], buf[4]); */
+  /* fflush(stdout); */
+
+  return write(fd, buf, sizeof(buf));
+}
+
 void fade_test(int fd) {
   uint16_t buf = 0xAAAA;
 
@@ -40,8 +51,22 @@ void fade_test(int fd) {
 
   uint16_t max = 0x1000;
 
+  LedValuesMessage msg =
+    {
+     .magic = led_values_message_magic,
+     .led1_value = 0,
+     .led2_value = 0,
+     .led3_value = 0,
+     .led4_value = 0,
+    };
+
   for(buf = 0; buf < (max - step); buf += step) {
-    write_16(fd, buf);
+    msg.led1_value = buf;
+    msg.led2_value = buf;
+    msg.led3_value = buf;
+    msg.led4_value = buf;
+
+    write_msg(fd, &msg);
     if (sleep_us > 0)
       usleep(sleep_us);
   }
@@ -50,7 +75,12 @@ void fade_test(int fd) {
   fflush(stdout);
 
   for(buf = max; buf > step; buf -= step) {
-    write_16(fd, buf);
+    msg.led1_value = buf;
+    msg.led2_value = buf;
+    msg.led3_value = buf;
+    msg.led4_value = buf;
+
+    write_msg(fd, &msg);
     if (sleep_us > 0)
       usleep(sleep_us);
   }
@@ -86,7 +116,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Could not open device: %s\n", strerror(errno));
   }
 
-  uint32_t speed = 1000000;
+  uint32_t speed = 100000;
   int ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if (ret == -1)
 		pabort("can't set max speed hz");
