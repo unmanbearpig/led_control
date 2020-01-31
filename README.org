@@ -68,3 +68,4 @@
    - Add another message type to only receive the state, not change it
 ** TODO UDP server (just have an stdin pipe to STM32 + nc?)
 `
+** TODO print debugging info to UART
