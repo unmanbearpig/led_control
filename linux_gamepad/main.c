@@ -76,7 +76,7 @@ void print_gamepad(GamepadState *gamepad) {
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-    shoulder_left_down = 'V';
+    shoulder_left_down = '_';
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
@@ -84,7 +84,7 @@ void print_gamepad(GamepadState *gamepad) {
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-    shoulder_right_down = 'V';
+    shoulder_right_down = '_';
   }
 
   char right_thumb_left = ' ';
