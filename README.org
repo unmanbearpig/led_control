@@ -63,3 +63,8 @@
 *** output compare
     - TIM_OC?: Output Compare channel
     - TIM_OC?N: ?
+* TODOs
+** TODO SPI both ways - make slave return its state
+   - Add another message type to only receive the state, not change it
+** TODO UDP server (just have an stdin pipe to STM32 + nc?)
+`
