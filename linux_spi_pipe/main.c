@@ -4,8 +4,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <linux/spi/spidev.h>
+#include <sys/ioctl.h>
 #include <linux/ioctl.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../common_headers/structs.h"
 
 const char *default_device = "/dev/spidev0.0";
@@ -80,7 +82,7 @@ int main(int argc, char *argv[]) {
     ssize_t bytes_read = read_msg(STDIN_FILENO, &msg);
 
     if (bytes_read != sizeof(msg)) {
-      fprintf(stderr, "expected %d bytes, but read only %d\n", sizeof(msg), bytes_read);
+      fprintf(stderr, "expected %ld bytes, but read only %ld\n", sizeof(msg), bytes_read);
       return 1;
     }
 
