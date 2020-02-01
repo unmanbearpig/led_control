@@ -7,6 +7,7 @@
 #include <linux/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../common_headers/structs.h"
 
 const char *default_device = "/dev/spidev0.0";
