@@ -50,34 +50,10 @@ struct LedFadeValue {
   int16_t step;
 };
 
-static void fade_task(void *_value) {
-  struct LedFadeValue *led_fade_value = (LedFadeValue *)_value;
-
-  for (;;) {
-    timer_set_oc_value(TIM1, led_fade_value->channel, (0xFFFF - led_fade_value->value));
-    led_fade_value->value += led_fade_value->step;
-
-    if (led_fade_value->value >= led_fade_value->max_value) {
-      led_fade_value->value = led_fade_value->min_value;
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(50));
-  }
-}
-
 struct LedValue {
   tim_oc_id channel; // e.g. TIM_OC2
   uint16_t value;
 };
-
-// static void set_led_value_task(void *_value) {
-//   struct LedValue *led_value = (LedValue *)_value;
-
-//   for(;;) {
-//     timer_set_oc_value(TIM1, led_value->channel, (0xFFFF-led_value->value));
-//     vTaskDelay(pdMS_TO_TICKS(10));
-//   }
-// }
 
 // SPI1
 // clock: RCC_SPI1
@@ -127,8 +103,6 @@ void spi_setup() {
   spi_enable_error_interrupt(SPI1);
 }
 
-
-
 // https://www.rhye.org/post/stm32-with-opencm3-2-spi-and-dma/
 void spi_dma_setup() {
   rcc_periph_clock_enable(RCC_DMA1);
@@ -175,11 +149,6 @@ struct LedValue led_value =
 
 struct LedValue tmp_led_value =
   { TIM_OC3, 0x0030 };
-
-// void spi1_isr() {
-//   // led_value.value = 0xFFFF;
-//   // gpio_toggle(GPIOC,GPIO13);
-// }
 
 void start_dma() {
   read_from_spi_dma(&tmp_msg, sizeof(tmp_msg));
@@ -238,13 +207,6 @@ void dma1_channel2_isr() {
   }
 }
 
-// static void read_spi_task(void *args __attribute((unused))) {
-//   for (;;) {
-//     led_value.value = spi_read(SPI1);
-//     vTaskDelay(pdMS_TO_TICKS(5));
-//   }
-// }
-
 extern "C" int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
 	rcc_periph_clock_enable(RCC_GPIOC);
@@ -262,9 +224,6 @@ extern "C" int main(void) {
   spi_dma_setup();
 
   pwm_setup(TIM_OCM_PWM2);
-
-  // xTaskCreate(fade_task,"FADE1", 100, (void *) &led_fade_values[0], configMAX_PRIORITIES-1, NULL);
-  // xTaskCreate(set_led_value_task, "SET_LED_VALUE", 100, (void *)&led_value, configMAX_PRIORITIES-1, NULL);
 
   xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
