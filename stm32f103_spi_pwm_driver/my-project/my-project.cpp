@@ -23,7 +23,7 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 
 uint32_t led_delay_ms = 1500;
 
-LedValuesMessage tmp_msg =
+LedValuesMessage input_msg =
   {
    .magic = 0,
    .led1_value = 0,
@@ -145,7 +145,7 @@ struct LedFadeValue led_fade_values[4] =
     { TIM_OC4, 0, 0x0000, 0x00FF,  7 } };
 
 void start_dma() {
-  read_from_spi_dma(&tmp_msg, sizeof(tmp_msg));
+  read_from_spi_dma(&input_msg, sizeof(input_msg));
 }
 
 void stop_dma() {
@@ -180,8 +180,8 @@ static void set_msg_values_task(void *_value) {
 
 void dma1_channel2_isr() {
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
-    if (is_msg_valid(&tmp_msg)) {
-      memcpy(&msg, &tmp_msg, sizeof(tmp_msg));
+    if (is_msg_valid(&input_msg)) {
+      memcpy(&msg, &input_msg, sizeof(input_msg));
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
