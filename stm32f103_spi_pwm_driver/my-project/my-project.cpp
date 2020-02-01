@@ -144,12 +144,6 @@ struct LedFadeValue led_fade_values[4] =
     { TIM_OC3, 0, 0x0000, 0x00FF,  5 },
     { TIM_OC4, 0, 0x0000, 0x00FF,  7 } };
 
-struct LedValue led_value =
-  { TIM_OC3, 0x0030 };
-
-struct LedValue tmp_led_value =
-  { TIM_OC3, 0x0030 };
-
 void start_dma() {
   read_from_spi_dma(&tmp_msg, sizeof(tmp_msg));
 }
