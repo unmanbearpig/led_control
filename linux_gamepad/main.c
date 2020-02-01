@@ -41,30 +41,6 @@ void report_error(int err) {
   fprintf(stderr, "Error: %s\n", error_str);
 }
 
-int main(int argc, char *argv[]) {
-  int gamepad_fd = open("/dev/hidraw0", O_RDONLY);
-
-  if (gamepad_fd == -1) {
-    report_error(errno);
-    return 1;
-  }
-
-  GamepadState gamepad = {};
-
-  ssize_t bytes_read = 0;
-  for(;;) {
-    bytes_read = read(gamepad_fd, &gamepad, sizeof(gamepad));
-
-    if (bytes_read != sizeof(gamepad)) {
-      int err = errno;
-      fprintf(stderr, "%d bytes read, this is an error\n", bytes_read);
-      report_error(errno);
-      return 1;
-    }
-    print_gamepad(&gamepad);
-  }
-}
-
 void print_gamepad(GamepadState *gamepad) {
   char shoulder_left_up = ' ';
   char shoulder_left_down = ' ';
@@ -118,4 +94,27 @@ void print_gamepad(GamepadState *gamepad) {
          right_thumb_up, right_thumb_right
          );
   fflush(stdout);
+}
+
+int main(int argc __attribute((unused)), char *argv[] __attribute((unused))) {
+  int gamepad_fd = open("/dev/hidraw0", O_RDONLY);
+
+  if (gamepad_fd == -1) {
+    report_error(errno);
+    return 1;
+  }
+
+  GamepadState gamepad = {};
+
+  for(;;) {
+    ssize_t bytes_read = read(gamepad_fd, &gamepad, sizeof(gamepad));
+
+    if (bytes_read != sizeof(gamepad)) {
+      int err = errno;
+      fprintf(stderr, "%ld bytes read, this is an error\n", bytes_read);
+      report_error(err);
+      return 1;
+    }
+    print_gamepad(&gamepad);
+  }
 }
