@@ -30,10 +30,16 @@ ssize_t write_msg(int fd, LedValuesMessage *msg) {
 }
 
 ssize_t read_msg(int fd, LedValuesMessage *msg) {
-  // return read(fd, msg, sizeof(*msg));
-  ssize_t bytes_read = read(fd, msg, sizeof(*msg));
+  size_t bytes_read = 0;
 
   char buf[sizeof(*msg)] = { 0 };
+
+  while(bytes_read < sizeof(*msg)) {
+    bytes_read += read(fd,
+                       buf + bytes_read,
+                       sizeof(*msg) - bytes_read);
+  }
+
   memcpy((void *) msg, buf, sizeof(*msg));
 
   fprintf(stderr, "> %02X %02X %02X %02X %02X\n",
