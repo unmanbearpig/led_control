@@ -30,27 +30,61 @@ ssize_t write_16(int fd, uint16_t value) {
   return write(fd, &value, sizeof(value));
 }
 
+/* ssize_t write_msg(int fd, LedValuesMessage *msg) { */
+/*   char buf[sizeof(*msg)] = { 0 }; */
+
+/*   memcpy(buf, msg, sizeof(buf)); */
+
+/*   /\* printf("%x %x %x %x %x\n", buf[0], buf[1], buf[2], buf[3], buf[4]); *\/ */
+/*   /\* fflush(stdout); *\/ */
+/*   ssize_t bytes_written = write(fd, buf, sizeof(buf)); */
+
+/*   printf("> %ld/%lu:  %04x %04x %04x %04x %04x\n", bytes_written, sizeof(*msg), buf[0], buf[1], buf[2], buf[3], buf[4]); */
+
+/*   ssize_t bytes_read = read(fd, buf, sizeof(buf)); */
+/*   printf("< %ld/%lu:  %04x %04x %04x %04x %04x\n", bytes_read, sizeof(*msg), buf[0], buf[1], buf[2], buf[3], buf[4]); */
+/*   fflush(stdout); */
+
+/*   return bytes_written; */
+/* } */
+
 ssize_t write_msg(int fd, LedValuesMessage *msg) {
-  char buf[sizeof(*msg)] = { 0 };
+  const size_t len = sizeof(*msg);
+  uint16_t tx_buf[sizeof(*msg)] = { 0 };
+  uint16_t rx_buf[sizeof(*msg)] = { 0 };
 
-  memcpy(buf, msg, sizeof(buf));
+  memcpy(tx_buf, msg, len);
+  memset(rx_buf, 0, sizeof(rx_buf));
 
-  /* printf("%x %x %x %x %x\n", buf[0], buf[1], buf[2], buf[3], buf[4]); */
-  /* fflush(stdout); */
+  printf(">    %ld/%lu:  %04x %04x %04x %04x %04x\n", len, len, tx_buf[0], tx_buf[1], tx_buf[2], tx_buf[3], tx_buf[4]);
 
-  return write(fd, buf, sizeof(buf));
+  struct spi_ioc_transfer xfer;
+
+  memset(&xfer, 0, sizeof xfer);
+  xfer.tx_buf = (unsigned long)tx_buf;
+  xfer.rx_buf = (unsigned long)rx_buf;
+  xfer.len = len;
+
+  /* xfer[1].rx_buf = (unsigned long) buf; */
+  /* xfer[1].len = len; */
+
+  int status = ioctl(fd, SPI_IOC_MESSAGE(1), &xfer);
+
+  printf("< %02d %ld/%lu:  %04x %04x %04x %04x %04x\n", status, len, len, rx_buf[0], rx_buf[1], rx_buf[2], rx_buf[3], rx_buf[4]);
+
+  return 0;
 }
 
 void fade_test(int fd) {
   uint16_t buf = 0xAAAA;
 
-  uint16_t step = 1;
+  uint16_t step = 0x18;
   uint32_t sleep_us = 0;
 
   printf("fade in...\n");
   fflush(stdout);
 
-  uint16_t max = 0x1000;
+  uint16_t max = 0xFFFF;
 
   LedValuesMessage msg =
     {
@@ -121,7 +155,6 @@ int main(int argc, char *argv[]) {
   int ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if (ret == -1)
 		pabort("can't set max speed hz");
-
 
   uint8_t bits = 8;
   ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
