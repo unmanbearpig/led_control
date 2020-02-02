@@ -69,3 +69,5 @@
 ** TODO UDP server (just have an stdin pipe to STM32 + nc?)
 `
 ** TODO print debugging info to UART
+   UART2 (TX: PA2, RX: PA3) is most convenient.
+** TODO Add error counter that I can read (screen? UART?)
