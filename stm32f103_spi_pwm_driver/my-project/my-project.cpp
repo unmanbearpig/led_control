@@ -11,7 +11,7 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/stm32/timer.h>
-#include "../../common_headers/structs.h"
+#include "../../common/protocol.h"
 
 #include "pwm.h"
 
@@ -54,13 +54,16 @@ LedValuesMessage msg =
 //   DFF: 8 or 16 bit frame format
 //
 void spi_setup() {
+  // need it?
+  rcc_periph_clock_enable(RCC_GPIOA);
+
   rcc_periph_clock_enable(RCC_SPI1);
 
   gpio_set_mode(GPIOA,
                 GPIO_MODE_OUTPUT_50_MHZ,
-                GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
+                GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, // ALTFN or no?
                 GPIO6);
-	gpio_set_mode(GPIOA,
+  gpio_set_mode(GPIOA,
                 GPIO_MODE_INPUT,
                 GPIO_CNF_INPUT_FLOAT,
                 GPIO4|GPIO5|GPIO7);
@@ -128,17 +131,17 @@ void write_to_spi_dma(void *tx_buf, uint32_t tx_len) {
   dma_set_memory_size(dma, channel, DMA_CCR_MSIZE_8BIT);
   dma_set_peripheral_size(dma, channel, DMA_CCR_PSIZE_8BIT);
   dma_set_number_of_data(dma, channel, tx_len);
-  dma_set_priority(dma, channel, DMA_CCR_PL_HIGH);
+  dma_set_priority(dma, channel, DMA_CCR_PL_LOW);
   dma_set_read_from_memory(dma, channel);
   dma_enable_memory_increment_mode(dma, channel);
   dma_enable_channel(dma, channel);
 
   // not sure about this one, probably no
-  // dma_enable_circular_mode(dma, channel);
+  dma_enable_circular_mode(dma, channel);
 
   spi_enable_tx_dma(SPI1);
 
-  dma_enable_transfer_complete_interrupt(dma, channel);
+  // dma_enable_transfer_complete_interrupt(dma, channel);
 }
 
 
@@ -165,19 +168,9 @@ void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
   // dma_enable_transfer_error_interrupt(dma, channel);
 }
 
-LedValuesMessage tx_msg =
-  {
-   .magic = led_values_message_magic,
-   .led1_value = 0xF0F0,
-   .led2_value = 0x3322,
-   .led3_value = 0x0000,
-   .led4_value = 0xFFFF,
-  };
-
-
 void start_dma() {
   read_from_spi_dma(&input_msg, sizeof(input_msg));
-  write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
+  write_to_spi_dma(&msg, sizeof(msg));
 }
 
 void stop_dma() {
@@ -224,11 +217,26 @@ DmaChanStats chan3_stats = { 0 };
 void dma1_channel2_isr() {
   chan2_stats.isrs += 1;
 
-  memcpy(&msg, &input_msg, sizeof(input_msg));
-
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
+
+    if (is_msg_valid(&input_msg)) {
+      memcpy(&msg, &input_msg, sizeof(input_msg));
+    } else if (is_msg_read_request(&input_msg)) {
+      // if circular dma is enabled (now it is) it will return the thing anyway
+    } else {
+      // We (the slave) might go out of sync with the host,
+      // i.e. we incorrectly assume the start of the message
+      // it might happen if the slave was (re)started in the middle of communication
+      // Here we try to resynchronize with the host by just restarting SPI DMA
+      // Eventually we should catch the correct start of the message and stop receiving errors
+      // There probably is a better way, but it works for now
+      restart_dma();
+      // Debugging, so I notice the errors better.
+      // Should change it no not changing state
+      set_msg_to_error_state(&msg);
+    }
   }
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_HTIF)) {
@@ -288,8 +296,8 @@ void dma1_channel3_isr() {
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_TEIF);
   }
 
-  spi_disable_tx_dma(SPI1);
-  write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
+  // spi_disable_tx_dma(SPI1);
+  // write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
 
   // breaks the leds when I comment it out, but the isrs number goes up
   // dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_TCIF);
@@ -297,8 +305,12 @@ void dma1_channel3_isr() {
 
 // static void write_to_spi_dma_task(void *_arg __attribute((unused))) {
 //   for(;;) {
+//     spi_disable_tx_dma(SPI1);
+
+//     SPI1_DR = 0xFF;
+//     vTaskDelay(pdMS_TO_TICKS(1));
+
 //     write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
-//     vTaskDelay(pdMS_TO_TICKS(10));
 //   }
 // }
 
@@ -306,8 +318,7 @@ extern "C" int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
 	rcc_periph_clock_enable(RCC_GPIOC);
 
-  // for spi pins, seems to be not needed?
-  // rcc_periph_clock_enable(RCC_GPIOA);
+  rcc_periph_clock_enable(RCC_GPIOA);
 
   // built-in LED
 	gpio_set_mode(GPIOC,
@@ -317,13 +328,13 @@ extern "C" int main(void) {
 
   spi_setup();
   spi_dma_setup();
+  start_dma();
 
   pwm_setup(TIM_OCM_PWM2);
 
   xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(write_to_spi_dma_task, "START_DMA_TX_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
-  start_dma();
 
 	vTaskStartScheduler();
 

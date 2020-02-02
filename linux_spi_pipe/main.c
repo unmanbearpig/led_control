@@ -8,7 +8,7 @@
 #include <linux/ioctl.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common_headers/structs.h"
+#include "../common/protocol.h"
 
 const char *default_device = "/dev/spidev0.0";
 
@@ -18,15 +18,25 @@ void pabort(const char *s)
 	abort();
 }
 
-ssize_t write_msg(int fd, LedValuesMessage *msg) {
-  /* char buf[sizeof(*msg)] = { 0 }; */
-  /* memcpy(buf, msg, sizeof(buf)); */
-  /* printf("%x %x %x %x %x\n", buf[0], buf[1], buf[2], buf[3], buf[4]); */
-  /* fflush(stdout); */
-  ssize_t bytes_written = write(fd, msg, sizeof(*msg));
-  // fflush(fd);
+
+ssize_t write_bytes(int fd, void *buf, size_t len) {
+  size_t bytes_written = 0;
+
+  while(bytes_written < len) {
+    ssize_t tmp_bytes_written = write(fd, buf + bytes_written, len - bytes_written);
+    if (tmp_bytes_written < 0) {
+      return tmp_bytes_written;
+    }
+
+    bytes_written += tmp_bytes_written;
+  }
 
   return bytes_written;
+}
+
+
+ssize_t write_msg(int fd, LedValuesMessage *msg) {
+  return write_bytes(fd, msg, sizeof(*msg));
 }
 
 ssize_t read_msg(int fd, LedValuesMessage *msg) {
@@ -42,8 +52,9 @@ ssize_t read_msg(int fd, LedValuesMessage *msg) {
 
   memcpy((void *) msg, buf, sizeof(*msg));
 
-  fprintf(stderr, "> %02X %02X %02X %02X %02X\n",
-          buf[0], buf[1], buf[2], buf[3], buf[4]);
+  fprintf(stderr, "> %02X%02X %02X%02X %02X%02X %02X%02X %02X%02X\n",
+          buf[0], buf[1], buf[2], buf[3], buf[4],
+          buf[5], buf[6], buf[7], buf[8], buf[9]);
 
   return bytes_read;
 }
@@ -66,7 +77,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Could not open device: %s\n", strerror(errno));
   }
 
-  uint32_t speed = 100000;
+  uint32_t speed = 1000000;
   int ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if (ret == -1)
 		pabort("can't set max speed hz");

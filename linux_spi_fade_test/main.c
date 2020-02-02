@@ -8,7 +8,7 @@
 #include <linux/spi/spidev.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../common_headers/structs.h"
+#include "../common/protocol.h"
 
 const char *default_device = "/dev/spidev0.0";
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Could not open device: %s\n", strerror(errno));
   }
 
-  uint32_t speed = 100000;
+  uint32_t speed = 10000000;
   int ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
 	if (ret == -1)
 		pabort("can't set max speed hz");

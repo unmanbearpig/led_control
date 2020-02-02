@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <linux/spi/spidev.h>
 #include <stdlib.h>
-#include "../common_headers/structs.h"
+#include "../common/protocol.h"
 
 void pabort(const char *s)
 {
@@ -13,15 +13,23 @@ void pabort(const char *s)
 	abort();
 }
 
-ssize_t write_msg(int fd, LedValuesMessage *msg) {
-  /* char buf[sizeof(*msg)] = { 0 }; */
-  /* memcpy(buf, msg, sizeof(buf)); */
-  /* printf("%x %x %x %x %x\n", buf[0], buf[1], buf[2], buf[3], buf[4]); */
-  /* fflush(stdout); */
-  ssize_t bytes_written = write(fd, msg, sizeof(msg));
-  // fflush(fd);
+ssize_t write_bytes(int fd, void *buf, size_t len) {
+  size_t bytes_written = 0;
+
+  while(bytes_written < len) {
+    ssize_t tmp_bytes_written = write(fd, buf + bytes_written, len - bytes_written);
+    if (tmp_bytes_written < 0) {
+      return tmp_bytes_written;
+    }
+
+    bytes_written += tmp_bytes_written;
+  }
 
   return bytes_written;
+}
+
+ssize_t write_msg(int fd, LedValuesMessage *msg) {
+  return write_bytes(fd, msg, sizeof(*msg));
 }
 
 void fade_test(int fd) {
@@ -33,7 +41,7 @@ void fade_test(int fd) {
   fprintf(stderr, "fade in...\n");
   fflush(stderr);
 
-  uint16_t max = 0x1000;
+  uint16_t max = 0xFFFF;
 
   LedValuesMessage msg =
     {
