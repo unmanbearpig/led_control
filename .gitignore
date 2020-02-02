@@ -1,1 +1,11 @@
 bin
+
+stm32f103_spi_pwm_driver/bin/
+stm32f103_spi_pwm_driver/*.elf
+stm32f103_spi_pwm_driver/*.bin
+stm32f103_spi_pwm_driver/generated.*.ld
+
+stm32f103_spi_echo/bin/
+stm32f103_spi_echo/*.elf
+stm32f103_spi_echo/*.bin
+stm32f103_spi_echo/generated.*.ld
