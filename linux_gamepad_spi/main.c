@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <math.h>
 #include "../common/linux_gamepad.h"
+#include "../common/linux_gamepad_print.h"
 #include "../common/linux_spi.h"
 #include "../common/protocol.h"
 #include "../common/linux_util.h"
@@ -16,61 +17,6 @@
 void report_error(int err) {
   char *error_str = strerror(err);
   fprintf(stderr, "Error: %s\n", error_str);
-}
-
-void print_gamepad(GamepadState *gamepad) {
-  char shoulder_left_up = ' ';
-  char shoulder_left_down = ' ';
-  char shoulder_right_up = ' ';
-  char shoulder_right_down = ' ';
-
-  if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-    shoulder_left_up = '^';
-  }
-
-  if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-    shoulder_left_down = '_';
-  }
-
-  if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-    shoulder_right_up = '^';
-  }
-
-  if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-    shoulder_right_down = '_';
-  }
-
-  char right_thumb_left = ' ';
-  char right_thumb_down = ' ';
-  char right_thumb_up = ' ';
-  char right_thumb_right = ' ';
-
-  if (gamepad->thumbs & RIGHT_THUMB_LEFT) {
-    right_thumb_left = '<';
-  }
-
-  if (gamepad->thumbs & RIGHT_THUMB_DOWN) {
-    right_thumb_down = 'V';
-  }
-
-  if (gamepad->thumbs & RIGHT_THUMB_UP) {
-    right_thumb_up = '^';
-  }
-
-  if (gamepad->thumbs & RIGHT_THUMB_RIGHT) {
-    right_thumb_right = '>';
-  }
-
-  printf(
-         "%04dx%04d %04dx%04d %c%c%c%c %c%c%c%c\n",
-         gamepad_abs_to_rel_axis(gamepad->left_x), gamepad_abs_to_rel_axis(gamepad->left_y),
-         gamepad_abs_to_rel_axis(gamepad->right_x), gamepad_abs_to_rel_axis(gamepad->right_y),
-         shoulder_left_up, shoulder_left_down,
-         shoulder_right_up, shoulder_right_down,
-         right_thumb_left, right_thumb_down,
-         right_thumb_up, right_thumb_right
-         );
-  fflush(stdout);
 }
 
 typedef struct {
@@ -108,6 +54,7 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
     state->led4 += left_stick;
   }
 
+
   if (gamepad->thumbs & RIGHT_THUMB_UP) {
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
       state->led1 = 0;
@@ -126,10 +73,32 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
     }
   }
 
-  msg->led1_value = state->led1 * 10;
-  msg->led2_value = state->led2 * 10;
-  msg->led3_value = state->led3 * 10;
-  msg->led4_value = state->led4 * 10;
+  if (gamepad->select_start_joystick_buttons_and_shoulders & START_BUTTON) {
+    memset(state, 0, sizeof(*state));
+  }
+
+  if (gamepad->thumbs & RIGHT_THUMB_UP) {
+    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
+      msg->led1_value = 0xFFFF;
+    }
+
+    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
+      msg->led2_value = 0xFFFF;
+    }
+
+    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
+      msg->led3_value = 0xFFFF;
+    }
+
+    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
+      msg->led4_value = 0xFFFF;
+    }
+  } else {
+    msg->led1_value = state->led1 * 10;
+    msg->led2_value = state->led2 * 10;
+    msg->led3_value = state->led3 * 10;
+    msg->led4_value = state->led4 * 10;
+  }
 }
 
 int main(int argc, char *argv[]) {

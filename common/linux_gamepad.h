@@ -1,3 +1,5 @@
+#pragma once
+
 #include <inttypes.h>
 
 #define SHOULDERS 0x0F
