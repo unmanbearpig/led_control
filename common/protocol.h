@@ -1,3 +1,6 @@
+#pragma once
+
+#include <inttypes.h>
 
 const uint16_t led_values_message_magic = 0x1324;
 const uint16_t led_values_message_read_request_magic = 0xFEED;

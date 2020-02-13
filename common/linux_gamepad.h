@@ -28,6 +28,8 @@ typedef struct {
   uint8_t reserved_2;
 } GamepadState;
 
+#define DEFAULT_GAMEPAD_PATH "/dev/hidraw0"
+
 int8_t gamepad_abs_to_rel_axis(uint8_t abs) {
   return abs - 0x80;
 }
