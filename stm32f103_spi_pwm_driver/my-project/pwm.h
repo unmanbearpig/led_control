@@ -19,7 +19,7 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
    */
   timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_CENTER_1, TIM_CR1_DIR_UP);
 
-  // Don't have to set the prescaler
+  // Don't have to set the prescaler?
   // timer_set_prescaler(TIM1, 2);
 
   /* Set Timer output compare mode:

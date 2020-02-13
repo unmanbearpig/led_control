@@ -70,7 +70,7 @@ void print_gamepad(GamepadState *gamepad) {
 
 #define DEFAULT_GAMEPAD_PATH "/dev/hidraw0"
 
-int main(int argc __attribute((unused)), char *argv[] __attribute((unused))) {
+int main(int argc, char *argv[]) {
   char *gamepad_path = DEFAULT_GAMEPAD_PATH;
   if (argc > 1) {
     gamepad_path = argv[1];
