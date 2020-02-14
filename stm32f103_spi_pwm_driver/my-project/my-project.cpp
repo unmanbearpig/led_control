@@ -36,10 +36,10 @@ LedValuesMessage input_msg =
 LedValuesMessage msg =
   {
    .magic = led_values_message_magic,
-   .led1_value = 0,
-   .led2_value = 0,
-   .led3_value = 0,
-   .led4_value = 0,
+   .led1_value = 0xFFFF,
+   .led2_value = 0xFFFF,
+   .led3_value = 0xFFFF,
+   .led4_value = 0xFFFF,
   };
 
 // SPI1
