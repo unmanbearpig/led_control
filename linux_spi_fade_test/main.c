@@ -40,7 +40,7 @@ void fade_test(int fd) {
     msg.led3_value = buf;
     msg.led4_value = buf;
 
-    xfer_msg(fd, &msg);
+    xfer_msg(fd, &msg, 1);
     if (sleep_us > 0)
       usleep(sleep_us);
   }
@@ -54,7 +54,7 @@ void fade_test(int fd) {
     msg.led3_value = buf;
     msg.led4_value = buf;
 
-    xfer_msg(fd, &msg);
+    xfer_msg(fd, &msg, 1);
     if (sleep_us > 0)
       usleep(sleep_us);
   }

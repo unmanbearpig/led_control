@@ -16,6 +16,8 @@
 #include "../common/linux_util.h"
 #include "../common/linux_spi_protocol.h"
 
+int verbose = 0;
+
 void report_error(int err) {
   char *error_str = strerror(err);
   fprintf(stderr, "Error: %s\n", error_str);
@@ -32,7 +34,22 @@ double stick_value(uint8_t x, uint8_t y) {
   int8_t sx = gamepad_abs_to_rel_axis(x);
   int8_t sy = gamepad_abs_to_rel_axis(y);
 
-  return sx * 0.0001 - pow(sy, 3) * 0.00001;
+  return (sx / 127.0) * 0.000002 - pow((sy / 127.0), 3) * 0.01;
+}
+
+void print_state(FLedState *state) {
+  if (verbose) {
+    printf("%f %f %f %f\n", state->led1, state->led2, state->led3, state->led4);
+  }
+}
+
+void add_stick_value(double *to, double from) {
+  *to += from;
+  if (*to < 0.0) {
+    *to = 0.0;
+  } else if (*to > 1.0) {
+    *to = 1.0;
+  }
 }
 
 void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState *gamepad) {
@@ -41,43 +58,31 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
   double left_stick = stick_value(gamepad->left_x, gamepad->left_y);
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-    state->led1 += left_stick;
+    add_stick_value(&state->led1, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-    state->led2 += left_stick;
+    add_stick_value(&state->led2, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-    state->led3 += left_stick;
+    add_stick_value(&state->led3, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-    state->led4 += left_stick;
+    add_stick_value(&state->led4, left_stick);
   }
 
-
-  if (gamepad->thumbs & RIGHT_THUMB_UP) {
-    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-      state->led1 = 0;
-    }
-
-    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-      state->led2 = 0;
-    }
-
-    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-      state->led3 = 0;
-    }
-
-    if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-      state->led4 = 0;
-    }
-  }
+  print_state(state);
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & START_BUTTON) {
     memset(state, 0, sizeof(*state));
   }
+
+  msg->led1_value = state->led1 * 0xFFFF;
+  msg->led2_value = state->led2 * 0xFFFF;
+  msg->led3_value = state->led3 * 0xFFFF;
+  msg->led4_value = state->led4 * 0xFFFF;
 
   if (gamepad->thumbs & RIGHT_THUMB_UP) {
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
@@ -95,16 +100,11 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
       msg->led4_value = 0xFFFF;
     }
-  } else {
-    msg->led1_value = state->led1 * 10;
-    msg->led2_value = state->led2 * 10;
-    msg->led3_value = state->led3 * 10;
-    msg->led4_value = state->led4 * 10;
   }
 }
 
 void print_usage() {
-  fprintf(stderr, "--spi <path to spi dev (default=/dev/spidev0.0)>\n--gamepad <path to gamepad hidraw, default=/dev/hidraw0>");
+  fprintf(stderr, "--spi <path to spi dev (default=/dev/spidev0.0)>\n--gamepad <path to gamepad hidraw, default=/dev/hidraw0>\n--verbose - enable verbose output\n");
 }
 
 int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
@@ -112,21 +112,25 @@ int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
 
   struct option opts[] =
     {
-     { .name = "spi", .has_arg = required_argument, .flag = &argid, .val = 's', },
-     { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g', },
+     { .name = "spi", .has_arg = required_argument, .flag = &argid, .val = 's' },
+     { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g' },
+     { .name = "verbose", .has_arg = no_argument, .flag = &argid, .val = 'v' },
      { 0, 0, 0, 0 }
     };
 
   int longindex = 0;
   int ch = 0;
 
-  while( (ch = getopt_long(argc, argv, "s:g:", opts, &longindex)) != -1 ) {
+  while( (ch = getopt_long(argc, argv, "s:g:v", opts, &longindex)) != -1 ) {
     switch(argid) {
     case 's':
       *spi_path = optarg;
       break;
     case 'g':
       *gamepad_path = optarg;
+      break;
+    case 'v':
+      verbose = 1;
       break;
     default:
       fprintf(stderr, "Invalid argument\n");
@@ -140,7 +144,6 @@ int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
 }
 
 int main(int argc, char *argv[]) {
-
   char *spi_path = "/dev/spidev0.0";
   char *gamepad_path = DEFAULT_GAMEPAD_PATH;
 
@@ -170,9 +173,14 @@ int main(int argc, char *argv[]) {
 
   GamepadState gamepad = {};
 
-  FLedState state = { 0 };
+  FLedState state;
+  memset(&state, 0, sizeof(state));
 
   for(;;) {
+    if (verbose) {
+      printf("\e[1;1H\e[2J"); // clear screen
+    }
+
     ssize_t bytes_read = read(gamepad_fd, &gamepad, sizeof(gamepad));
 
     if (bytes_read != sizeof(gamepad)) {
@@ -193,8 +201,11 @@ int main(int argc, char *argv[]) {
 
     modify_msg_by_gamepad(&state, &msg, &gamepad);
 
-    print_gamepad(&gamepad);
+    if (verbose) {
+      print_gamepad(&gamepad);
+    }
 
-    xfer_msg(spi_fd, &msg);
+    xfer_msg(spi_fd, &msg, verbose);
+    fflush(stdout);
   }
 }
