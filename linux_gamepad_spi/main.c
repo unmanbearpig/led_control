@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
+#include <unistd.h>
+#include <getopt.h>
 #include "../common/linux_gamepad.h"
 #include "../common/linux_gamepad_print.h"
 #include "../common/linux_spi.h"
@@ -101,16 +103,65 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
   }
 }
 
-int main(int argc, char *argv[]) {
+void print_usage() {
+  fprintf(stderr, "--spi <path to spi dev (default=/dev/spidev0.0)>\n--gamepad <path to gamepad hidraw, default=/dev/hidraw0>");
+}
 
-  int spi_fd = STDOUT_FILENO; // try_open_spi("/dev/spidev0.0", 0);
+int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
+  int argid = 0;
 
-  char *gamepad_path = DEFAULT_GAMEPAD_PATH;
-  if (argc > 1) {
-    gamepad_path = argv[1];
+  struct option opts[] =
+    {
+     { .name = "spi", .has_arg = required_argument, .flag = &argid, .val = 's', },
+     { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g', },
+     { 0, 0, 0, 0 }
+    };
+
+  int longindex = 0;
+  int ch = 0;
+
+  while( (ch = getopt_long(argc, argv, "s:g:", opts, &longindex)) != -1 ) {
+    switch(argid) {
+    case 's':
+      *spi_path = optarg;
+      break;
+    case 'g':
+      *gamepad_path = optarg;
+      break;
+    default:
+      fprintf(stderr, "Invalid argument\n");
+      print_usage();
+      return(0);
+      break;
+    }
   }
 
-  int gamepad_fd = open(gamepad_path, O_RDONLY);
+  return(1);
+}
+
+int main(int argc, char *argv[]) {
+
+  char *spi_path = "/dev/spidev0.0";
+  char *gamepad_path = DEFAULT_GAMEPAD_PATH;
+
+  if (!parse_args(argc, argv, &spi_path, &gamepad_path)) {
+    exit(1);
+  }
+
+  int spi_fd = 0;
+  if (0 == strcmp(spi_path, "-")) {
+    spi_fd = STDOUT_FILENO;
+  } else {
+    spi_fd = try_open_spi(spi_path, 0);
+  }
+
+  int gamepad_fd = 0;
+
+  if (0 == strcmp(gamepad_path, "-")) {
+    gamepad_fd = STDIN_FILENO;
+  } else {
+    gamepad_fd = open(gamepad_path, O_RDONLY);
+  }
 
   if (gamepad_fd == -1) {
     report_error(errno);
