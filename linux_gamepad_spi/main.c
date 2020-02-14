@@ -52,10 +52,26 @@ void add_stick_value(double *to, double from) {
   }
 }
 
+#define DEFAULT_ADJUSTMENT_EXP 7.0
+double adjustment_exp = DEFAULT_ADJUSTMENT_EXP;
+
+double adjust_led_value(double value) {
+  return pow(value, adjustment_exp);
+}
+
 void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState *gamepad) {
   int8_t left_x, left_y, right_x, right_y = 0;
 
   double left_stick = stick_value(gamepad->left_x, gamepad->left_y);
+  double right_stick = stick_value(gamepad->right_x, gamepad->right_y);
+
+  if (gamepad->select_start_joystick_buttons_and_shoulders & RIGHT_JOYSTICK_BUTTON) {
+    adjustment_exp += right_stick;
+  }
+
+  if (verbose) {
+    printf("adjustment_exp: %f\n", adjustment_exp);
+  }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
     add_stick_value(&state->led1, left_stick);
@@ -77,12 +93,13 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & START_BUTTON) {
     memset(state, 0, sizeof(*state));
+    adjustment_exp = DEFAULT_ADJUSTMENT_EXP;
   }
 
-  msg->led1_value = state->led1 * 0xFFFF;
-  msg->led2_value = state->led2 * 0xFFFF;
-  msg->led3_value = state->led3 * 0xFFFF;
-  msg->led4_value = state->led4 * 0xFFFF;
+  msg->led1_value = adjust_led_value(state->led1) * 0xFFFF;
+  msg->led2_value = adjust_led_value(state->led2) * 0xFFFF;
+  msg->led3_value = adjust_led_value(state->led3) * 0xFFFF;
+  msg->led4_value = adjust_led_value(state->led4) * 0xFFFF;
 
   if (gamepad->thumbs & RIGHT_THUMB_UP) {
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
