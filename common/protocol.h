@@ -33,3 +33,10 @@ void set_msg_to_error_state(LedValuesMessage *msg) {
   msg->led3_value = 0;
   msg->led4_value = 0xFFFF;
 }
+
+void set_all_msg_values(LedValuesMessage *msg, uint16_t value) {
+  msg->led1_value = value;
+  msg->led2_value = value;
+  msg->led3_value = value;
+  msg->led4_value = value;
+}

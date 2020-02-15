@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     write(sock, &msg, sizeof(msg));
     sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&peer_addr, peer_addr_len);
 
-    print_msg_bytes((uint16_t *)&msg);
+    print_msg(&msg);
   }
 
   return 0;
