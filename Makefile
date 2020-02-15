@@ -7,7 +7,7 @@ fade_test: bin/spi_fade_test
 
 spi_echo_test: flash_stm32f103_spi_echo fade_test
 
-linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi
+linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/udp_gamepad
 
 bin/spi_pipe: bin linux_spi_pipe/main.c
 	gcc linux_spi_pipe/main.c -o bin/spi_pipe
@@ -23,6 +23,12 @@ bin/gamepad: bin linux_gamepad/main.c
 
 bin/gamepad_spi: bin linux_gamepad_spi/main.c
 	gcc linux_gamepad_spi/main.c -o bin/gamepad_spi -lm
+
+bin/udp_spi: bin linux_udp_spi/main.c
+	gcc linux_udp_spi/main.c -o bin/udp_spi
+
+bin/udp_gamepad: bin linux_udp_gamepad/main.c
+	gcc linux_udp_gamepad/main.c -o bin/udp_gamepad
 
 bin:
 	mkdir bin

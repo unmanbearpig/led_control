@@ -24,10 +24,19 @@ void report_error(int err) {
 }
 
 typedef struct {
+  double sine_amplitude;
+  double sine_wavelength;
+} LedAttrs;
+
+typedef struct {
   double led1;
   double led2;
   double led3;
   double led4;
+  LedAttrs led1_attrs;
+  LedAttrs led2_attrs;
+  LedAttrs led3_attrs;
+  LedAttrs led4_attrs;
 } FLedState;
 
 double stick_value(uint8_t x, uint8_t y) {
@@ -117,6 +126,8 @@ void modify_msg_by_gamepad(FLedState *state, LedValuesMessage *msg, GamepadState
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
       msg->led4_value = 0xFFFF;
     }
+  } else {
+
   }
 }
 
@@ -184,6 +195,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (gamepad_fd == -1) {
+    fprintf(stderr, "Gamepad: ");
     report_error(errno);
     return 1;
   }
@@ -222,7 +234,12 @@ int main(int argc, char *argv[]) {
       print_gamepad(&gamepad);
     }
 
-    xfer_msg(spi_fd, &msg, verbose);
+    if (spi_fd == STDOUT_FILENO) {
+      write(spi_fd, &msg, sizeof(msg));
+    } else {
+      xfer_msg(spi_fd, &msg, verbose);
+    }
+
     fflush(stdout);
   }
 }
