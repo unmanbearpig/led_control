@@ -34,6 +34,13 @@ typedef struct {
   LedAttrs attrs;
 } Led;
 
+#define BTN_LU 0
+#define BTN_LD 1
+#define BTN_RU 2
+#define BTN_RD 3
+
+unsigned int btn_map[] = { 0, 1, 2, 3 };
+
 double stick_value(uint8_t x, uint8_t y) {
   int8_t sx = gamepad_abs_to_rel_axis(x);
   int8_t sy = gamepad_abs_to_rel_axis(y);
@@ -112,19 +119,19 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-    add_stick_value(&leds[0].value, left_stick);
+    add_stick_value(&leds[btn_map[BTN_LU]].value, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-    add_stick_value(&leds[1].value, left_stick);
+    add_stick_value(&leds[btn_map[BTN_LD]].value, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-    add_stick_value(&leds[2].value, left_stick);
+    add_stick_value(&leds[btn_map[BTN_RU]].value, left_stick);
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-    add_stick_value(&leds[3].value, left_stick);
+    add_stick_value(&leds[btn_map[BTN_RD]].value, left_stick);
   }
 
   print_state(leds);
@@ -134,49 +141,52 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
     adjustment_exp = DEFAULT_ADJUSTMENT_EXP;
   }
 
-  msg->led1_value = adjust_led_value(leds[0].value) * 0xFFFF;
-  msg->led2_value = adjust_led_value(leds[1].value) * 0xFFFF;
-  msg->led3_value = adjust_led_value(leds[2].value) * 0xFFFF;
-  msg->led4_value = adjust_led_value(leds[3].value) * 0xFFFF;
+  uint16_t converted_values[4] =
+    {
+     adjust_led_value(leds[0].value) * 0xFFFF,
+     adjust_led_value(leds[1].value) * 0xFFFF,
+     adjust_led_value(leds[2].value) * 0xFFFF,
+     adjust_led_value(leds[3].value) * 0xFFFF,
+    };
 
   if (gamepad->thumbs & RIGHT_THUMB_UP) {
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-      msg->led1_value = 0xFFFF;
+      converted_values[btn_map[BTN_LU]] = 0xFFFF;
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-      msg->led2_value = 0xFFFF;
+      converted_values[btn_map[BTN_LD]] = 0xFFFF;
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-      msg->led3_value = 0xFFFF;
+      converted_values[btn_map[BTN_RU]] = 0xFFFF;
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-      msg->led4_value = 0xFFFF;
+      converted_values[btn_map[BTN_RD]] = 0xFFFF;
     }
   } else {
     double freq_delta = stick_x_value(gamepad->right_x) * 0.0001;
     double amplitude_delta = stick_y_value(gamepad->right_y) * 0.01;
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-      leds[0].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[0].attrs.sine_amplitude, amplitude_delta);
+      leds[btn_map[BTN_LU]].attrs.sine_freq += freq_delta;
+      add_stick_value(&leds[btn_map[BTN_LU]].attrs.sine_amplitude, amplitude_delta);
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-      leds[1].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[1].attrs.sine_amplitude, amplitude_delta);
+      leds[btn_map[BTN_LD]].attrs.sine_freq += freq_delta;
+      add_stick_value(&leds[btn_map[BTN_LD]].attrs.sine_amplitude, amplitude_delta);
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-      leds[2].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[2].attrs.sine_amplitude, amplitude_delta);
+      leds[btn_map[BTN_RU]].attrs.sine_freq += freq_delta;
+      add_stick_value(&leds[btn_map[BTN_RU]].attrs.sine_amplitude, amplitude_delta);
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-      leds[3].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[3].attrs.sine_amplitude, amplitude_delta);
+      leds[btn_map[BTN_RD]].attrs.sine_freq += freq_delta;
+      add_stick_value(&leds[btn_map[BTN_RD]].attrs.sine_amplitude, amplitude_delta);
     }
 
     for (int i = 0; i < 4; i++) {
@@ -185,6 +195,11 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
       }
     }
   }
+
+  msg->led1_value = converted_values[0];
+  msg->led2_value = converted_values[1];
+  msg->led3_value = converted_values[2];
+  msg->led4_value = converted_values[3];
 }
 
 void print_usage() {
@@ -198,6 +213,10 @@ int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
     {
      { .name = "spi", .has_arg = required_argument, .flag = &argid, .val = 's' },
      { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g' },
+     { .name = "btn-lu", .has_arg = required_argument, .flag = &argid, .val = 'c' },
+     { .name = "btn-ld", .has_arg = required_argument, .flag = &argid, .val = 't' },
+     { .name = "btn-ru", .has_arg = required_argument, .flag = &argid, .val = 'r' },
+     { .name = "btn-rd", .has_arg = required_argument, .flag = &argid, .val = 'n' },
      { .name = "verbose", .has_arg = no_argument, .flag = &argid, .val = 'v' },
      { 0, 0, 0, 0 }
     };
@@ -205,7 +224,7 @@ int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
   int longindex = 0;
   int ch = 0;
 
-  while( (ch = getopt_long(argc, argv, "s:g:v", opts, &longindex)) != -1 ) {
+  while( (ch = getopt_long(argc, argv, "s:g:c:t:r:n:v", opts, &longindex)) != -1 ) {
     switch(argid) {
     case 's':
       *spi_path = optarg;
@@ -215,6 +234,18 @@ int parse_args(int argc, char *argv[], char **spi_path, char **gamepad_path) {
       break;
     case 'v':
       verbose = 1;
+      break;
+    case 'c':
+      btn_map[BTN_LU] = atoi(optarg);
+      break;
+    case 't':
+      btn_map[BTN_LD] = atoi(optarg);
+      break;
+    case 'r':
+      btn_map[BTN_RU] = atoi(optarg);
+      break;
+    case 'n':
+      btn_map[BTN_RD] = atoi(optarg);
       break;
     default:
       fprintf(stderr, "Invalid argument\n");
