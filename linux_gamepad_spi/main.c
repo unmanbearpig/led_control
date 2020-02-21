@@ -166,7 +166,7 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
       converted_values[btn_map[BTN_RD]] = 0xFFFF;
     }
   } else {
-    double freq_delta = stick_x_value(gamepad->right_x) * 0.0001;
+    double freq_delta = stick_x_value(gamepad->right_x) * 0.00001;
     double amplitude_delta = stick_y_value(gamepad->right_y) * 0.01;
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
