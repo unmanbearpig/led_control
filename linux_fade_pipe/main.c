@@ -36,7 +36,7 @@ void fade_test(int fd) {
   uint16_t buf = 0xAAAA;
 
   uint16_t step = 1;
-  uint32_t sleep_us = 20;
+  uint32_t sleep_us = 100;
 
   fprintf(stderr, "fade in...\n");
   fflush(stderr);

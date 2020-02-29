@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
   unsigned int peer_addr_len = 0;
   memset(&peer_addr, 0, sizeof(peer_addr));
 
+  int sleep_us = 5000;
+
   for (;;) {
     int recsize = recvfrom(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&peer_addr, &peer_addr_len);
 
@@ -56,6 +58,7 @@ int main(int argc, char *argv[]) {
     sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&peer_addr, peer_addr_len);
 
     print_msg(&msg);
+    usleep(sleep_us);
   }
 
   return 0;

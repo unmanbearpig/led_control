@@ -9,3 +9,9 @@ stm32f103_spi_echo/bin/
 stm32f103_spi_echo/*.elf
 stm32f103_spi_echo/*.bin
 stm32f103_spi_echo/generated.*.ld
+esp8266_toolchain
+ESP8266_RTOS_SDK
+xtensa-lx106-elf
+esp8266_wifi_bridge/build
+
+common/secrets.h
