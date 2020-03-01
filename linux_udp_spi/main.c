@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   char *spi_path = "/dev/spidev0.0";
   int spi_fd = try_open_spi(spi_path, 500000);
 
-  if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) == -1)	{
+  if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)	{
     fprintf(stderr, "socket failed\n");
     exit(1);
 	}
