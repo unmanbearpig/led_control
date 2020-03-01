@@ -32,7 +32,7 @@ LedValuesMessage input_msg =
    .led4_value = 0,
   };
 
-LedValuesMessage output_msg =
+volatile LedValuesMessage output_msg =
   {
    .magic = 0x4332,
    .led1_value = 0x6546,
@@ -41,13 +41,13 @@ LedValuesMessage output_msg =
    .led4_value = 0xCDAB,
   };
 
-LedValuesMessage msg =
+volatile LedValuesMessage msg =
   {
    .magic = led_values_message_magic,
-   .led1_value = 0xFFFF,
-   .led2_value = 0xFFFF,
-   .led3_value = 0xFFFF,
-   .led4_value = 0xFFFF,
+   .led1_value = 0xF2FA,
+   .led2_value = 0xF3FB,
+   .led3_value = 0xF4FA,
+   .led4_value = 0xACFC,
   };
 
 // SPI1
@@ -108,7 +108,7 @@ void spi_setup() {
 }
 
 void spi_dma_setup_output() {
-  dma_disable_peripheral_increment_mode(DMA1, DMA_CHANNEL3);
+  // dma_disable_peripheral_increment_mode(DMA1, DMA_CHANNEL3);
   dma_channel_reset(DMA1, DMA_CHANNEL3);
   dma_set_peripheral_address(DMA1, DMA_CHANNEL3, (uint32_t)&SPI1_DR);
 
@@ -131,7 +131,7 @@ void spi_dma_setup() {
   spi_dma_setup_output();
 }
 
-void write_to_spi_dma(void *tx_buf, uint32_t tx_len) {
+void write_to_spi_dma(volatile void *tx_buf, uint32_t tx_len) {
   uint32_t dma = DMA1;
   uint8_t channel = DMA_CHANNEL3;
 
@@ -144,7 +144,7 @@ void write_to_spi_dma(void *tx_buf, uint32_t tx_len) {
   dma_enable_memory_increment_mode(dma, channel);
   dma_enable_channel(dma, channel);
 
-  // not sure about this one, probably no
+  // should be enabled
   dma_enable_circular_mode(dma, channel);
 
   spi_enable_tx_dma(SPI1);
@@ -207,7 +207,14 @@ static void set_msg_values_task(void *_value) {
 
   for(;;) {
     set_all_leds(msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
-    memcpy(&output_msg, &msg, sizeof(msg));
+    // memcpy(&output_msg, &msg, sizeof(msg));
+
+    output_msg.magic = msg->magic;
+    output_msg.led1_value = msg->led1_value;
+    output_msg.led2_value = msg->led2_value;
+    output_msg.led3_value = msg->led3_value;
+    output_msg.led4_value = msg->led4_value;
+
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
@@ -241,15 +248,48 @@ void dma1_channel2_isr() {
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
-    if (is_all_zeros(&input_msg, sizeof(input_msg))) {
+    if (input_msg.magic == 0xBADE) {
+      output_msg.magic = 0xBADE;
+      output_msg.led1_value = 0xFAFE;
+      output_msg.led2_value = 0x1234;
+      output_msg.led3_value = 0x8765;
+      output_msg.led4_value = 0xBCDE;
+    } else if (is_all_zeros(&input_msg, sizeof(input_msg))) {
       // if circular dma is enabled (now it is) it will return the thing anyway
-      memcpy(&output_msg, &msg, sizeof(output_msg));
-    } else if (is_msg_valid(&input_msg)) {
-      memcpy(&msg, &input_msg, sizeof(msg));
-      memcpy(&output_msg, &input_msg, sizeof(msg));
+      // memcpy(&output_msg, &msg, sizeof(output_msg));
+
+      output_msg.magic = msg.magic;
+      output_msg.led1_value = msg.led1_value;
+      output_msg.led2_value = msg.led2_value;
+      output_msg.led3_value = msg.led3_value;
+      output_msg.led4_value = msg.led4_value;
     } else if (is_msg_read_request(&input_msg)) {
       // if circular dma is enabled (now it is) it will return the thing anyway
-      memcpy(&output_msg, &msg, sizeof(output_msg));
+      // memcpy(&output_msg, &msg, sizeof(output_msg));
+
+      output_msg.magic = msg.magic;
+      output_msg.led1_value = msg.led1_value;
+      output_msg.led2_value = msg.led2_value;
+      output_msg.led3_value = msg.led3_value;
+      output_msg.led4_value = msg.led4_value;
+
+    } else if (is_msg_valid(&input_msg)) {
+      // memcpy(&msg, &input_msg, sizeof(msg));
+
+      msg.magic = input_msg.magic;
+      msg.led1_value = input_msg.led1_value;
+      msg.led1_value = input_msg.led1_value;
+      msg.led2_value = input_msg.led2_value;
+      msg.led3_value = input_msg.led3_value;
+      msg.led4_value = input_msg.led4_value;
+
+      // memcpy(&output_msg, &input_msg, sizeof(msg));
+
+      output_msg.magic = 0x7272;
+      output_msg.led1_value = msg.led1_value;
+      output_msg.led2_value = msg.led2_value;
+      output_msg.led3_value = msg.led3_value;
+      output_msg.led4_value = msg.led4_value;
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
@@ -260,7 +300,14 @@ void dma1_channel2_isr() {
       restart_dma();
       // Debugging, so I notice the errors better.
       // Should change it no not changing state
-      set_msg_to_error_state(&msg);
+      // set_msg_to_error_state(&msg);
+
+      msg.magic = led_values_message_magic;
+      msg.led1_value = 0;
+      msg.led2_value = 0xFFFF;
+      msg.led3_value = 0;
+      msg.led4_value = 0xFFFF;
+
     }
   }
 
