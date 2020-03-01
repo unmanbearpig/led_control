@@ -10,43 +10,43 @@ spi_echo_test: flash_stm32f103_spi_echo fade_test
 linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/udp_gamepad bin/sine bin/set_value bin/udp_xfer
 
 bin/spi_pipe: linux_spi_pipe/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_spi_pipe/main.c -o bin/spi_pipe
 
 bin/fade_pipe: linux_fade_pipe/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_fade_pipe/main.c -o bin/fade_pipe
 
 bin/spi_fade_test: linux_spi_fade_test/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_spi_fade_test/main.c -o bin/spi_fade_test
 
 bin/gamepad: linux_gamepad/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_gamepad/main.c -o bin/gamepad
 
 bin/gamepad_spi: linux_gamepad_spi/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_gamepad_spi/main.c -o bin/gamepad_spi -lm
 
 bin/udp_spi: linux_udp_spi/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_udp_spi/main.c -o bin/udp_spi
 
 bin/udp_gamepad: linux_udp_gamepad/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_udp_gamepad/main.c -o bin/udp_gamepad  -lm
 
 bin/sine: linux_sine/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_sine/main.c -o bin/sine -lm
 
 bin/set_value: linux_set_value/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_set_value/main.c -o bin/set_value
 
 bin/udp_xfer: linux_udp_xfer/main.c
-	mkdir bin; true
+	[ -d bin ] || mkdir bin
 	gcc linux_udp_xfer/main.c -o bin/udp_xfer
 
 esp8266: esp8266_wifi_bridge
