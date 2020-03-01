@@ -376,6 +376,6 @@ int main(int argc, char *argv[]) {
       fflush(stderr);
     }
 
-    usleep(sleep_us);
+    // usleep(sleep_us);
   }
 }

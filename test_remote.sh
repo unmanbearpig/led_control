@@ -4,9 +4,8 @@ set -e
 
 HOST=$1
 
-make
+./sync.sh $HOST
 
-rsync -av --delete ~/projects/stuff/electronics/led_control/ pi@$HOST:led_control/
 ssh pi@$HOST "pkill spi_fade_test" || true
 ssh pi@$HOST "make $2 -C ~/led_control"
 

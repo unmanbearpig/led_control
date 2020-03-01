@@ -7,12 +7,13 @@
 #include <arpa/inet.h>
 #include "../common/protocol.h"
 #include "../common/protocol_debug.h"
+#include "../common/secrets.h"
 
 int main(int argc, char *argv[]) {
   int sock = 0;
 
-  char *dst_host = "192.168.0.102";
-  int dst_port = 8932;
+  char *dst_host = "192.168.0.105";
+  int dst_port = DEFAULT_UDP_PORT;
 
   sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   if (sock == -1) {

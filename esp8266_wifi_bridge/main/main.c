@@ -30,56 +30,72 @@ void send_spi(uint8_t *data, int length) {
 	spi_trans(HSPI_HOST, &trans);
 }
 
-uint8_t read_spi() {
-	uint8_t resp[1];
+esp_err_t spi_xfer(void *send_buf, size_t send_buf_len, void *recv_buf, size_t recv_buf_len) {
+  spi_trans_t trans;
+ 	memset(&trans, 0, sizeof(trans));
 
-	spi_trans_t trans;
-	memset(&trans, 0, sizeof(trans));
+  trans.bits.mosi = send_buf_len * 8;
+  trans.mosi = send_buf;
+  trans.bits.miso = recv_buf_len * 8;
+  trans.miso = recv_buf;
 
-	trans.bits.miso = 8;
-	trans.miso = resp;
-	trans.addr = NULL;
-	trans.cmd = NULL;
+  // shouldn't be needed because memset
+  trans.addr = NULL;
+  trans.cmd = NULL;
 
-	spi_trans(HSPI_HOST, &trans);
-
-	return resp[0];
+  return spi_trans(HSPI_HOST, &trans);
 }
 
-void ICACHE_FLASH_ATTR spi_master_write_slave_task(void *arg) {
-	printf("SPI Write-Task started...\n");
+/* uint8_t read_spi() { */
+/* 	uint8_t resp[1]; */
 
-  while(true) {
-    uint16_t buf[5] = { 0x1324, 0xbaef, 0xfeed, 0xbeef, 0xfafa };
+/* 	spi_trans_t trans; */
+/* 	memset(&trans, 0, sizeof(trans)); */
 
-    uint16_t v = 0;
+/* 	trans.bits.miso = 8; */
+/* 	trans.miso = resp; */
+/* 	trans.addr = NULL; */
+/* 	trans.cmd = NULL; */
 
-    for(; v < 0xFFFF; v++) {
-      buf[1] = v;
-      buf[2] = v;
-      buf[3] = v;
-      buf[4] = v;
+/* 	spi_trans(HSPI_HOST, &trans); */
 
-      send_spi(buf, sizeof(buf));
+/* 	return resp[0]; */
+/* } */
 
-      if (v % 100 == 0) {
-        vTaskDelay(1);
-      }
-    }
+/* void ICACHE_FLASH_ATTR spi_master_write_slave_task(void *arg) { */
+/* 	printf("SPI Write-Task started...\n"); */
 
-    for(; v > 0; v--) {
-      buf[1] = v;
-      buf[2] = v;
-      buf[3] = v;
-      buf[4] = v;
+/*   while(true) { */
+/*     uint16_t buf[5] = { 0x1324, 0xbaef, 0xfeed, 0xbeef, 0xfafa }; */
 
-      send_spi(buf, sizeof(buf));
-      if (v % 100 == 0) {
-        vTaskDelay(1);
-      }
-    }
-	}
-}
+/*     uint16_t v = 0; */
+
+/*     for(; v < 0xFFFF; v++) { */
+/*       buf[1] = v; */
+/*       buf[2] = v; */
+/*       buf[3] = v; */
+/*       buf[4] = v; */
+
+/*       send_spi(buf, sizeof(buf)); */
+
+/*       if (v % 100 == 0) { */
+/*         vTaskDelay(1); */
+/*       } */
+/*     } */
+
+/*     for(; v > 0; v--) { */
+/*       buf[1] = v; */
+/*       buf[2] = v; */
+/*       buf[3] = v; */
+/*       buf[4] = v; */
+
+/*       send_spi(buf, sizeof(buf)); */
+/*       if (v % 100 == 0) { */
+/*         vTaskDelay(1); */
+/*       } */
+/*     } */
+/* 	} */
+/* } */
 
 void setup_spi() {
 	gpio_config_t io_conf;
@@ -94,7 +110,7 @@ void setup_spi() {
 	spi_config_t spi_config;
 	spi_config.interface.val = SPI_DEFAULT_INTERFACE;
 	spi_config.mode = SPI_MASTER_MODE;
-	spi_config.clk_div = SPI_40MHz_DIV;
+	spi_config.clk_div = SPI_8MHz_DIV;
 	spi_config.event_cb = NULL;
 	spi_init(HSPI_HOST, &spi_config);
 }
@@ -311,6 +327,9 @@ static void udp_server_task(void *pvParameters)
         }
         ESP_LOGI(TAG, "Socket binded");
 
+        uint8_t spi_buf[1024] = { 0 };
+        memset(spi_buf, 0, sizeof(spi_buf));
+
         while (1) {
             /* ESP_LOGI(TAG, "Waiting for data"); */
             struct sockaddr_in sourceAddr;
@@ -331,9 +350,18 @@ static void udp_server_task(void *pvParameters)
                 /* ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str); */
                 /* ESP_LOGI(TAG, "%s", rx_buffer); */
 
-                send_spi((uint8_t *)rx_buffer, len);
+                memset(spi_buf, 0, sizeof(spi_buf));
+                int spi_buf_len = len;
+                if (spi_buf_len > sizeof(spi_buf)) {
+                  spi_buf_len = sizeof(spi_buf);
+                }
 
-                int err = sendto(sock, rx_buffer, len, 0, (struct sockaddr *)&sourceAddr, sizeof(sourceAddr));
+                spi_xfer(rx_buffer, len, 0, 0);
+                spi_xfer(0, 0, spi_buf, spi_buf_len);
+                /* printf("%d\n", spi_buf_len); */
+                /* ESP_ERROR_CHECK(spi_err); */
+
+                int err = sendto(sock, spi_buf, spi_buf_len, 0, (struct sockaddr *)&sourceAddr, sizeof(sourceAddr));
                 if (err < 0) {
                     ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
                     break;

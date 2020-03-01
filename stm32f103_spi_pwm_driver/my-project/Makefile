@@ -22,3 +22,14 @@ OPENCM3_DIR=../../libopencm3
 include $(OPENCM3_DIR)/mk/genlink-config.mk
 include ../rules.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
+
+.PHONY: flash_bmp
+flash-bmp: stm32f103_spi_pwm_driver.elf
+	gdb-multiarch -nx --batch \
+  -ex 'target extended-remote /dev/ttyBmpGdb' \
+  -ex 'monitor swdp_scan' \
+  -ex 'attach 1' \
+  -ex 'load' \
+  -ex 'compare-sections' \
+  -ex 'kill' \
+  *.elf

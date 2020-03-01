@@ -32,6 +32,14 @@ LedValuesMessage input_msg =
    .led4_value = 0,
   };
 
+LedValuesMessage output_msg =
+  {
+   .magic = 0x4332,
+   .led1_value = 0x6546,
+   .led2_value = 0xFEFD,
+   .led3_value = 0xABCD,
+   .led4_value = 0xCDAB,
+  };
 
 LedValuesMessage msg =
   {
@@ -170,7 +178,7 @@ void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
 
 void start_dma() {
   read_from_spi_dma(&input_msg, sizeof(input_msg));
-  write_to_spi_dma(&msg, sizeof(msg));
+  write_to_spi_dma(&output_msg, sizeof(output_msg));
 }
 
 void stop_dma() {
@@ -199,6 +207,7 @@ static void set_msg_values_task(void *_value) {
 
   for(;;) {
     set_all_leds(msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
+    memcpy(&output_msg, &msg, sizeof(msg));
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
@@ -214,17 +223,33 @@ typedef struct {
 DmaChanStats chan2_stats = { 0 };
 DmaChanStats chan3_stats = { 0 };
 
+// not optimized at all
+int is_all_zeros(void *buf, size_t len) {
+  uint8_t *chars = (uint8_t *)buf;
+  for (size_t i = 0; i < len; i++) {
+    if (chars[i] != 0) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 void dma1_channel2_isr() {
   chan2_stats.isrs += 1;
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
-
-    if (is_msg_valid(&input_msg)) {
-      memcpy(&msg, &input_msg, sizeof(input_msg));
+    if (is_all_zeros(&input_msg, sizeof(input_msg))) {
+      // if circular dma is enabled (now it is) it will return the thing anyway
+      memcpy(&output_msg, &msg, sizeof(output_msg));
+    } else if (is_msg_valid(&input_msg)) {
+      memcpy(&msg, &input_msg, sizeof(msg));
+      memcpy(&output_msg, &input_msg, sizeof(msg));
     } else if (is_msg_read_request(&input_msg)) {
       // if circular dma is enabled (now it is) it will return the thing anyway
+      memcpy(&output_msg, &msg, sizeof(output_msg));
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
