@@ -5,7 +5,7 @@ spi_fade_test: flash fade_test
 fade_test: bin/spi_fade_test
 	bin/spi_fade_test | grep '<' | grep -v '0000 0000 0000 0000 0000'
 
-spi_echo_test: flash_stm32f103_spi_echo fade_test
+# spi_echo_test: flash_stm32f103_spi_echo fade_test
 
 linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/udp_gamepad bin/sine bin/set_value bin/udp_xfer bin/gamepad_udp
 
@@ -77,27 +77,31 @@ esp8266_wifi_bridge: esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf
 esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf: export CONFIG_SDK_TOOLPREFIX = $(LED_CONTROL_PATH)$(ESP8266_TOOLCHAIN_BIN)/xtensa-lx106-elf-
 esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf: export IDF_PATH = $(realpath $(LED_CONTROL_PATH)/ESP8266_RTOS_SDK)
 esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf: $(ESP8266_TOOLCHAIN) esp8266_wifi_bridge/main/*.c common/*
+	[ -f esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf ] && rm esp8266_wifi_bridge/build/esp8266_wifi_bridge.elf
 	./make_shit_esp_project.sh esp8266_wifi_bridge
 
-stm32: stm32f103_spi_pwm_driver stm32f103_spi_pwm_fade stm32f103_spi_echo
+stm32: stm32f103_spi_pwm_driver stm32f103_spi_pwm_fade # stm32f103_spi_echo
 
 stm32f103_spi_pwm_fade: stm32f103_spi_pwm_fade/my-project/bin/my-project.o
 
 stm32f103_spi_pwm_driver: stm32f103_spi_pwm_driver/my-project/bin/my-project.o
 
 stm32f103_spi_pwm_fade/my-project/bin/my-project.o: common/* stm32f103_spi_pwm_fade/my-project/*.cpp stm32f103_spi_pwm_fade/my-project/*.h
+	[ -f stm32f103_spi_pwm_fade/my-project/bin/my-project.o ] && rm stm32f103_spi_pwm_fade/my-project/bin/my-project.o
 	make -C stm32f103_spi_pwm_fade/my-project
 
 stm32f103_spi_pwm_driver/my-project/bin/my-project.o: common/* stm32f103_spi_pwm_driver/my-project/*.cpp stm32f103_spi_pwm_driver/my-project/*.h
+	[ -f stm32f103_spi_pwm_driver/my-project/bin/my-project.o ] && rm stm32f103_spi_pwm_driver/my-project/bin/my-project.o
 	make -C stm32f103_spi_pwm_driver/my-project
 
-flash_stm32f103_spi_echo: stm32f103_spi_echo
-	make flash -C stm32f103_spi_echo/my-project
+# .PHONY: flash_stm32f103_spi_echo
+# flash_stm32f103_spi_echo: stm32f103_spi_echo
+# 	make flash -C stm32f103_spi_echo/my-project
 
-stm32f103_spi_echo: stm32f103_spi_echo/my-project/bin/my-project.o
+# stm32f103_spi_echo: stm32f103_spi_echo/my-project/bin/my-project.o
 
-stm32f103_spi_echo/my-project/bin/my-project.o: common/* stm32f103_spi_echo/my-project/*.cpp stm32f103_spi_echo/my-project/*.h
-	make -C stm32f103_spi_echo/my-project
+# stm32f103_spi_echo/my-project/bin/my-project.o: common/* stm32f103_spi_echo/my-project/*.cpp stm32f103_spi_echo/my-project/*.h
+# 	make -C stm32f103_spi_echo/my-project
 
 .PHONY: clean
 clean:
