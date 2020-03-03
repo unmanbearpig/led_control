@@ -17,10 +17,8 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
    * - Alignment centre mode 1 (up/down counting, interrupt on downcount only)
    * - Direction up (when centre mode is set it is read only, changes by hardware)
    */
-  timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_CENTER_1, TIM_CR1_DIR_UP);
-
-  // Don't have to set the prescaler?
-  // timer_set_prescaler(TIM1, 2);
+  timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+  timer_set_prescaler(TIM1, 0); // it's the default, but whatever
 
   /* Set Timer output compare mode:
    * - Channel 1
