@@ -1,3 +1,4 @@
+#include <libopencm3/stm32/timer.h>
 
 #define PWM_PERIOD 65535
 

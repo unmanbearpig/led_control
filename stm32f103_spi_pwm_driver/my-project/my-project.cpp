@@ -10,7 +10,6 @@
 #include <libopencm3/stm32/f1/nvic.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/dma.h>
-#include <libopencm3/stm32/timer.h>
 #include "../../common/protocol.h"
 
 #include "pwm.h"
