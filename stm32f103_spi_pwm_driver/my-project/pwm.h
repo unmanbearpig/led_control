@@ -13,11 +13,6 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
   rcc_periph_clock_enable(RCC_TIM1);
   // timer_reset(TIM1); // missing
 
-  /* Set Timer global mode:
-   * - No division
-   * - Alignment centre mode 1 (up/down counting, interrupt on downcount only)
-   * - Direction up (when centre mode is set it is read only, changes by hardware)
-   */
   timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
   timer_set_prescaler(TIM1, 0); // it's the default, but whatever
 
