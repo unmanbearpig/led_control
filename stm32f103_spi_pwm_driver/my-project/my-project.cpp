@@ -40,14 +40,17 @@ volatile LedValuesMessage output_msg =
    .led4_value = 0xCDAB,
   };
 
+#define INITIAL_LED_VALUE 0xEEEE
 volatile LedValuesMessage msg =
   {
    .magic = led_values_message_magic,
-   .led1_value = 0xF2FA,
-   .led2_value = 0xF3FB,
-   .led3_value = 0xF4FA,
-   .led4_value = 0xACFC,
+   .led1_value = INITIAL_LED_VALUE,
+   .led2_value = INITIAL_LED_VALUE,
+   .led3_value = INITIAL_LED_VALUE,
+   .led4_value = INITIAL_LED_VALUE,
   };
+
+volatile int spi_command_received = 0;
 
 // SPI1
 // clock: RCC_SPI1
@@ -194,6 +197,31 @@ void restart_dma() {
   start_dma();
 }
 
+void init_tmp_fade_down_to(LedValuesMessage *msg, uint16_t *value, uint16_t target_value) {
+   for(; *value > target_value; *value = *value*=0.99 ) {
+    if (spi_command_received) {
+      break;
+    }
+
+    set_all_msg_values(msg, *value);
+    vTaskDelay(pdMS_TO_TICKS(25));
+  }
+}
+
+static void set_temp_initial_values_task(void *_value) {
+  LedValuesMessage *msg = (LedValuesMessage *)_value;
+  vTaskDelay(pdMS_TO_TICKS(3000));
+
+  uint16_t value = INITIAL_LED_VALUE;
+
+  init_tmp_fade_down_to(msg, &value, 0x8888);
+  vTaskDelay(pdMS_TO_TICKS(5000));
+  init_tmp_fade_down_to(msg, &value, 0x0111);
+  vTaskDelay(pdMS_TO_TICKS(2000));
+  init_tmp_fade_down_to(msg, &value, 0);
+  vTaskDelete(NULL);
+}
+
 static void set_msg_values_task(void *_value) {
   LedValuesMessage *msg = (LedValuesMessage *)_value;
 
@@ -243,6 +271,7 @@ int is_all_zeros(void *buf, size_t len) {
 
 void dma1_channel2_isr() {
   chan2_stats.isrs += 1;
+  spi_command_received = 1;
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
     chan2_stats.tcif_count += 1;
@@ -406,6 +435,7 @@ extern "C" int main(void) {
   xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(write_to_spi_dma_task, "START_DMA_TX_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
+  xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
 	vTaskStartScheduler();
 
