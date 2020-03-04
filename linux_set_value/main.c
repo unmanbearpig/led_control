@@ -6,7 +6,8 @@
 #include <arpa/inet.h>
 #include "../common/protocol.h"
 #include "../common/protocol_debug.h"
-
+#include "../common/secrets.h"
+#include "../common/args.h"
 
 int send_msg(int sock, struct sockaddr_in *sa, LedValuesMessage *msg) {
   print_msg(msg);
@@ -14,15 +15,23 @@ int send_msg(int sock, struct sockaddr_in *sa, LedValuesMessage *msg) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    fprintf(stderr, "need one argument\n");
+  if (argc < 2) {
+    fprintf(stderr, "usage: set_value VALUE [--host HOST] [--port PORT]\n");
     return(1);
   }
 
-  uint16_t value = atoi(argv[1]);
+  char *strtol_endptr = 0;
+  uint16_t value = strtol(argv[1], &strtol_endptr, 0);
+
+  if (strtol_endptr == argv[1]) {
+    fprintf(stderr, "first argument should be a value, but it is: %s\n", argv[1]);
+    exit(1);
+  }
 
   char *dst_host = "192.168.0.102";
-  int dst_port = 8932;
+  int dst_port = DEFAULT_UDP_PORT;
+
+  parse_args(argc, argv, &dst_host, &dst_port);
 
   int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (sock == -1) {
