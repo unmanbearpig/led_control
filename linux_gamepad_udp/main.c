@@ -42,7 +42,7 @@ typedef struct {
 #define BTN_RU 2
 #define BTN_RD 3
 
-unsigned int btn_map[] = { 0, 1, 2, 3 };
+int btn_map[] = { 0, 1, 2, 3 };
 
 double stick_value(uint8_t x, uint8_t y) {
   int8_t sx = gamepad_abs_to_rel_axis(x);
@@ -122,19 +122,27 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-    add_stick_value(&leds[btn_map[BTN_LU]].value, left_stick);
+    if (btn_map[BTN_LU] != -1) {
+      add_stick_value(&leds[btn_map[BTN_LU]].value, left_stick);
+    }
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-    add_stick_value(&leds[btn_map[BTN_LD]].value, left_stick);
+    if (btn_map[BTN_LD] != -1) {
+      add_stick_value(&leds[btn_map[BTN_LD]].value, left_stick);
+    }
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-    add_stick_value(&leds[btn_map[BTN_RU]].value, left_stick);
+    if (btn_map[BTN_RU] != -1) {
+      add_stick_value(&leds[btn_map[BTN_RU]].value, left_stick);
+    }
   }
 
   if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-    add_stick_value(&leds[btn_map[BTN_RD]].value, left_stick);
+    if (btn_map[BTN_RD] != -1) {
+      add_stick_value(&leds[btn_map[BTN_RD]].value, left_stick);
+    }
   }
 
   print_state(leds);
@@ -154,42 +162,58 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
 
   if (gamepad->thumbs & RIGHT_THUMB_UP) {
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-      converted_values[btn_map[BTN_LU]] = 0xFFFF;
+      if (btn_map[BTN_LU] != -1) {
+        converted_values[btn_map[BTN_LU]] = 0xFFFF;
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-      converted_values[btn_map[BTN_LD]] = 0xFFFF;
+      if (btn_map[BTN_LD] != -1) {
+        converted_values[btn_map[BTN_LD]] = 0xFFFF;
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-      converted_values[btn_map[BTN_RU]] = 0xFFFF;
+      if (btn_map[BTN_RU] != -1) {
+        converted_values[btn_map[BTN_RU]] = 0xFFFF;
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-      converted_values[btn_map[BTN_RD]] = 0xFFFF;
+      if (btn_map[BTN_RD] != -1) {
+        converted_values[btn_map[BTN_RD]] = 0xFFFF;
+      }
     }
   } else {
     double freq_delta = stick_x_value(gamepad->right_x) * 0.00001;
     double amplitude_delta = stick_y_value(gamepad->right_y) * 0.01;
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
-      leds[btn_map[BTN_LU]].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[btn_map[BTN_LU]].attrs.sine_amplitude, amplitude_delta);
+      if (btn_map[BTN_LU] != -1) {
+        leds[btn_map[BTN_LU]].attrs.sine_freq += freq_delta;
+        add_stick_value(&leds[btn_map[BTN_LU]].attrs.sine_amplitude, amplitude_delta);
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_DOWN) {
-      leds[btn_map[BTN_LD]].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[btn_map[BTN_LD]].attrs.sine_amplitude, amplitude_delta);
+      if (btn_map[BTN_LD] != -1) {
+        leds[btn_map[BTN_LD]].attrs.sine_freq += freq_delta;
+        add_stick_value(&leds[btn_map[BTN_LD]].attrs.sine_amplitude, amplitude_delta);
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_UP) {
-      leds[btn_map[BTN_RU]].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[btn_map[BTN_RU]].attrs.sine_amplitude, amplitude_delta);
+      if (btn_map[BTN_RU] != -1) {
+        leds[btn_map[BTN_RU]].attrs.sine_freq += freq_delta;
+        add_stick_value(&leds[btn_map[BTN_RU]].attrs.sine_amplitude, amplitude_delta);
+      }
     }
 
     if (gamepad->select_start_joystick_buttons_and_shoulders & SHOULDER_RIGHT_DOWN) {
-      leds[btn_map[BTN_RD]].attrs.sine_freq += freq_delta;
-      add_stick_value(&leds[btn_map[BTN_RD]].attrs.sine_amplitude, amplitude_delta);
+      if (btn_map[BTN_RD] != -1) {
+        leds[btn_map[BTN_RD]].attrs.sine_freq += freq_delta;
+        add_stick_value(&leds[btn_map[BTN_RD]].attrs.sine_amplitude, amplitude_delta);
+      }
     }
 
     for (int i = 0; i < 4; i++) {
