@@ -37,10 +37,6 @@ bin/udp_spi: linux_udp_spi/main.c common/*
 	[ -d bin ] || mkdir bin
 	gcc linux_udp_spi/main.c -o bin/udp_spi
 
-bin/udp_gamepad: linux_udp_gamepad/main.c common/*
-	[ -d bin ] || mkdir bin
-	gcc linux_udp_gamepad/main.c -o bin/udp_gamepad  -lm
-
 bin/sine: linux_sine/main.c common/*
 	[ -d bin ] || mkdir bin
 	gcc linux_sine/main.c -o bin/sine -lm
