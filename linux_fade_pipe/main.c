@@ -33,15 +33,12 @@ ssize_t write_msg(int fd, LedValuesMessage *msg) {
 }
 
 void fade_test(int fd) {
-  uint16_t buf = 0xAAAA;
+  float buf = 0.00001;
+  float step = 0.02;
 
-  uint16_t step = 1;
-  uint32_t sleep_us = 100;
+  uint32_t sleep_us = 0;
 
-  fprintf(stderr, "fade in...\n");
-  fflush(stderr);
-
-  uint16_t max = 0xFFFF;
+  // uint16_t max = 0xFFFF;
 
   LedValuesMessage msg =
     {
@@ -52,44 +49,46 @@ void fade_test(int fd) {
      .led4_value = 0,
     };
 
-  for(buf = 0; buf < (max - step); buf += step) {
-    msg.led1_value = buf;
-    msg.led2_value = buf;
-    msg.led3_value = buf;
-    msg.led4_value = buf;
-
-    write_msg(fd, &msg);
-    if (sleep_us > 0)
-      usleep(sleep_us);
-  }
-
-  fprintf(stderr, "fade out...\n");
+  fprintf(stderr, "fade in\n");
   fflush(stderr);
 
-  for(buf = max; buf > step; buf -= step) {
-    msg.led1_value = buf;
-    msg.led2_value = buf;
-    msg.led3_value = buf;
-    msg.led4_value = buf;
+  for(; buf < (1.0 - 0.00002); buf *= (1.0 + step)) {
+    uint16_t val = buf * 0xFFFF;
+
+    if (buf >= 1.0) {
+      val = 0xFFFF;
+    }
+
+    set_all_msg_values(&msg, val);
 
     write_msg(fd, &msg);
-    if (sleep_us > 0)
+    if(sleep_us > 0) {
       usleep(sleep_us);
+    }
+  }
+
+  fprintf(stderr, "fade out\n");
+  fflush(stderr);
+
+  for(; buf > 0.00002; buf *= (1.0 - step)) {
+    uint16_t val = buf * 0xFFFF;
+
+    if (buf >= 1.0) {
+      val = 0xFFFF;
+    }
+    set_all_msg_values(&msg, val);
+
+    write_msg(fd, &msg);
+    if(sleep_us > 0) {
+      usleep(sleep_us);
+    }
   }
 
   fprintf(stderr, "fade end.\n");
   fflush(stderr);
-
-  /* for(uint32_t i = 0; i < 0xFFFF; i++) { */
-  /*   write_16(fd, buf); */
-  /*   if (sleep_us > 0) */
-  /*     usleep(sleep_us); */
-  /* } */
-
-  /* printf("end test.\n"); */
-  /* fflush(stdout); */
 }
 
 int main(int argc, char *argv[]) {
   fade_test(1);
+  return(0);
 }
