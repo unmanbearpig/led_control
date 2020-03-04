@@ -2,16 +2,47 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <getopt.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
 #include "../common/protocol_debug.h"
 #include "../common/secrets.h"
-#include "../common/args.h"
 
 int send_msg(int sock, struct sockaddr_in *sa, LedValuesMessage *msg) {
   print_msg(msg);
   return sendto(sock, msg, sizeof(*msg), 0, (struct sockaddr *)sa, sizeof(*sa));
+}
+
+
+int parse_args(int argc, char *argv[], char **host, int *port) {
+  int argid = 0;
+
+  struct option opts[] =
+    {
+     { .name = "host", .has_arg = required_argument, .flag = &argid, .val = 'h' },
+     { .name = "port", .has_arg = required_argument, .flag = &argid, .val = 'p' },
+     { 0, 0, 0, 0 }
+    };
+
+  int longindex = 0;
+  int ch = 0;
+
+  while( (ch = getopt_long(argc, argv, "h:p:", opts, &longindex)) != -1 ) {
+    switch(argid) {
+    case 'h':
+      *host = optarg;
+      break;
+    case 'p':
+      *port = atoi(optarg);
+      break;
+    default:
+      return 1; // whatever
+    }
+  }
+
+  return(1);
 }
 
 int main(int argc, char *argv[]) {
