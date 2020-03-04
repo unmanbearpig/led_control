@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   memset(buf, 0, sizeof(buf));
 
-  int sleep_us = 10000;
+  int sleep_us = 5000;
 
   for(;;) {
     int bytes_read = read(STDIN_FILENO, buf, sizeof(buf));
