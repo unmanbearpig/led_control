@@ -7,7 +7,7 @@ fade_test: bin/spi_fade_test
 
 # spi_echo_test: flash_stm32f103_spi_echo fade_test
 
-linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/udp_gamepad bin/sine bin/set_value bin/udp_xfer bin/gamepad_udp
+linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/sine bin/set_value bin/udp_xfer bin/gamepad_udp
 
 bin/spi_pipe: linux_spi_pipe/main.c common/*
 	[ -d bin ] || mkdir bin
