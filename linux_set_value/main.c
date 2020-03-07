@@ -9,33 +9,40 @@
 #include "../common/protocol.h"
 #include "../common/protocol_debug.h"
 #include "../common/secrets.h"
+#include "../common/protocol_udp.h"
 
-int send_msg(int sock, struct sockaddr_in *sa, LedValuesMessage *msg) {
-  print_msg(msg);
-  return sendto(sock, msg, sizeof(*msg), 0, (struct sockaddr *)sa, sizeof(*sa));
-}
-
-
-int parse_args(int argc, char *argv[], char **host, int *port) {
+int parse_args(int argc, char *argv[], char **host, int *port, uint16_t *type) {
   int argid = 0;
 
   struct option opts[] =
     {
      { .name = "host", .has_arg = required_argument, .flag = &argid, .val = 'h' },
      { .name = "port", .has_arg = required_argument, .flag = &argid, .val = 'p' },
+     { .name = "type", .has_arg = required_argument, .flag = &argid, .val = 't' },
      { 0, 0, 0, 0 }
     };
 
   int longindex = 0;
   int ch = 0;
 
-  while( (ch = getopt_long(argc, argv, "h:p:", opts, &longindex)) != -1 ) {
+  while( (ch = getopt_long(argc, argv, "h:p:t:", opts, &longindex)) != -1 ) {
+    char *strtol_endptr = 0;
+
     switch(argid) {
     case 'h':
       *host = optarg;
       break;
     case 'p':
       *port = atoi(optarg);
+      break;
+    case 't':
+      *type = strtol(optarg, &strtol_endptr, 0);
+
+      if (strtol_endptr == optarg) {
+        fprintf(stderr, "first argument should be a value, but it is: %s\n", optarg);
+        exit(1);
+      }
+
       break;
     default:
       return 1; // whatever
@@ -47,7 +54,7 @@ int parse_args(int argc, char *argv[], char **host, int *port) {
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
-    fprintf(stderr, "usage: set_value VALUE [--host HOST] [--port PORT]\n");
+    fprintf(stderr, "usage: set_value VALUE [--type TYPE] [--host HOST] [--port PORT]\n");
     return(1);
   }
 
@@ -61,8 +68,9 @@ int main(int argc, char *argv[]) {
 
   char *dst_host = "192.168.0.102";
   int dst_port = DEFAULT_UDP_PORT;
+  uint16_t type = led_values_message_magic;
 
-  parse_args(argc, argv, &dst_host, &dst_port);
+  parse_args(argc, argv, &dst_host, &dst_port, &type);
 
   int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (sock == -1) {
@@ -80,12 +88,24 @@ int main(int argc, char *argv[]) {
 
   LedValuesMessage msg;
   memset(&msg, 0, sizeof(msg));
-  set_valid_msg_magic(&msg);
-
+  msg.magic = type;
   msg.led1_value = value;
   msg.led2_value = value;
   msg.led3_value = value;
   msg.led4_value = value;
 
+  print_msg(&msg, ">");
   send_msg(sock, &sa, &msg);
+
+
+  LedValuesMessage recv_msg;
+  memset(&recv_msg, 0, sizeof(recv_msg));
+  int recsize = recvfrom(sock, &recv_msg, sizeof(recv_msg), 0, NULL, NULL);
+
+  if (recsize == -1) {
+    fprintf(stderr, "recsize == -1\n");
+    return(1);
+  }
+
+  print_msg(&recv_msg, "<");
 }
