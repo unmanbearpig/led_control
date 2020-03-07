@@ -26,32 +26,17 @@ uint32_t led_delay_ms = 1500;
 LedValuesMessage input_msg =
   {
    .magic = 0,
-   .led1_value = 0,
-   .led2_value = 0,
-   .led3_value = 0,
-   .led4_value = 0,
+   .led_values = { 0, 0, 0, 0 }
   };
 
 volatile LedValuesMessage output_msgs[2];
 volatile LedValuesMessage *output_msg;
 
-// volatile LedValuesMessage output_msg =
-//   {
-//    .magic = 0x4332,
-//    .led1_value = 0x6546,
-//    .led2_value = 0xFEFD,
-//    .led3_value = 0xABCD,
-//    .led4_value = 0xCDAB,
-//   };
-
 #define INITIAL_LED_VALUE 0xEEEE
 volatile LedValuesMessage msg =
   {
    .magic = LED_VALUES_MESSAGE_MAGIC,
-   .led1_value = INITIAL_LED_VALUE,
-   .led2_value = INITIAL_LED_VALUE,
-   .led3_value = INITIAL_LED_VALUE,
-   .led4_value = INITIAL_LED_VALUE,
+   .led_values = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE }
   };
 
 volatile int spi_command_received = 0;
@@ -238,14 +223,14 @@ static void set_msg_values_task(void *_value) {
   }
 
   for(;;) {
-    set_all_leds(msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
+    set_all_leds(msg->led_values[0], msg->led_values[1], msg->led_values[2], msg->led_values[3]);
     // memcpy(&output_msg, &msg, sizeof(msg));
 
     output_msg->magic = msg->magic;
-    output_msg->led1_value = msg->led1_value;
-    output_msg->led2_value = msg->led2_value;
-    output_msg->led3_value = msg->led3_value;
-    output_msg->led4_value = msg->led4_value;
+    output_msg->led_values[0] = msg->led_values[0];
+    output_msg->led_values[1] = msg->led_values[1];
+    output_msg->led_values[2] = msg->led_values[2];
+    output_msg->led_values[3] = msg->led_values[3];
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -286,35 +271,34 @@ void dma1_channel2_isr() {
 
     if (input_msg.magic == 0xBADE) {
       output_msg->magic = 0xBAD0;
-      output_msg->led1_value = 0xFAFE;
-      output_msg->led2_value = 0x1234;
-      output_msg->led3_value = 0x8765;
-      output_msg->led4_value = 0xBCDE;
+      output_msg->led_values[0] = 0xFAFE;
+      output_msg->led_values[1] = 0x1234;
+      output_msg->led_values[2] = 0x8765;
+      output_msg->led_values[3] = 0xBCDE;
     } else if (is_all_zeros(&input_msg, sizeof(input_msg))) {
       output_msg->magic = 0xBBAB;
-      output_msg->led1_value = msg.led1_value;
-      output_msg->led2_value = msg.led2_value;
-      output_msg->led3_value = msg.led3_value;
-      output_msg->led4_value = msg.led4_value;
+      output_msg->led_values[0] = msg.led_values[0];
+      output_msg->led_values[1] = msg.led_values[1];
+      output_msg->led_values[2] = msg.led_values[2];
+      output_msg->led_values[3] = msg.led_values[3];
     } else if (is_msg_read_request(&input_msg)) {
       output_msg->magic = 0xCCAC;
-      output_msg->led1_value = msg.led1_value;
-      output_msg->led2_value = msg.led2_value;
-      output_msg->led3_value = msg.led3_value;
-      output_msg->led4_value = msg.led4_value;
+      output_msg->led_values[0] = msg.led_values[0];
+      output_msg->led_values[1] = msg.led_values[1];
+      output_msg->led_values[2] = msg.led_values[2];
+      output_msg->led_values[3] = msg.led_values[3];
     } else if (is_msg_valid(&input_msg)) {
       msg.magic = input_msg.magic;
-      msg.led1_value = input_msg.led1_value;
-      msg.led1_value = input_msg.led1_value;
-      msg.led2_value = input_msg.led2_value;
-      msg.led3_value = input_msg.led3_value;
-      msg.led4_value = input_msg.led4_value;
+      msg.led_values[0] = input_msg.led_values[0];
+      msg.led_values[1] = input_msg.led_values[1];
+      msg.led_values[2] = input_msg.led_values[2];
+      msg.led_values[3] = input_msg.led_values[3];
 
       output_msg->magic = 0xABCD;
-      output_msg->led1_value = msg.led1_value;
-      output_msg->led2_value = msg.led2_value;
-      output_msg->led3_value = msg.led3_value;
-      output_msg->led4_value = msg.led4_value;
+      output_msg->led_values[0] = msg.led_values[0];
+      output_msg->led_values[1] = msg.led_values[1];
+      output_msg->led_values[2] = msg.led_values[2];
+      output_msg->led_values[3] = msg.led_values[3];
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
@@ -327,10 +311,10 @@ void dma1_channel2_isr() {
       // Should change it no not changing state
 
       msg.magic = LED_VALUES_MESSAGE_MAGIC;
-      msg.led1_value = 0;
-      msg.led2_value = 0xFFFF;
-      msg.led3_value = 0;
-      msg.led4_value = 0xFFFF;
+      msg.led_values[0] = 0;
+      msg.led_values[1] = 0xFFFF;
+      msg.led_values[2] = 0;
+      msg.led_values[3] = 0xFFFF;
 
     }
   }

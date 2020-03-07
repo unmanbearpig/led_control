@@ -223,10 +223,10 @@ void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadState *gamep
     }
   }
 
-  msg->led1_value = converted_values[0];
-  msg->led2_value = converted_values[1];
-  msg->led3_value = converted_values[2];
-  msg->led4_value = converted_values[3];
+  msg->led_values[0] = converted_values[0];
+  msg->led_values[1] = converted_values[1];
+  msg->led_values[2] = converted_values[2];
+  msg->led_values[3] = converted_values[3];
 }
 
 void print_usage() {
@@ -334,10 +334,7 @@ int main(int argc, char *argv[]) {
   LedValuesMessage msg =
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
-     .led1_value = 0,
-     .led2_value = 0,
-     .led3_value = 0,
-     .led4_value = 0,
+     .led_values = { 0, 0, 0, 0 }
     };
 
 

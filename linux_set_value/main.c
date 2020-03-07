@@ -89,10 +89,10 @@ int main(int argc, char *argv[]) {
   LedValuesMessage msg;
   memset(&msg, 0, sizeof(msg));
   msg.magic = type;
-  msg.led1_value = value;
-  msg.led2_value = value;
-  msg.led3_value = value;
-  msg.led4_value = value;
+  msg.led_values[0] = value;
+  msg.led_values[1] = value;
+  msg.led_values[2] = value;
+  msg.led_values[3] = value;
 
   print_msg(&msg, ">");
   send_msg(sock, &sa, &msg);

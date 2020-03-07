@@ -74,16 +74,16 @@ uint16_t *get_midi_msg_led(LedValuesMessage *msg, MidiMsg *midi_msg) {
   uint16_t *led = 0;
   switch(midi_msg->what) {
   case 0x2c:
-    led = &msg->led1_value;
+    led = &msg->led_values[0];
     break;
   case 0x2d:
-    led = &msg->led2_value;
+    led = &msg->led_values[1];
     break;
   case 0x2e:
-    led = &msg->led3_value;
+    led = &msg->led_values[2];
     break;
   case 0x2f:
-    led = &msg->led4_value;
+    led = &msg->led_values[3];
     break;
   }
   return led;
@@ -148,10 +148,7 @@ int main(int argc, char *argv[]) {
   LedValuesMessage msg =
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
-     .led1_value = 0,
-     .led2_value = 0,
-     .led3_value = 0,
-     .led4_value = 0,
+     .led_values = { 0, 0, 0, 0 }
     };
 
 

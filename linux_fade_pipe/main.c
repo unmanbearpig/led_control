@@ -43,10 +43,7 @@ void fade_test(int fd) {
   LedValuesMessage msg =
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
-     .led1_value = 0,
-     .led2_value = 0,
-     .led3_value = 0,
-     .led4_value = 0,
+     .led_values = { 0, 0, 0, 0 }
     };
 
   fprintf(stderr, "fade in\n");

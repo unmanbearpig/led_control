@@ -24,10 +24,7 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 LedValuesMessage msg =
   {
    .magic = LED_VALUES_MESSAGE_MAGIC,
-   .led1_value = 0xFFFF,
-   .led2_value = 0xFFFF,
-   .led3_value = 0xFFFF,
-   .led4_value = 0xFFFF,
+   .led_values = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF }
   };
 
 #define PWM_DELAY_MS 100

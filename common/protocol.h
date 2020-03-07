@@ -7,10 +7,7 @@
 
 typedef struct __attribute__((__packed__)) {
   uint16_t magic;
-  uint16_t led1_value;
-  uint16_t led2_value;
-  uint16_t led3_value;
-  uint16_t led4_value;
+  uint16_t led_values[4];
 } LedValuesMessage;
 
 int is_msg_valid(LedValuesMessage *msg) {
@@ -27,15 +24,15 @@ void set_valid_msg_magic(LedValuesMessage *msg) {
 
 void set_msg_to_error_state(LedValuesMessage *msg) {
   set_valid_msg_magic(msg);
-  msg->led1_value = 0;
-  msg->led2_value = 0xFFFF;
-  msg->led3_value = 0;
-  msg->led4_value = 0xFFFF;
+  msg->led_values[0] = 0;
+  msg->led_values[1] = 0xFFFF;
+  msg->led_values[2] = 0;
+  msg->led_values[3] = 0xFFFF;
 }
 
 void set_all_msg_values(LedValuesMessage *msg, uint16_t value) {
-  msg->led1_value = value;
-  msg->led2_value = value;
-  msg->led3_value = value;
-  msg->led4_value = value;
+  msg->led_values[0] = value;
+  msg->led_values[1] = value;
+  msg->led_values[2] = value;
+  msg->led_values[3] = value;
 }

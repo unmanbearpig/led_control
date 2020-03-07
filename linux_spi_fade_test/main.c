@@ -28,17 +28,14 @@ void fade_test(int fd) {
   LedValuesMessage msg =
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
-     .led1_value = 0,
-     .led2_value = 0,
-     .led3_value = 0,
-     .led4_value = 0,
+     .led_values = { 0, 0, 0, 0 }
     };
 
   for(buf = 0; buf < (max - step); buf += step) {
-    msg.led1_value = buf;
-    msg.led2_value = buf;
-    msg.led3_value = buf;
-    msg.led4_value = buf;
+    msg.led_values[0] = buf;
+    msg.led_values[1] = buf;
+    msg.led_values[2] = buf;
+    msg.led_values[3] = buf;
 
     xfer_msg(fd, &msg, 1);
     if (sleep_us > 0)
@@ -49,10 +46,10 @@ void fade_test(int fd) {
   fflush(stdout);
 
   for(buf = max; buf > step; buf -= step) {
-    msg.led1_value = buf;
-    msg.led2_value = buf;
-    msg.led3_value = buf;
-    msg.led4_value = buf;
+    msg.led_values[0] = buf;
+    msg.led_values[1] = buf;
+    msg.led_values[2] = buf;
+    msg.led_values[3] = buf;
 
     xfer_msg(fd, &msg, 1);
     if (sleep_us > 0)

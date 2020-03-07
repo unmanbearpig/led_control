@@ -6,7 +6,7 @@ void print_msg(LedValuesMessage *msg, char *label) {
     label = ">";
   }
 
-  printf("%s    %04x %04x %04x %04x %04x\n", label, msg->magic, msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
+  printf("%s    %04x %04x %04x %04x %04x\n", label, msg->magic, msg->led_values[0], msg->led_values[1], msg->led_values[2], msg->led_values[3]);
 }
 
 void print_msg_bytes(uint16_t *buf) {
