@@ -10,6 +10,7 @@
 #include <libopencm3/stm32/f1/nvic.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/dma.h>
+#include <libopencm3/cm3/cortex.h>
 #include "../../common/protocol.h"
 
 #include "pwm.h"
@@ -31,14 +32,17 @@ LedValuesMessage input_msg =
    .led4_value = 0,
   };
 
-volatile LedValuesMessage output_msg =
-  {
-   .magic = 0x4332,
-   .led1_value = 0x6546,
-   .led2_value = 0xFEFD,
-   .led3_value = 0xABCD,
-   .led4_value = 0xCDAB,
-  };
+volatile LedValuesMessage output_msgs[2];
+volatile LedValuesMessage *output_msg;
+
+// volatile LedValuesMessage output_msg =
+//   {
+//    .magic = 0x4332,
+//    .led1_value = 0x6546,
+//    .led2_value = 0xFEFD,
+//    .led3_value = 0xABCD,
+//    .led4_value = 0xCDAB,
+//   };
 
 #define INITIAL_LED_VALUE 0xEEEE
 volatile LedValuesMessage msg =
@@ -151,7 +155,8 @@ void write_to_spi_dma(volatile void *tx_buf, uint32_t tx_len) {
 
   spi_enable_tx_dma(SPI1);
 
-  // dma_enable_transfer_complete_interrupt(dma, channel);
+  dma_enable_transfer_complete_interrupt(dma, channel);
+  dma_enable_half_transfer_interrupt(dma, channel);
 }
 
 
@@ -180,7 +185,7 @@ void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
 
 void start_dma() {
   read_from_spi_dma(&input_msg, sizeof(input_msg));
-  write_to_spi_dma(&output_msg, sizeof(output_msg));
+  write_to_spi_dma(output_msgs, sizeof(output_msgs));
 }
 
 void stop_dma() {
@@ -198,7 +203,7 @@ void restart_dma() {
 }
 
 void init_tmp_fade_down_to(LedValuesMessage *msg, uint16_t *value, uint16_t target_value) {
-   for(; *value > target_value; *value = *value*=0.99 ) {
+  for(; *value > target_value; *value = *value*=0.99 ) {
     if (spi_command_received) {
       break;
     }
@@ -236,11 +241,11 @@ static void set_msg_values_task(void *_value) {
     set_all_leds(msg->led1_value, msg->led2_value, msg->led3_value, msg->led4_value);
     // memcpy(&output_msg, &msg, sizeof(msg));
 
-    output_msg.magic = msg->magic;
-    output_msg.led1_value = msg->led1_value;
-    output_msg.led2_value = msg->led2_value;
-    output_msg.led3_value = msg->led3_value;
-    output_msg.led4_value = msg->led4_value;
+    output_msg->magic = msg->magic;
+    output_msg->led1_value = msg->led1_value;
+    output_msg->led2_value = msg->led2_value;
+    output_msg->led3_value = msg->led3_value;
+    output_msg->led4_value = msg->led4_value;
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -270,40 +275,34 @@ int is_all_zeros(void *buf, size_t len) {
 }
 
 void dma1_channel2_isr() {
+  cm_disable_interrupts();
+
   chan2_stats.isrs += 1;
   spi_command_received = 1;
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
+
     if (input_msg.magic == 0xBADE) {
-      output_msg.magic = 0xBADE;
-      output_msg.led1_value = 0xFAFE;
-      output_msg.led2_value = 0x1234;
-      output_msg.led3_value = 0x8765;
-      output_msg.led4_value = 0xBCDE;
+      output_msg->magic = 0xBAD0;
+      output_msg->led1_value = 0xFAFE;
+      output_msg->led2_value = 0x1234;
+      output_msg->led3_value = 0x8765;
+      output_msg->led4_value = 0xBCDE;
     } else if (is_all_zeros(&input_msg, sizeof(input_msg))) {
-      // if circular dma is enabled (now it is) it will return the thing anyway
-      // memcpy(&output_msg, &msg, sizeof(output_msg));
-
-      output_msg.magic = msg.magic;
-      output_msg.led1_value = msg.led1_value;
-      output_msg.led2_value = msg.led2_value;
-      output_msg.led3_value = msg.led3_value;
-      output_msg.led4_value = msg.led4_value;
+      output_msg->magic = 0xBBAB;
+      output_msg->led1_value = msg.led1_value;
+      output_msg->led2_value = msg.led2_value;
+      output_msg->led3_value = msg.led3_value;
+      output_msg->led4_value = msg.led4_value;
     } else if (is_msg_read_request(&input_msg)) {
-      // if circular dma is enabled (now it is) it will return the thing anyway
-      // memcpy(&output_msg, &msg, sizeof(output_msg));
-
-      output_msg.magic = msg.magic;
-      output_msg.led1_value = msg.led1_value;
-      output_msg.led2_value = msg.led2_value;
-      output_msg.led3_value = msg.led3_value;
-      output_msg.led4_value = msg.led4_value;
-
+      output_msg->magic = 0xCCAC;
+      output_msg->led1_value = msg.led1_value;
+      output_msg->led2_value = msg.led2_value;
+      output_msg->led3_value = msg.led3_value;
+      output_msg->led4_value = msg.led4_value;
     } else if (is_msg_valid(&input_msg)) {
-      // memcpy(&msg, &input_msg, sizeof(msg));
-
       msg.magic = input_msg.magic;
       msg.led1_value = input_msg.led1_value;
       msg.led1_value = input_msg.led1_value;
@@ -311,13 +310,11 @@ void dma1_channel2_isr() {
       msg.led3_value = input_msg.led3_value;
       msg.led4_value = input_msg.led4_value;
 
-      // memcpy(&output_msg, &input_msg, sizeof(msg));
-
-      output_msg.magic = 0x7272;
-      output_msg.led1_value = msg.led1_value;
-      output_msg.led2_value = msg.led2_value;
-      output_msg.led3_value = msg.led3_value;
-      output_msg.led4_value = msg.led4_value;
+      output_msg->magic = 0xABCD;
+      output_msg->led1_value = msg.led1_value;
+      output_msg->led2_value = msg.led2_value;
+      output_msg->led3_value = msg.led3_value;
+      output_msg->led4_value = msg.led4_value;
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
@@ -328,7 +325,6 @@ void dma1_channel2_isr() {
       restart_dma();
       // Debugging, so I notice the errors better.
       // Should change it no not changing state
-      // set_msg_to_error_state(&msg);
 
       msg.magic = led_values_message_magic;
       msg.led1_value = 0;
@@ -349,46 +345,28 @@ void dma1_channel2_isr() {
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TEIF);
   }
 
-
-  // if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_TCIF)) {
-  //   if (is_msg_valid(&input_msg)) {
-  //     memcpy(&msg, &input_msg, sizeof(input_msg));
-  //   } else {
-  //     // We (the slave) might go out of sync with the host,
-  //     // i.e. we incorrectly assume the start of the message
-  //     // it might happen if the slave was (re)started in the middle of communication
-  //     // Here we try to resynchronize with the host by just restarting SPI DMA
-  //     // Eventually we should catch the correct start of the message and stop receiving errors
-  //     // There probably is a better way, but it works for now
-  //     restart_dma();
-  //     // Debugging, so I notice the errors better.
-  //     // Should change it no not changing state
-  //     set_msg_to_error_state(&msg);
-  //   }
-
-  //   dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
-  // } else {
-  //   set_valid_msg_magic(&msg);
-  //   msg.led1_value = 0;
-  //   msg.led2_value = 0;
-  //   msg.led3_value = 0;
-  //   msg.led4_value = 0xFFFF;
-
-  //   restart_dma();
-  // }
+  cm_enable_interrupts();
 }
 
+
 void dma1_channel3_isr() {
+  cm_disable_interrupts();
   chan3_stats.isrs += 1;
 
+  // complete
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL3, DMA_TCIF)) {
     chan3_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_TCIF);
+
+    output_msg = &output_msgs[1];
   }
 
+  // half transfer
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL3, DMA_HTIF)) {
     chan3_stats.htif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_HTIF);
+
+    output_msg = &output_msgs[0];
   }
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL3, DMA_TEIF)) {
@@ -396,23 +374,8 @@ void dma1_channel3_isr() {
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_TEIF);
   }
 
-  // spi_disable_tx_dma(SPI1);
-  // write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
-
-  // breaks the leds when I comment it out, but the isrs number goes up
-  // dma_clear_interrupt_flags(DMA1, DMA_CHANNEL3, DMA_TCIF);
+  cm_enable_interrupts();
 }
-
-// static void write_to_spi_dma_task(void *_arg __attribute((unused))) {
-//   for(;;) {
-//     spi_disable_tx_dma(SPI1);
-
-//     SPI1_DR = 0xFF;
-//     vTaskDelay(pdMS_TO_TICKS(1));
-
-//     write_to_spi_dma(&tx_msg, (sizeof(tx_msg)));
-//   }
-// }
 
 extern "C" int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
@@ -426,6 +389,9 @@ extern "C" int main(void) {
                 GPIO_CNF_OUTPUT_PUSHPULL,
                 GPIO13);
 
+  memset((void *)output_msgs, 0, sizeof(output_msgs));
+  output_msg = &output_msgs[0];
+
   spi_setup();
   spi_dma_setup();
   start_dma();
@@ -433,8 +399,6 @@ extern "C" int main(void) {
   pwm_setup(TIM_OCM_PWM2);
 
   xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
-  // xTaskCreate(write_to_spi_dma_task, "START_DMA_TX_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
-
   xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
 	vTaskStartScheduler();
