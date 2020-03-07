@@ -23,7 +23,7 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 
 LedValuesMessage msg =
   {
-   .magic = led_values_message_magic,
+   .magic = LED_VALUES_MESSAGE_MAGIC,
    .led1_value = 0xFFFF,
    .led2_value = 0xFFFF,
    .led3_value = 0xFFFF,

@@ -47,7 +47,7 @@ volatile LedValuesMessage *output_msg;
 #define INITIAL_LED_VALUE 0xEEEE
 volatile LedValuesMessage msg =
   {
-   .magic = led_values_message_magic,
+   .magic = LED_VALUES_MESSAGE_MAGIC,
    .led1_value = INITIAL_LED_VALUE,
    .led2_value = INITIAL_LED_VALUE,
    .led3_value = INITIAL_LED_VALUE,
@@ -326,7 +326,7 @@ void dma1_channel2_isr() {
       // Debugging, so I notice the errors better.
       // Should change it no not changing state
 
-      msg.magic = led_values_message_magic;
+      msg.magic = LED_VALUES_MESSAGE_MAGIC;
       msg.led1_value = 0;
       msg.led2_value = 0xFFFF;
       msg.led3_value = 0;

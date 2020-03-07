@@ -42,7 +42,7 @@ void fade_test(int fd) {
 
   LedValuesMessage msg =
     {
-     .magic = led_values_message_magic,
+     .magic = LED_VALUES_MESSAGE_MAGIC,
      .led1_value = 0,
      .led2_value = 0,
      .led3_value = 0,

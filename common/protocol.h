@@ -2,9 +2,8 @@
 
 #include <inttypes.h>
 
-const uint16_t led_values_message_magic = 0x1324;
-const uint16_t led_values_message_read_request_magic = 0xFEED;
-
+#define LED_VALUES_MESSAGE_MAGIC 0x1324
+#define LED_VALUES_MESSAGE_READ_REQUEST_MAGIC 0xFEED;
 
 typedef struct __attribute__((__packed__)) {
   uint16_t magic;
@@ -15,15 +14,15 @@ typedef struct __attribute__((__packed__)) {
 } LedValuesMessage;
 
 int is_msg_valid(LedValuesMessage *msg) {
-  return msg->magic == led_values_message_magic;
+  return msg->magic == LED_VALUES_MESSAGE_MAGIC;
 }
 
 int is_msg_read_request(LedValuesMessage *msg) {
-  return msg->magic == led_values_message_read_request_magic;
+  return msg->magic == LED_VALUES_MESSAGE_READ_REQUEST_MAGIC;
 }
 
 void set_valid_msg_magic(LedValuesMessage *msg) {
-  msg->magic = led_values_message_magic;
+  msg->magic = LED_VALUES_MESSAGE_MAGIC;
 }
 
 void set_msg_to_error_state(LedValuesMessage *msg) {

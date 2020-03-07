@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
   char *dst_host = "192.168.0.102";
   int dst_port = DEFAULT_UDP_PORT;
-  uint16_t type = led_values_message_magic;
+  uint16_t type = LED_VALUES_MESSAGE_MAGIC;
 
   parse_args(argc, argv, &dst_host, &dst_port, &type);
 
