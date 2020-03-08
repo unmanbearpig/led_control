@@ -5,8 +5,14 @@
 #define LED_VALUES_MESSAGE_MAGIC 0x1324
 #define LED_VALUES_MESSAGE_READ_REQUEST_MAGIC 0xFEED;
 
+#define LED_READ 1
+#define LED_WRITE 2
+#define LED_VALUES 4
+#define LED_CONFIG 8
+
 typedef struct __attribute__((__packed__)) {
   uint16_t magic;
+  uint16_t type;
   uint16_t led_values[4];
 } LedValuesMessage;
 

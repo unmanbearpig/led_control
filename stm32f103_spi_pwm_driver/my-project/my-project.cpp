@@ -26,6 +26,7 @@ uint32_t led_delay_ms = 1500;
 LedValuesMessage input_msg =
   {
    .magic = 0,
+   .type = 0,
    .led_values = { 0, 0, 0, 0 }
   };
 
@@ -36,6 +37,7 @@ volatile LedValuesMessage *output_msg;
 volatile LedValuesMessage msg =
   {
    .magic = LED_VALUES_MESSAGE_MAGIC,
+   .type = 0,
    .led_values = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE }
   };
 
