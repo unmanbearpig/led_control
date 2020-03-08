@@ -34,12 +34,9 @@ volatile LedValuesMessage output_msgs[2];
 volatile LedValuesMessage *output_msg;
 
 #define INITIAL_LED_VALUE 0xEEEE
-volatile LedValuesMessage msg =
-  {
-   .magic = LED_VALUES_MESSAGE_MAGIC,
-   .type = 0,
-   .led_values = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE }
-  };
+uint16_t led_values[4] = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE };
+
+int led_count =  (sizeof(led_values) / sizeof(led_values[0]));
 
 volatile int spi_command_received = 0;
 
@@ -189,50 +186,39 @@ void restart_dma() {
   start_dma();
 }
 
-void init_tmp_fade_down_to(LedValuesMessage *msg, uint16_t *value, uint16_t target_value) {
+void init_tmp_fade_down_to(uint16_t *led_values, uint16_t *value, uint16_t target_value) {
   for(; *value > target_value; *value = *value*=0.99 ) {
     if (spi_command_received) {
       break;
     }
 
-    set_all_msg_values(msg, *value);
+    for(int i = 0; i < led_count; i++) {
+      led_values[i] = *value;
+    }
+
     vTaskDelay(pdMS_TO_TICKS(25));
   }
 }
 
 static void set_temp_initial_values_task(void *_value) {
-  LedValuesMessage *msg = (LedValuesMessage *)_value;
+  uint16_t *led_values = (uint16_t *)_value;
   vTaskDelay(pdMS_TO_TICKS(3000));
 
   uint16_t value = INITIAL_LED_VALUE;
 
-  init_tmp_fade_down_to(msg, &value, 0x8888);
+  init_tmp_fade_down_to(led_values, &value, 0x8888);
   vTaskDelay(pdMS_TO_TICKS(5000));
-  init_tmp_fade_down_to(msg, &value, 0x0111);
+  init_tmp_fade_down_to(led_values, &value, 0x0111);
   vTaskDelay(pdMS_TO_TICKS(2000));
-  init_tmp_fade_down_to(msg, &value, 0);
+  init_tmp_fade_down_to(led_values, &value, 0);
   vTaskDelete(NULL);
 }
 
 static void set_msg_values_task(void *_value) {
-  LedValuesMessage *msg = (LedValuesMessage *)_value;
-
-  // we don't need it do we?
-  if (!is_msg_valid(msg)) {
-    restart_dma();
-    set_msg_to_error_state(msg);
-    return;
-  }
+  uint16_t *led_vaules = (uint16_t *)_value;
 
   for(;;) {
-    set_all_leds(msg->led_values[0], msg->led_values[1], msg->led_values[2], msg->led_values[3]);
-    // memcpy(&output_msg, &msg, sizeof(msg));
-
-    output_msg->magic = msg->magic;
-    output_msg->led_values[0] = msg->led_values[0];
-    output_msg->led_values[1] = msg->led_values[1];
-    output_msg->led_values[2] = msg->led_values[2];
-    output_msg->led_values[3] = msg->led_values[3];
+    set_all_leds(led_values[0], led_values[1], led_values[2], led_values[3]);
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -279,28 +265,27 @@ void dma1_channel2_isr() {
       output_msg->led_values[3] = 0xBCDE;
     } else if (is_all_zeros(&input_msg, sizeof(input_msg))) {
       output_msg->magic = 0xBBAB;
-      output_msg->led_values[0] = msg.led_values[0];
-      output_msg->led_values[1] = msg.led_values[1];
-      output_msg->led_values[2] = msg.led_values[2];
-      output_msg->led_values[3] = msg.led_values[3];
+      output_msg->led_values[0] = led_values[0];
+      output_msg->led_values[1] = led_values[1];
+      output_msg->led_values[2] = led_values[2];
+      output_msg->led_values[3] = led_values[3];
     } else if (is_msg_read_request(&input_msg)) {
       output_msg->magic = 0xCCAC;
-      output_msg->led_values[0] = msg.led_values[0];
-      output_msg->led_values[1] = msg.led_values[1];
-      output_msg->led_values[2] = msg.led_values[2];
-      output_msg->led_values[3] = msg.led_values[3];
+      output_msg->led_values[0] = led_values[0];
+      output_msg->led_values[1] = led_values[1];
+      output_msg->led_values[2] = led_values[2];
+      output_msg->led_values[3] = led_values[3];
     } else if (is_msg_valid(&input_msg)) {
-      msg.magic = input_msg.magic;
-      msg.led_values[0] = input_msg.led_values[0];
-      msg.led_values[1] = input_msg.led_values[1];
-      msg.led_values[2] = input_msg.led_values[2];
-      msg.led_values[3] = input_msg.led_values[3];
+      led_values[0] = input_msg.led_values[0];
+      led_values[1] = input_msg.led_values[1];
+      led_values[2] = input_msg.led_values[2];
+      led_values[3] = input_msg.led_values[3];
 
       output_msg->magic = 0xABCD;
-      output_msg->led_values[0] = msg.led_values[0];
-      output_msg->led_values[1] = msg.led_values[1];
-      output_msg->led_values[2] = msg.led_values[2];
-      output_msg->led_values[3] = msg.led_values[3];
+      output_msg->led_values[0] = led_values[0];
+      output_msg->led_values[1] = led_values[1];
+      output_msg->led_values[2] = led_values[2];
+      output_msg->led_values[3] = led_values[3];
     } else {
       // We (the slave) might go out of sync with the host,
       // i.e. we incorrectly assume the start of the message
@@ -312,12 +297,10 @@ void dma1_channel2_isr() {
       // Debugging, so I notice the errors better.
       // Should change it no not changing state
 
-      msg.magic = LED_VALUES_MESSAGE_MAGIC;
-      msg.led_values[0] = 0;
-      msg.led_values[1] = 0xFFFF;
-      msg.led_values[2] = 0;
-      msg.led_values[3] = 0xFFFF;
-
+      led_values[0] = 0;
+      led_values[1] = 0xFFFF;
+      led_values[2] = 0;
+      led_values[3] = 0xFFFF;
     }
   }
 
@@ -384,8 +367,8 @@ extern "C" int main(void) {
 
   pwm_setup(TIM_OCM_PWM2);
 
-  xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
-  xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
+  xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
+  xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
 
 	vTaskStartScheduler();
 
