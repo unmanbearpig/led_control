@@ -257,31 +257,21 @@ void dma1_channel2_isr() {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
 
-    if (input_msg.magic == 0xBADE) {
-      output_msg->magic = 0xBAD0;
-      output_msg->led_values[0] = 0xFAFE;
-      output_msg->led_values[1] = 0x1234;
-      output_msg->led_values[2] = 0x8765;
-      output_msg->led_values[3] = 0xBCDE;
-    } else if (is_all_zeros(&input_msg, sizeof(input_msg))) {
-      output_msg->magic = 0xBBAB;
-      output_msg->led_values[0] = led_values[0];
-      output_msg->led_values[1] = led_values[1];
-      output_msg->led_values[2] = led_values[2];
-      output_msg->led_values[3] = led_values[3];
-    } else if (is_msg_read_request(&input_msg)) {
-      output_msg->magic = 0xCCAC;
+    if (is_all_zeros(&input_msg, sizeof(input_msg))) {
+      output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
       output_msg->led_values[0] = led_values[0];
       output_msg->led_values[1] = led_values[1];
       output_msg->led_values[2] = led_values[2];
       output_msg->led_values[3] = led_values[3];
     } else if (is_msg_valid(&input_msg)) {
-      led_values[0] = input_msg.led_values[0];
-      led_values[1] = input_msg.led_values[1];
-      led_values[2] = input_msg.led_values[2];
-      led_values[3] = input_msg.led_values[3];
+      if (input_msg.type & LED_WRITE) {
+        led_values[0] = input_msg.led_values[0];
+        led_values[1] = input_msg.led_values[1];
+        led_values[2] = input_msg.led_values[2];
+        led_values[3] = input_msg.led_values[3];
+      }
 
-      output_msg->magic = 0xABCD;
+      output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
       output_msg->led_values[0] = led_values[0];
       output_msg->led_values[1] = led_values[1];
       output_msg->led_values[2] = led_values[2];

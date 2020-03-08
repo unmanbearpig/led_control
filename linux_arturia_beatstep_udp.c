@@ -30,7 +30,7 @@ void print_usage() {
   fprintf(stderr, "TODO");
 }
 
-int parse_args(int argc, char *argv[], char **host, int *port, char **device_path) {
+int parse_args(int argc, char *argv[], char **host, int *port, char **device_path, int *should_read) {
   int argid = 0;
 
   struct option opts[] =
@@ -39,13 +39,14 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **device_pat
      { .name = "host", .has_arg = required_argument, .flag = &argid, .val = 'h' },
      { .name = "port", .has_arg = required_argument, .flag = &argid, .val = 'p' },
      { .name = "verbose", .has_arg = no_argument, .flag = &argid, .val = 'v' },
+     { .name = "read", .has_arg = no_argument, .flag = &argid, .val = 'r' },
      { 0, 0, 0, 0 }
     };
 
   int longindex = 0;
   int ch = 0;
 
-  while( (ch = getopt_long(argc, argv, "s:g:c:t:r:n:v", opts, &longindex)) != -1 ) {
+  while( (ch = getopt_long(argc, argv, "s:g:c:t:r:n:vr", opts, &longindex)) != -1 ) {
     switch(argid) {
     case 'h':
       *host = optarg;
@@ -58,6 +59,9 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **device_pat
       break;
     case 'v':
       verbose = 1;
+      break;
+    case 'r':
+      *should_read = 1;
       break;
     default:
       fprintf(stderr, "Invalid argument\n");
@@ -112,12 +116,13 @@ int main(int argc, char *argv[]) {
   char *device_path = ""; // DEFAULT_GAMEPAD_PATH;
   char *host = 0;
   int port = 0;
+  int should_read = 0;
 
 #ifdef DEFAULT_UDP_PORT
   port = DEFAULT_UDP_PORT;
 #endif
 
-  if (!parse_args(argc, argv, &host, &port, &device_path)) {
+  if (!parse_args(argc, argv, &host, &port, &device_path, &should_read)) {
     exit(1);
   }
 
@@ -148,9 +153,13 @@ int main(int argc, char *argv[]) {
   LedValuesMessage msg =
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
+     .type = LED_WRITE,
      .led_values = { 0, 0, 0, 0 }
     };
 
+  if (should_read) {
+    msg.type |= LED_READ;
+  }
 
   int sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   if (sock == -1) {
@@ -169,7 +178,7 @@ int main(int argc, char *argv[]) {
 
   memset(buf, 0, sizeof(buf));
 
-  int sleep_us = 10000;
+  int sleep_us = 5000;
 
   uint8_t input_buf[sizeof(LedValuesMessage)];
 
@@ -196,13 +205,15 @@ int main(int argc, char *argv[]) {
 
     sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&sa, sizeof(sa));
 
-    ssize_t bytes_received = recv(sock, input_buf, sizeof(input_buf), 0);
+    if (should_read) {
+      ssize_t bytes_received = recv(sock, input_buf, sizeof(input_buf), 0);
 
-    if (bytes_received != -1) {
-      if (bytes_received != sizeof(input_buf)) {
-        fprintf(stderr, "received %ld bytes instead of %lu\n", bytes_received, (unsigned long)sizeof(input_buf));
+      if (bytes_received != -1) {
+        if (bytes_received != sizeof(input_buf)) {
+          fprintf(stderr, "received %ld bytes instead of %lu\n", bytes_received, (unsigned long)sizeof(input_buf));
+        }
+        write(STDOUT_FILENO, input_buf, sizeof(input_buf));
       }
-      write(STDOUT_FILENO, input_buf, sizeof(input_buf));
     }
 
     if (verbose) {

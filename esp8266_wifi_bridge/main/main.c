@@ -13,6 +13,8 @@
 #include "driver/gpio.h"
 #include "driver/spi.h"
 
+#include "../../common/protocol.h"
+
 #define	LED_OUTPUT_PIN_SEL	( (1 << GPIO_NUM_2) | (1 << GPIO_NUM_2) )
 
 #define SPI_CS				GPIO_NUM_15
@@ -221,161 +223,165 @@ static int s_retry_num = 0;
 
 
 static void event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
+                          int32_t event_id, void* event_data)
 {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP");
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGI(TAG,"connect to the AP fail");
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:%s",
-                 ip4addr_ntoa(&event->ip_info.ip));
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+  if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+    esp_wifi_connect();
+  } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+      esp_wifi_connect();
+      s_retry_num++;
+      ESP_LOGI(TAG, "retry to connect to the AP");
+    } else {
+      xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
     }
+    ESP_LOGI(TAG,"connect to the AP fail");
+  } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+    ESP_LOGI(TAG, "got ip:%s",
+             ip4addr_ntoa(&event->ip_info.ip));
+    s_retry_num = 0;
+    xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+  }
 }
 
 
 
 void wifi_init_sta(void)
 {
-    s_wifi_event_group = xEventGroupCreate();
+  s_wifi_event_group = xEventGroupCreate();
 
-    tcpip_adapter_init();
+  tcpip_adapter_init();
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS
-        },
-    };
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
-    ESP_ERROR_CHECK(esp_wifi_start() );
+  wifi_config_t wifi_config = {
+                               .sta = {
+                                       .ssid = WIFI_SSID,
+                                       .password = WIFI_PASS
+                                       },
+  };
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+  ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+  ESP_ERROR_CHECK(esp_wifi_start() );
 
-    ESP_LOGI(TAG, "wifi_init_sta finished.");
+  ESP_LOGI(TAG, "wifi_init_sta finished.");
 
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
+  /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+   * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
+  EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+                                         WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                         pdFALSE,
+                                         pdFALSE,
+                                         portMAX_DELAY);
 
-    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-     * happened. */
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 WIFI_SSID, WIFI_PASS);
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 WIFI_SSID, WIFI_PASS);
-    } else {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
-    }
+  /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
+   * happened. */
+  if (bits & WIFI_CONNECTED_BIT) {
+    ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
+             WIFI_SSID, WIFI_PASS);
+  } else if (bits & WIFI_FAIL_BIT) {
+    ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
+             WIFI_SSID, WIFI_PASS);
+  } else {
+    ESP_LOGE(TAG, "UNEXPECTED EVENT");
+  }
 
-    ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler));
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
-    vEventGroupDelete(s_wifi_event_group);
+  ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler));
+  ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler));
+  vEventGroupDelete(s_wifi_event_group);
 }
 
 #define PORT 8932
 
 static void udp_server_task(void *pvParameters)
 {
-    char rx_buffer[128];
-    char addr_str[128];
-    int addr_family;
-    int ip_protocol;
+  char rx_buffer[128];
+  char addr_str[128];
+  int addr_family;
+  int ip_protocol;
+
+  while (1) {
+    struct sockaddr_in destAddr;
+    destAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    destAddr.sin_family = AF_INET;
+    destAddr.sin_port = htons(PORT);
+    addr_family = AF_INET;
+    ip_protocol = IPPROTO_IP;
+    inet_ntoa_r(destAddr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+    int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
+    if (sock < 0) {
+      ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+      break;
+    }
+    ESP_LOGI(TAG, "Socket created");
+
+    int err = bind(sock, (struct sockaddr *)&destAddr, sizeof(destAddr));
+    if (err < 0) {
+      ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
+    }
+    ESP_LOGI(TAG, "Socket binded");
+
+    uint8_t spi_buf[1024] = { 0 };
+    memset(spi_buf, 0, sizeof(spi_buf));
 
     while (1) {
-        struct sockaddr_in destAddr;
-        destAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-        destAddr.sin_family = AF_INET;
-        destAddr.sin_port = htons(PORT);
-        addr_family = AF_INET;
-        ip_protocol = IPPROTO_IP;
-        inet_ntoa_r(destAddr.sin_addr, addr_str, sizeof(addr_str) - 1);
+      /* ESP_LOGI(TAG, "Waiting for data"); */
+      struct sockaddr_in sourceAddr;
+      socklen_t socklen = sizeof(sourceAddr);
+      int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&sourceAddr, &socklen);
 
-        int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
-        if (sock < 0) {
-            ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-            break;
-        }
-        ESP_LOGI(TAG, "Socket created");
+      // Error occured during receiving
+      if (len < 0) {
+        ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
+        break;
+      }
+      // Data received
+      else {
+        // Get the sender's ip address as string
+        inet_ntoa_r(((struct sockaddr_in *)&sourceAddr)->sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
 
-        int err = bind(sock, (struct sockaddr *)&destAddr, sizeof(destAddr));
-        if (err < 0) {
-            ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
-        }
-        ESP_LOGI(TAG, "Socket binded");
+        //rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string...
+        /* ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str); */
+        /* ESP_LOGI(TAG, "%s", rx_buffer); */
 
-        uint8_t spi_buf[1024] = { 0 };
         memset(spi_buf, 0, sizeof(spi_buf));
-
-        while (1) {
-            /* ESP_LOGI(TAG, "Waiting for data"); */
-            struct sockaddr_in sourceAddr;
-            socklen_t socklen = sizeof(sourceAddr);
-            int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&sourceAddr, &socklen);
-
-            // Error occured during receiving
-            if (len < 0) {
-                ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
-                break;
-            }
-            // Data received
-            else {
-                // Get the sender's ip address as string
-                inet_ntoa_r(((struct sockaddr_in *)&sourceAddr)->sin_addr.s_addr, addr_str, sizeof(addr_str) - 1);
-
-                //rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string...
-                /* ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str); */
-                /* ESP_LOGI(TAG, "%s", rx_buffer); */
-
-                memset(spi_buf, 0, sizeof(spi_buf));
-                int spi_buf_len = len;
-                if (spi_buf_len > sizeof(spi_buf)) {
-                  spi_buf_len = sizeof(spi_buf);
-                }
-
-                spi_xfer(rx_buffer, len, 0, 0);
-                spi_xfer(0, 0, spi_buf, spi_buf_len);
-                /* printf("%d\n", spi_buf_len); */
-                /* ESP_ERROR_CHECK(spi_err); */
-
-                int err = sendto(sock, spi_buf, spi_buf_len, 0, (struct sockaddr *)&sourceAddr, sizeof(sourceAddr));
-                if (err < 0) {
-                    ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
-                    break;
-                }
-            }
+        int spi_buf_len = len;
+        if (spi_buf_len > sizeof(spi_buf)) {
+          spi_buf_len = sizeof(spi_buf);
         }
 
-        if (sock != -1) {
-            ESP_LOGE(TAG, "Shutting down socket and restarting...");
-            shutdown(sock, 0);
-            close(sock);
+        spi_xfer(rx_buffer, len, 0, 0);
+
+        if (len >= sizeof(LedValuesMessage)) {
+          LedValuesMessage *msg = (LedValuesMessage *)rx_buffer;
+          if (msg->type & LED_READ) {
+            spi_xfer(0, 0, spi_buf, spi_buf_len);
+          }
         }
+
+        int err = sendto(sock, spi_buf, spi_buf_len, 0, (struct sockaddr *)&sourceAddr, sizeof(sourceAddr));
+        if (err < 0) {
+          ESP_LOGE(TAG, "Error occured during sending: errno %d", errno);
+          break;
+        }
+      }
     }
-    vTaskDelete(NULL);
+
+    if (sock != -1) {
+      ESP_LOGE(TAG, "Shutting down socket and restarting...");
+      shutdown(sock, 0);
+      close(sock);
+    }
+  }
+  vTaskDelete(NULL);
 }
 
 
@@ -384,13 +390,13 @@ void app_main()
   printf("ssid=%s\n", WIFI_SSID);
   printf("pass=%s\n", WIFI_PASS);
 
-    setup_spi();
-    /* xTaskCreate(spi_master_write_slave_task, "spi_master_write_slave", 2048, NULL, 3, NULL); */
+  setup_spi();
+  /* xTaskCreate(spi_master_write_slave_task, "spi_master_write_slave", 2048, NULL, 3, NULL); */
 
-    ESP_ERROR_CHECK(nvs_flash_init());
+  ESP_ERROR_CHECK(nvs_flash_init());
 
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
-    wifi_init_sta();
+  ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
+  wifi_init_sta();
 
-    xTaskCreate(udp_server_task, "udp_server", 4096, NULL, 5, NULL);
+  xTaskCreate(udp_server_task, "udp_server", 4096, NULL, 5, NULL);
 }
