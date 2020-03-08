@@ -91,14 +91,18 @@ stm32f103_spi_pwm_driver/my-project/bin/my-project.o: common/* stm32f103_spi_pwm
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	-rm -rf bin
 	make clean -C stm32f103_spi_pwm_driver/my-project
 	make clean -C stm32f103_spi_pwm_fade/my-project
 	make clean -C esp8266_wifi_bridge
 
-.PHONY: flash
-flash: stm32f103_spi_pwm_driver
+.PHONY: stm32-flash
+stm32-flash: stm32f103_spi_pwm_driver
 	make flash -C stm32f103_spi_pwm_driver/my-project
+
+.PHONY: stm32-flash-bmp
+stm32-flash-bmp: stm32f103_spi_pwm_driver
+	make flash-bmp -C stm32f103_spi_pwm_driver/my-project
 
 .PHONY: esp8266-flash
 esp8266-flash: esp8266
