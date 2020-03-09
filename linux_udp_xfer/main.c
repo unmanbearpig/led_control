@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
-#include "../common/protocol_debug.h"
 #include "../common/secrets.h"
 
 void print_usage() {
@@ -93,7 +92,7 @@ int main(int argc, char *argv[]) {
 
   memset(buf, 0, sizeof(buf));
 
-  int sleep_us = 5000;
+  int sleep_us = UDP_SLEEP_US;
 
   for(;;) {
     int bytes_read = read(STDIN_FILENO, buf, sizeof(buf));

@@ -6,7 +6,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
-#include "../common/protocol_debug.h"
 #include "../common/linux_spi_protocol.h"
 #include "../common/secrets.h"
 
@@ -40,8 +39,6 @@ int main(int argc, char *argv[]) {
   struct sockaddr_storage peer_addr;
   unsigned int peer_addr_len = 0;
   memset(&peer_addr, 0, sizeof(peer_addr));
-
-  /* int sleep_us = 5000; */
 
   LedValuesMessage recv_msg;
   memset(&recv_msg, 0xEE, sizeof(recv_msg));

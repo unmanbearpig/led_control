@@ -7,6 +7,8 @@ CPPFILES = my-project.cpp
 # heap_5.c doesn't work, 1-4 work
 CFILES = FreeRTOS/heap_4.c FreeRTOS/list.c FreeRTOS/port.c FreeRTOS/queue.c FreeRTOS/tasks.c
 
+LDLIBS += -lm
+
 # TODO - you will need to edit these two lines!
 DEVICE=stm32f103c8t6
 OOCD_INTERFACE=stlink-v2

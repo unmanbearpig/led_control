@@ -5,7 +5,6 @@
 #include <string.h>
 #include <math.h>
 #include "../common/protocol.h"
-#include "../common/protocol_debug.h"
 
 #define SAMPLE_COUNT 10000
 

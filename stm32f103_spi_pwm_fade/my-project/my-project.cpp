@@ -13,7 +13,7 @@
 #include <libopencm3/stm32/timer.h>
 #include "../../common/protocol.h"
 
-#include "pwm.h"
+#include "../../common/stm32_pwm.h"
 
 extern "C" void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName );
 
@@ -21,27 +21,29 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 	for(;;);	// Loop forever here..
 }
 
-LedValuesMessage msg =
-  {
-   .magic = LED_VALUES_MESSAGE_MAGIC,
-   .type = 0,
-   .led_values = { 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF }
-  };
+#define LEDS_COUNT 4
+uint16_t leds[LEDS_COUNT] = { 0, 0, 0, 0 };
 
 #define PWM_DELAY_MS 100
 
-static void pwm_fade_task(void *_value) {
-  LedValuesMessage *msg = (LedValuesMessage *)_value;
+void set_leds_to_value(uint16_t *leds, uint16_t value) {
+  for(int i = 0; i < LEDS_COUNT; i++) {
+    leds[i] = value;
+  }
+}
 
+static void pwm_fade_task(void *_value) {
   uint16_t value = 0;
 
   for(;;) {
     for(; value < 0xFFFF; value++) {
-      set_all_leds(value, value, value, value);
+      set_leds_to_value(leds, value);
+      set_4_leds(leds);
     }
 
     for(; value > 0; value--) {
-      set_all_leds(value, value, value, value);
+      set_leds_to_value(leds, value);
+      set_4_leds(leds);
     }
 
     vTaskDelay(pdMS_TO_TICKS(PWM_DELAY_MS));
@@ -62,7 +64,7 @@ extern "C" int main(void) {
 
   pwm_setup(TIM_OCM_PWM2);
 
-  xTaskCreate(pwm_fade_task, "PWM_FADE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
+  xTaskCreate(pwm_fade_task, "PWM_FADE", 100, NULL, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(write_to_spi_dma_task, "START_DMA_TX_VALUE", 100, (void *)&msg, configMAX_PRIORITIES-1, NULL);
 
 

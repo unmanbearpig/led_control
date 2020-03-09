@@ -74,41 +74,45 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **device_pat
   return(1);
 }
 
-uint16_t *get_midi_msg_led(LedValuesMessage *msg, MidiMsg *midi_msg) {
-  uint16_t *led = 0;
+int get_midi_led_index(MidiMsg *midi_msg) {
   switch(midi_msg->what) {
   case 0x2c:
-    led = &msg->led_values[0];
+    return 0;
     break;
   case 0x2d:
-    led = &msg->led_values[1];
+    return 1;
     break;
   case 0x2e:
-    led = &msg->led_values[2];
+    return 2;
     break;
   case 0x2f:
-    led = &msg->led_values[3];
+    return 3;
     break;
   }
-  return led;
+  return -1;
 }
 
 void modify_msg_by_midi_msg(LedValuesMessage *msg, MidiMsg *midi_msg) {
   uint8_t event_type = midi_msg_status_event(midi_msg);
-  if(event_type == POLY_AFTERTOUCH || event_type == NOTE_ON) {
-    uint16_t *led = get_midi_msg_led(msg, midi_msg);
-    if (led == 0) {
-      return;
-    }
+  int led_index = get_midi_led_index(midi_msg);
 
-    *led = (midi_msg->value * 2) * (midi_msg->value * 2);
+  if (led_index < 0) {
+    return;
+  }
+
+  // uint16_t *led = &msg->payload.data.values.values16[led_index];
+  float *led = &msg->payload.data.values.values_float[led_index];
+
+  if (event_type == NOTE_ON) {
+    msg->payload.data.amount = 1.0;
+    *led = midi_msg->value / 127.0;
+  } else if(event_type == POLY_AFTERTOUCH) {
+    msg->payload.data.amount /= 4;
+    *led = midi_msg->value / 127.0;
+    // *led = (midi_msg->value * 2) * (midi_msg->value * 2);
   } else if (event_type == NOTE_OFF) {
-    uint16_t *led = get_midi_msg_led(msg, midi_msg);
-    if (led == 0) {
-      return;
-    }
-
-    *led = 0;
+    *led = 0.0;
+    // *led = 0;
   }
 }
 
@@ -154,7 +158,11 @@ int main(int argc, char *argv[]) {
     {
      .magic = LED_VALUES_MESSAGE_MAGIC,
      .type = LED_WRITE,
-     .led_values = { 0, 0, 0, 0 }
+     .payload.data = {
+                      .flags = LED_VALUES_FLAG_FLOAT | LED_VALUES_FLAG_ADD,
+                      .amount = 1.0,
+                      .values.values_float = { 0, 0, 0, 0 }
+                      }
     };
 
   if (should_read) {
@@ -178,7 +186,7 @@ int main(int argc, char *argv[]) {
 
   memset(buf, 0, sizeof(buf));
 
-  int sleep_us = 5000;
+  int sleep_us = UDP_SLEEP_US;
 
   uint8_t input_buf[sizeof(LedValuesMessage)];
 

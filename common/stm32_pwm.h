@@ -1,8 +1,12 @@
 #include <libopencm3/stm32/timer.h>
 
-#define PWM_PERIOD 65535
+#define PWM_PERIOD 16383
 
-void pwm_setup(enum tim_oc_mode oc_mode) {
+void set_pwm_period(uint16_t pwm_period) {
+  timer_set_period(TIM1, pwm_period);
+}
+
+void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
   // https://github.com/ksarkies/ARM-Ports/blob/master/test-libopencm3-stm32f1/pwm-tim1.c
   rcc_periph_clock_enable(RCC_GPIOA);
 
@@ -57,7 +61,7 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
   /* The ARR (auto-preload register) sets the PWM period to 62.5kHz from the
      72 MHz clock.*/
 	timer_enable_preload(TIM1);
-	timer_set_period(TIM1, PWM_PERIOD);
+	timer_set_period(TIM1, pwm_period);
 
 
   /* The CCR1 (capture/compare register 1) sets the PWM duty cycle to default 50% */
@@ -72,8 +76,6 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
   timer_enable_oc_preload(TIM1, TIM_OC4);
 	// timer_set_oc_value(TIM1, TIM_OC4, 40000);
 
-
-
   /* Force an update to load the shadow registers */
 	timer_generate_event(TIM1, TIM_EGR_UG);
 
@@ -81,9 +83,10 @@ void pwm_setup(enum tim_oc_mode oc_mode) {
 	timer_enable_counter(TIM1);
 }
 
-void set_all_leds(uint16_t led1, uint16_t led2, uint16_t led3, uint16_t led4) {
-  timer_set_oc_value(TIM1, TIM_OC1, (0xFFFF-led1));
-  timer_set_oc_value(TIM1, TIM_OC2, (0xFFFF-led2));
-  timer_set_oc_value(TIM1, TIM_OC3, (0xFFFF-led3));
-  timer_set_oc_value(TIM1, TIM_OC4, (0xFFFF-led4));
+void set_4_leds(uint16_t *leds, uint16_t pwm_period) {
+  timer_set_oc_value(TIM1, TIM_OC1, (pwm_period-leds[3]));
+  timer_set_oc_value(TIM1, TIM_OC2, (pwm_period-leds[2]));
+  timer_set_oc_value(TIM1, TIM_OC3, (pwm_period-leds[1]));
+  timer_set_oc_value(TIM1, TIM_OC4, (pwm_period-leds[0])); //leds[3] is cursed?
+  // timer_set_oc_value(TIM1, TIM_OC4, (0xFFFF-leds[3])); // corrupted value in leds[3] ???
 }

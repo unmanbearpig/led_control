@@ -7,7 +7,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
-#include "../common/protocol_debug.h"
 #include "../common/secrets.h"
 #include "../common/protocol_udp.h"
 

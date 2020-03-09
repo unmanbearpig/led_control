@@ -2,6 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <string.h>
+#include <math.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
@@ -13,7 +14,7 @@
 #include <libopencm3/cm3/cortex.h>
 #include "../../common/protocol.h"
 
-#include "pwm.h"
+#include "../../common/stm32_pwm.h"
 
 extern "C" void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName );
 
@@ -21,22 +22,18 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 	for(;;);	// Loop forever here..
 }
 
-uint32_t led_delay_ms = 1500;
+uint16_t pwm_period = 16383;
 
-LedValuesMessage input_msg =
-  {
-   .magic = 0,
-   .type = 0,
-   .led_values = { 0, 0, 0, 0 }
-  };
+LedValuesMessage input_msg_buf;
 
-volatile LedValuesMessage output_msgs[2];
-volatile LedValuesMessage *output_msg;
+LedValuesMessage output_msgs[2];
+LedValuesMessage *output_msg;
 
 #define INITIAL_LED_VALUE 0xEEEE
-uint16_t led_values[4] = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE };
-
-int led_count =  (sizeof(led_values) / sizeof(led_values[0]));
+uint16_t led_values[LED_COUNT + 1] = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE };
+float float_led_values[LED_COUNT] = { 0, 0, 0, 0 };
+int use_float = 0;
+float led_gamma = 2.0;
 
 volatile int spi_command_received = 0;
 
@@ -168,7 +165,7 @@ void read_from_spi_dma(void *rx_buf, uint32_t rx_len) {
 }
 
 void start_dma() {
-  read_from_spi_dma(&input_msg, sizeof(input_msg));
+  read_from_spi_dma(&input_msg_buf, sizeof(input_msg_buf));
   write_to_spi_dma(output_msgs, sizeof(output_msgs));
 }
 
@@ -192,7 +189,7 @@ void init_tmp_fade_down_to(uint16_t *led_values, uint16_t *value, uint16_t targe
       break;
     }
 
-    for(int i = 0; i < led_count; i++) {
+    for(int i = 0; i < LED_COUNT; i++) {
       led_values[i] = *value;
     }
 
@@ -214,13 +211,36 @@ static void set_temp_initial_values_task(void *_value) {
   vTaskDelete(NULL);
 }
 
+void led_values_convert_float_to_16(uint16_t *led_values16, float *led_values_float) {
+  for(int i = 0; i < LED_COUNT; i++) {
+    float val = powf(led_values_float[i], led_gamma) * pwm_period;
+    if (val > pwm_period) {
+      val = pwm_period;
+    }
+
+    led_values16[i] = val;
+  }
+}
+
 static void set_msg_values_task(void *_value) {
-  uint16_t *led_vaules = (uint16_t *)_value;
+  // uint16_t *led_values = (uint16_t *)_value;
 
   for(;;) {
-    set_all_leds(led_values[0], led_values[1], led_values[2], led_values[3]);
+    // if (use_float) {
+    //   // xxx
+    //   float temp = float_led_values[2];
+    //   float_led_values[2] = float_led_values[3];
+    //   float_led_values[3] = temp;
 
-    vTaskDelay(pdMS_TO_TICKS(10));
+    //   // ----
+
+    //   led_values_convert_float_to_16(led_values, float_led_values);
+    // }
+
+    set_4_leds(led_values, pwm_period);
+
+    // vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(1); // xxx?
   }
 }
 
@@ -247,6 +267,111 @@ int is_all_zeros(void *buf, size_t len) {
   return 1;
 }
 
+void handle_values_msg(LedValuesMessage *input_msg, LedValuesMessage *output_msg) {
+  for(int i = 0; i < LED_COUNT; i++) {
+    output_msg->payload.data.values.values16[i] = led_values[i];
+  }
+
+  if (input_msg->type & LED_WRITE && input_msg->payload.data.flags & LED_VALUES_FLAG_FLOAT) {
+    use_float = true;
+
+    for(int i = 0; i < LED_COUNT; i++) {
+      float input_value = input_msg->payload.data.values.values_float[i];
+      float amount = input_msg->payload.data.amount;
+      float old_value = float_led_values[i];
+
+      float val = 0;
+      if (input_msg->payload.data.flags & LED_VALUES_FLAG_ADD) {
+        val = old_value + (amount * input_value);
+      } else {
+        val = (old_value * (1.0 - amount)) + (amount * input_value);
+      }
+
+      float_led_values[i] = val;
+    }
+
+    led_values_convert_float_to_16(led_values, float_led_values);
+    set_4_leds(led_values, pwm_period);
+  } else {
+    // if (input_msg->type & LED_WRITE) {
+    //   use_float = false;
+
+    //   for(int i = 0; i < LED_COUNT; i++) {
+    //     led_values[i] = input_msg->payload.data.values.values16[i];
+    //   }
+
+    //   set_4_leds(led_values);
+    // }
+
+    // output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
+    // output_msg->payload.data.values.values16[0] = led_values[0];
+    // output_msg->payload.data.values.values16[1] = led_values[1];
+    // output_msg->payload.data.values.values16[2] = led_values[2];
+    // output_msg->payload.data.values.values16[3] = led_values[3];
+  }
+}
+
+void handle_config_msg(LedValuesMessage *input_msg, LedValuesMessage *output_msg) {
+  if (input_msg->type & LED_WRITE) {
+    if (input_msg->payload.config.flags & LED_CONFIG_SET_GAMMA) {
+      led_gamma = input_msg->payload.config.gamma;
+    }
+
+    if (input_msg->payload.config.flags & LED_CONFIG_SET_PWM_PERIOD) {
+      uint16_t new_pwm_period = input_msg->payload.config.pwm_period;
+      if (new_pwm_period != pwm_period) {
+        pwm_period = new_pwm_period;
+        set_pwm_period(pwm_period);
+      }
+    }
+
+    led_values_convert_float_to_16(led_values, float_led_values);
+    set_4_leds(led_values, pwm_period);
+  }
+
+  if (input_msg->type & LED_READ) {
+    memset(output_msg, 0, sizeof(*output_msg));
+    output_msg->type = LED_CONFIG;
+    output_msg->payload.config.gamma = led_gamma;
+    output_msg->payload.config.pwm_period = pwm_period;
+    // TODO
+  }
+}
+
+void handle_msg(LedValuesMessage *input_msg, LedValuesMessage *output_msg) {
+  if (is_all_zeros(input_msg, sizeof(*input_msg))) {
+    output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
+    output_msg->type = LED_READ | LED_WRITE;
+    output_msg->payload.data.flags = 0;
+    output_msg->payload.data.values.values16[0] = led_values[0];
+    output_msg->payload.data.values.values16[1] = led_values[1];
+    output_msg->payload.data.values.values16[2] = led_values[2];
+    output_msg->payload.data.values.values16[3] = led_values[3];
+  } else if (is_msg_valid(input_msg)) {
+    if (input_msg->type & LED_CONFIG) {
+      handle_config_msg(input_msg, output_msg);
+    } else {
+      handle_values_msg(input_msg, output_msg);
+    }
+  } else {
+
+    // We (the slave) might go out of sync with the host,
+    // i.e. we incorrectly assume the start of the message
+    // it might happen if the slave was (re)started in the middle of communication
+    // Here we try to resynchronize with the host by just restarting SPI DMA
+    // Eventually we should catch the correct start of the message and stop receiving errors
+    // There probably is a better way, but it works for now
+    restart_dma();
+    // Debugging, so I notice the errors better.
+    // Should change it no not changing state
+
+    led_values[0] = 0;
+    led_values[1] = pwm_period;
+    led_values[2] = 0;
+    led_values[3] = pwm_period;
+  }
+}
+
 void dma1_channel2_isr() {
   cm_disable_interrupts();
 
@@ -257,41 +382,7 @@ void dma1_channel2_isr() {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
 
-    if (is_all_zeros(&input_msg, sizeof(input_msg))) {
-      output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
-      output_msg->led_values[0] = led_values[0];
-      output_msg->led_values[1] = led_values[1];
-      output_msg->led_values[2] = led_values[2];
-      output_msg->led_values[3] = led_values[3];
-    } else if (is_msg_valid(&input_msg)) {
-      if (input_msg.type & LED_WRITE) {
-        led_values[0] = input_msg.led_values[0];
-        led_values[1] = input_msg.led_values[1];
-        led_values[2] = input_msg.led_values[2];
-        led_values[3] = input_msg.led_values[3];
-      }
-
-      output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
-      output_msg->led_values[0] = led_values[0];
-      output_msg->led_values[1] = led_values[1];
-      output_msg->led_values[2] = led_values[2];
-      output_msg->led_values[3] = led_values[3];
-    } else {
-      // We (the slave) might go out of sync with the host,
-      // i.e. we incorrectly assume the start of the message
-      // it might happen if the slave was (re)started in the middle of communication
-      // Here we try to resynchronize with the host by just restarting SPI DMA
-      // Eventually we should catch the correct start of the message and stop receiving errors
-      // There probably is a better way, but it works for now
-      restart_dma();
-      // Debugging, so I notice the errors better.
-      // Should change it no not changing state
-
-      led_values[0] = 0;
-      led_values[1] = 0xFFFF;
-      led_values[2] = 0;
-      led_values[3] = 0xFFFF;
-    }
+    handle_msg(&input_msg_buf, output_msg);
   }
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_HTIF)) {
@@ -348,6 +439,7 @@ extern "C" int main(void) {
                 GPIO_CNF_OUTPUT_PUSHPULL,
                 GPIO13);
 
+  memset((void *)&input_msg_buf, 0, sizeof(input_msg_buf));
   memset((void *)output_msgs, 0, sizeof(output_msgs));
   output_msg = &output_msgs[0];
 
@@ -355,12 +447,13 @@ extern "C" int main(void) {
   spi_dma_setup();
   start_dma();
 
-  pwm_setup(TIM_OCM_PWM2);
+  pwm_setup(TIM_OCM_PWM2, pwm_period);
 
-  xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
-  xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
 
-	vTaskStartScheduler();
+  // xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
+  // xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
+
+	// vTaskStartScheduler();
 
 	while(true) {
     gpio_toggle(GPIOC,GPIO13);

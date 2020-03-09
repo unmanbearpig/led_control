@@ -112,7 +112,7 @@ void setup_spi() {
 	spi_config_t spi_config;
 	spi_config.interface.val = SPI_DEFAULT_INTERFACE;
 	spi_config.mode = SPI_MASTER_MODE;
-	spi_config.clk_div = SPI_8MHz_DIV;
+	spi_config.clk_div = SPI_16MHz_DIV;
 	spi_config.event_cb = NULL;
 	spi_init(HSPI_HOST, &spi_config);
 }

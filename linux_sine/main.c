@@ -3,7 +3,6 @@
 #include <math.h>
 #include <string.h>
 #include "../common/protocol.h"
-#include "../common/protocol_debug.h"
 
 int main(int argc, char *argv[]) {
   struct timeval tv;
