@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
   int sock = 0;
 
   char *spi_path = "/dev/spidev0.0";
-  int spi_fd = try_open_spi(spi_path, 500000);
+  int spi_fd = try_open_spi(spi_path, 0);
 
   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)	{
     fprintf(stderr, "socket failed\n");

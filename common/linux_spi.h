@@ -9,7 +9,7 @@
 #include <string.h>
 #include "linux_util.h"
 
-const uint32_t spi_default_speed = 10000000;
+#define SPI_DEFAULT_FREQUENCY 16000000
 
 int spi_xfer_bytes(int fd, void *tx_buf, void *rx_buf, size_t len) {
   struct spi_ioc_transfer xfer;
@@ -25,7 +25,7 @@ int spi_xfer_bytes(int fd, void *tx_buf, void *rx_buf, size_t len) {
 
 int try_open_spi(const char *dev_path, uint32_t speed) {
   if (speed == 0) {
-    speed = spi_default_speed;
+    speed = SPI_DEFAULT_FREQUENCY;
   }
 
   int fd = open(dev_path, O_RDONLY);
