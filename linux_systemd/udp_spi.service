@@ -1,0 +1,14 @@
+[Unit]
+Description="udp-spi led_control bridge"
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+ExecStart=/home/pi/led_control/bin/udp_spi
+
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+[Unit]
+Description="gamepad led_control"
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+ExecStart=/home/pi/led_control/bin/gamepad_udp --host 127.0.0.1
+
+
+[Install]
+WantedBy=multi-user.target
