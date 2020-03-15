@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
-#include <unistd.h>
 #include <getopt.h>
 #include <sys/time.h>
 
