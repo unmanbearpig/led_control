@@ -272,42 +272,56 @@ void handle_values_msg(LedValuesMessage *input_msg, LedValuesMessage *output_msg
     output_msg->payload.data.values.values16[i] = led_values[i];
   }
 
-  if (input_msg->type & LED_WRITE && input_msg->payload.data.flags & LED_VALUES_FLAG_FLOAT) {
-    use_float = true;
+  output_msg->type = output_msg->type & ~LED_CONFIG;
 
-    for(int i = 0; i < LED_COUNT; i++) {
-      float input_value = input_msg->payload.data.values.values_float[i];
-      float amount = input_msg->payload.data.amount;
-      float old_value = float_led_values[i];
+  if (input_msg->type & LED_WRITE) {
+    if (input_msg->payload.data.flags & LED_VALUES_FLAG_FLOAT) {
+      use_float = true;
 
-      float val = 0;
-      if (input_msg->payload.data.flags & LED_VALUES_FLAG_ADD) {
-        val = old_value + (amount * input_value);
-      } else {
-        val = (old_value * (1.0 - amount)) + (amount * input_value);
+      for(int i = 0; i < LED_COUNT; i++) {
+        float input_value = input_msg->payload.data.values.values_float[i];
+        float amount = input_msg->payload.data.amount;
+        float old_value = float_led_values[i];
+
+        float val = 0;
+        if (input_msg->payload.data.flags & LED_VALUES_FLAG_ADD) {
+          val = old_value + (amount * input_value);
+        } else {
+          val = (old_value * (1.0 - amount)) + (amount * input_value);
+        }
+
+        float_led_values[i] = val;
       }
 
-      float_led_values[i] = val;
+      led_values_convert_float_to_16(led_values, float_led_values);
+      set_4_leds(led_values, pwm_period);
+    } else {
+      // if (input_msg->type & LED_WRITE) {
+      //   use_float = false;
+
+      //   for(int i = 0; i < LED_COUNT; i++) {
+      //     led_values[i] = input_msg->payload.data.values.values16[i];
+      //   }
+
+      //   set_4_leds(led_values);
+      // }
+
+      // output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
+      // output_msg->payload.data.values.values16[0] = led_values[0];
+      // output_msg->payload.data.values.values16[1] = led_values[1];
+      // output_msg->payload.data.values.values16[2] = led_values[2];
+      // output_msg->payload.data.values.values16[3] = led_values[3];
     }
+  }
 
-    led_values_convert_float_to_16(led_values, float_led_values);
-    set_4_leds(led_values, pwm_period);
-  } else {
-    // if (input_msg->type & LED_WRITE) {
-    //   use_float = false;
-
-    //   for(int i = 0; i < LED_COUNT; i++) {
-    //     led_values[i] = input_msg->payload.data.values.values16[i];
-    //   }
-
-    //   set_4_leds(led_values);
-    // }
-
-    // output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
-    // output_msg->payload.data.values.values16[0] = led_values[0];
-    // output_msg->payload.data.values.values16[1] = led_values[1];
-    // output_msg->payload.data.values.values16[2] = led_values[2];
-    // output_msg->payload.data.values.values16[3] = led_values[3];
+  if (input_msg->type & LED_READ) {
+    if (input_msg->payload.data.flags & LED_VALUES_FLAG_FLOAT) {
+      output_msg->payload.data.flags = LED_VALUES_FLAG_FLOAT;
+      memcpy(&output_msg->payload.data.values.values_float, float_led_values, sizeof(float_led_values));
+    } else {
+      output_msg->payload.data.flags = 0;
+      memcpy(&output_msg->payload.data.values.values16, led_values, sizeof(led_values));
+    }
   }
 }
 
@@ -348,6 +362,7 @@ void handle_msg(LedValuesMessage *input_msg, LedValuesMessage *output_msg) {
     output_msg->payload.data.values.values16[2] = led_values[2];
     output_msg->payload.data.values.values16[3] = led_values[3];
   } else if (is_msg_valid(input_msg)) {
+    output_msg->magic = LED_VALUES_MESSAGE_MAGIC;
     if (input_msg->type & LED_CONFIG) {
       handle_config_msg(input_msg, output_msg);
     } else {
@@ -448,7 +463,6 @@ extern "C" int main(void) {
   start_dma();
 
   pwm_setup(TIM_OCM_PWM2, pwm_period);
-
 
   // xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);

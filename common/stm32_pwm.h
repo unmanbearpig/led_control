@@ -1,6 +1,5 @@
 #include <libopencm3/stm32/timer.h>
-
-#define PWM_PERIOD 16383
+#include "config.h"
 
 void set_pwm_period(uint16_t pwm_period) {
   timer_set_period(TIM1, pwm_period);

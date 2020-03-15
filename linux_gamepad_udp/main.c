@@ -89,6 +89,74 @@ int open_gamepad(char *gamepad_path) {
   }
 }
 
+int fetch_current_config(GamepadLedControlState *control, int sock, struct sockaddr *sa, size_t sa_size) {
+  LedValuesMessage msg = {
+                          .magic = LED_VALUES_MESSAGE_MAGIC,
+                          .type = LED_READ | LED_CONFIG
+  };
+
+  LedValuesMessage input_msg;
+  memset(&input_msg, 0, sizeof(input_msg));
+
+  while(1) {
+    sendto(sock, &msg, sizeof(msg), 0, sa, sa_size);
+    ssize_t bytes_received = recv(sock, &input_msg, sizeof(input_msg), 0);
+
+    if(bytes_received != sizeof(input_msg)) {
+      continue;
+    }
+
+    if (input_msg.type & LED_CONFIG) {
+      control->gamma = input_msg.payload.config.gamma;
+      control->pwm_period = input_msg.payload.config.pwm_period;
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int fetch_current_values(Led *leds, int sock, struct sockaddr *sa, size_t sa_size) {
+  LedValuesMessage msg = {
+                          .magic = LED_VALUES_MESSAGE_MAGIC,
+                          .type = LED_READ,
+                          .payload.data.flags = LED_VALUES_FLAG_FLOAT
+  };
+
+  LedValuesMessage input_msg;
+  memset(&input_msg, 0, sizeof(input_msg));
+
+  while(1) {
+    sendto(sock, &msg, sizeof(msg), 0, sa, sa_size);
+    ssize_t bytes_received = recv(sock, &input_msg, sizeof(input_msg), 0);
+
+    if(bytes_received != sizeof(input_msg)) {
+      continue;
+    }
+
+    if (!(input_msg.type & LED_CONFIG) && input_msg.payload.data.flags & LED_VALUES_FLAG_FLOAT) {
+      for(int i = 0; i < LED_COUNT; i++) {
+        leds[i].value = input_msg.payload.data.values.values_float[i];
+      }
+
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+int fetch_current_state(GamepadLedControlState *control, Led *leds, int sock, struct sockaddr *sa, size_t sa_size) {
+  if (!fetch_current_config(control, sock, sa, sa_size)) {
+    return 0;
+  }
+
+  if (!fetch_current_values(leds, sock, sa, sa_size)) {
+    return 0;
+  }
+  return 1;
+}
+
 int try_reopen_gamepad_forever(char *gamepad_path) {
   int gamepad_fd = -1;
 
@@ -169,6 +237,11 @@ int main(int argc, char *argv[]) {
 
   uint8_t input_buf[sizeof(LedValuesMessage)];
 
+  if (!fetch_current_state(&gamepad_led_control, leds, sock, (struct sockaddr *)&sa, sizeof(sa))) {
+    fprintf(stderr, "Could not fetch current state\n");
+    return(1);
+  }
+
   int gamepad_io_error_count = 0;
   for(;;) {
     ssize_t bytes_read = read(gamepad_fd, &gamepad_led_control.gamepad, sizeof(gamepad_led_control.gamepad));
@@ -204,10 +277,6 @@ int main(int argc, char *argv[]) {
       }
       write(STDOUT_FILENO, input_buf, sizeof(input_buf));
     }
-
-    /* if (verbose) { */
-    /*   fflush(stderr); */
-    /* } */
 
     // usleep(sleep_us);
   }

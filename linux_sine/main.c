@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 #include "../common/protocol.h"
 
 int main(int argc, char *argv[]) {

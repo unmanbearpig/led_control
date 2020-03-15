@@ -5,7 +5,7 @@ spi_fade_test: flash fade_test
 fade_test: bin/spi_fade_test
 	bin/spi_fade_test | grep '<' | grep -v '0000 0000 0000 0000 0000'
 
-linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/sine bin/udp_xfer bin/gamepad_udp bin/arturia_beatstep_udp
+linux: bin/spi_fade_test bin/gamepad bin/spi_pipe bin/fade_pipe bin/gamepad_spi bin/udp_spi bin/sine bin/udp_xfer bin/gamepad_udp bin/arturia_beatstep_udp bin/fetch
 
 bin/arturia_beatstep_udp: linux_arturia_beatstep_udp.c common/*
 	-mkdir bin
@@ -26,6 +26,10 @@ bin/spi_fade_test: linux_spi_fade_test/main.c common/*
 bin/gamepad: linux_gamepad/main.c common/*
 	-mkdir bin
 	gcc linux_gamepad/main.c -o bin/gamepad
+
+bin/fetch: linux_fetch.c common/*
+	-mkdir bin
+	gcc linux_fetch.c -o bin/fetch
 
 bin/gamepad_spi: linux_gamepad_spi/main.c common/*
 	-mkdir bin

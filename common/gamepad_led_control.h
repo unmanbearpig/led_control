@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "protocol.h"
 #include "linux_gamepad.h"
+#include "config.h"
 
 typedef struct {
   double sine_amplitude;
@@ -19,6 +20,10 @@ typedef struct {
   GamepadState gamepad;
   int btn_map[4];
   float gamma;
+  uint16_t pwm_period;
+  double value_stick_sensitivity;
+  double pwm_period_stick_sensitivity;
+  double gamma_stick_sensitivity
 } GamepadLedControlState;
 
 enum GamepadBtn {
@@ -31,7 +36,12 @@ enum GamepadBtn {
 void init_gamepad_led_control_state(GamepadLedControlState *gamepad_led_control) {
   memset(gamepad_led_control, 0, sizeof(GamepadLedControlState));
 
-  gamepad_led_control->gamma = 2.0;
+  gamepad_led_control->value_stick_sensitivity = 0.005;
+  gamepad_led_control->gamma_stick_sensitivity = 0.002;
+  gamepad_led_control->pwm_period_stick_sensitivity = 100.0;
+
+  gamepad_led_control->gamma = 2.5;
+  gamepad_led_control->pwm_period = PWM_PERIOD;
 
   gamepad_led_control->btn_map[BTN_LU] = 3;
   gamepad_led_control->btn_map[BTN_LD] = 0;
@@ -43,7 +53,13 @@ double stick_value(uint8_t x, uint8_t y) {
   int8_t sx = gamepad_abs_to_rel_axis(x);
   int8_t sy = gamepad_abs_to_rel_axis(y);
 
-  return (sx / 127.0) * 0.000002 - pow((sy / 127.0), 3) * 0.003;
+  // double value = ((sx / 127.0) * 0.000002) - (pow((sy / 127.0), 3) * 0.003);
+
+  double value = -pow((sy / 127.0), 5.0) + pow((sx / 127.0), 5.0) * 0.02;
+
+  // fprintf(stderr, "%f\n", value);
+
+  return value;
 }
 
 double stick_x_value(uint8_t val) {
@@ -85,17 +101,40 @@ void update_leds_sine(Led *leds) {
 
 void handle_gamepad_led_config(LedValuesMessage *msg, GamepadLedControlState *control) {
   msg->type = LED_READ | LED_WRITE | LED_CONFIG;
-  msg->payload.config.flags = LED_CONFIG_SET_GAMMA;
-
   double left_stick = stick_value(control->gamepad.left_x, control->gamepad.left_y);
 
-  control->gamma += left_stick;
-  if (control->gamma < 0.0) {
-    control->gamma = 0.0;
+  if (control->gamepad.thumbs & RIGHT_THUMB_LEFT) {
+    double delta = left_stick * control->gamma_stick_sensitivity;
+    msg->payload.config.flags = LED_CONFIG_SET_GAMMA;
+
+    control->gamma += delta;
+    if (control->gamma < 0.0) {
+      control->gamma = 0.0;
+    }
+
+    msg->payload.config.gamma = control->gamma;
+    return;
   }
 
-  msg->payload.config.gamma = control->gamma;
+  if (control->gamepad.thumbs & RIGHT_THUMB_RIGHT) {
+    msg->payload.config.flags = LED_CONFIG_SET_PWM_PERIOD;
 
+    int16_t delta = (left_stick * control->pwm_period_stick_sensitivity);
+    int32_t new_pwm_period = control->pwm_period + delta;
+    if (new_pwm_period < 2) {
+      new_pwm_period = 2;
+    }
+
+    if (new_pwm_period > 0xFFFF) {
+      new_pwm_period = 0xFFFF;
+    }
+
+    control->pwm_period = new_pwm_period;
+    // fprintf(stderr, "%d %i\n", control->pwm_period, delta);
+
+    msg->payload.config.pwm_period = control->pwm_period;
+    return;
+  }
 }
 
 void handle_gamepad_led_values(Led *leds, LedValuesMessage *msg, GamepadLedControlState *control) {
@@ -103,7 +142,7 @@ void handle_gamepad_led_values(Led *leds, LedValuesMessage *msg, GamepadLedContr
   msg->payload.data.flags = LED_VALUES_FLAG_FLOAT;
   msg->payload.data.amount = 1.0;
 
-  double left_stick = stick_value(control->gamepad.left_x, control->gamepad.left_y);
+  double left_stick = stick_value(control->gamepad.left_x, control->gamepad.left_y) * control->value_stick_sensitivity;
 
   if (control->gamepad.select_start_joystick_buttons_and_shoulders & SHOULDER_LEFT_UP) {
     if (control->btn_map[BTN_LU] != -1) {
@@ -211,7 +250,7 @@ void handle_gamepad_led_values(Led *leds, LedValuesMessage *msg, GamepadLedContr
 void modify_msg_by_gamepad(Led *leds, LedValuesMessage *msg, GamepadLedControlState *control) {
   /* int8_t left_x, left_y, right_x, right_y = 0; */
 
-  if (control->gamepad.thumbs & RIGHT_THUMB_LEFT) {
+  if (control->gamepad.thumbs & (RIGHT_THUMB_LEFT | RIGHT_THUMB_RIGHT)) {
     handle_gamepad_led_config(msg, control);
   } else {
     handle_gamepad_led_values(leds, msg, control);

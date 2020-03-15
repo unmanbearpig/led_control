@@ -33,5 +33,9 @@ typedef struct {
 #define DEFAULT_GAMEPAD_PATH "/dev/hidraw0"
 
 int8_t gamepad_abs_to_rel_axis(uint8_t abs) {
+  if (abs == 0) {
+    abs = 1;
+  }
+
   return abs - 0x80;
 }
