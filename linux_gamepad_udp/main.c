@@ -42,7 +42,6 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
      { .name = "btn-ld", .has_arg = required_argument, .flag = &argid, .val = 't' },
      { .name = "btn-ru", .has_arg = required_argument, .flag = &argid, .val = 'r' },
      { .name = "btn-rd", .has_arg = required_argument, .flag = &argid, .val = 'n' },
-     /* { .name = "verbose", .has_arg = no_argument, .flag = &argid, .val = 'v' }, */
      { 0, 0, 0, 0 }
     };
 
@@ -60,9 +59,6 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
     case 'g':
       *gamepad_path = optarg;
       break;
-    /* case 'v': */
-    /*   verbose = 1; */
-    /*   break; */
     case 'c':
       btn_map[BTN_LU] = atoi(optarg);
       break;
@@ -84,6 +80,25 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
   }
 
   return(1);
+}
+
+int open_gamepad(char *gamepad_path) {
+  if (0 == strcmp(gamepad_path, "-")) {
+    return STDIN_FILENO;
+  } else {
+    return open(gamepad_path, O_RDONLY | O_ASYNC);
+  }
+}
+
+int try_reopen_gamepad_forever(char *gamepad_path) {
+  int gamepad_fd = -1;
+
+  while(gamepad_fd < 0) {
+    gamepad_fd = open_gamepad(gamepad_path);
+    usleep(100000);
+  }
+
+  return gamepad_fd;
 }
 
 int main(int argc, char *argv[]) {
@@ -112,13 +127,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  int gamepad_fd = 0;
-
-  if (0 == strcmp(gamepad_path, "-")) {
-    gamepad_fd = STDIN_FILENO;
-  } else {
-    gamepad_fd = open(gamepad_path, O_RDONLY | O_ASYNC);
-  }
+  int gamepad_fd = open_gamepad(gamepad_path);
 
   if (gamepad_fd == -1) {
     fprintf(stderr, "Gamepad: ");
@@ -161,26 +170,30 @@ int main(int argc, char *argv[]) {
 
   uint8_t input_buf[sizeof(LedValuesMessage)];
 
+  int gamepad_io_error_count = 0;
   for(;;) {
-    /* if (verbose) { */
-    /*   fprintf(stderr, "\e[1;1H\e[2J"); // clear screen */
-    /* } */
-
     ssize_t bytes_read = read(gamepad_fd, &gamepad_led_control.gamepad, sizeof(gamepad_led_control.gamepad));
 
     if (bytes_read != sizeof(gamepad_led_control.gamepad)) {
       int err = errno;
+      if (bytes_read < 0) {
+        gamepad_io_error_count++;
+        if (gamepad_io_error_count > 5) {
+          fprintf(stderr, "Waiting to gamepad to reappear...\n");
+          close(gamepad_fd);
+          gamepad_fd = try_reopen_gamepad_forever(gamepad_path);
+        }
+      }
+
       fprintf(stderr, "%ld bytes read, this is an error\n", bytes_read);
       report_error(err);
-      return 1;
+      continue;
+    } else {
+      gamepad_io_error_count = 0;
     }
 
     update_leds_sine(leds);
     modify_msg_by_gamepad(leds, &msg, &gamepad_led_control);
-
-    /* if (verbose) { */
-    /*   print_gamepad(&gamepad); */
-    /* } */
 
     sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&sa, sizeof(sa));
 
