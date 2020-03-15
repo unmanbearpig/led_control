@@ -43,7 +43,7 @@ double stick_value(uint8_t x, uint8_t y) {
   int8_t sx = gamepad_abs_to_rel_axis(x);
   int8_t sy = gamepad_abs_to_rel_axis(y);
 
-  return (sx / 127.0) * 0.000002 - pow((sy / 127.0), 3) * 0.01;
+  return (sx / 127.0) * 0.000002 - pow((sy / 127.0), 3) * 0.003;
 }
 
 double stick_x_value(uint8_t val) {
