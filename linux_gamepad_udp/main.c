@@ -254,6 +254,11 @@ int main(int argc, char *argv[]) {
           fprintf(stderr, "Waiting to gamepad to reappear...\n");
           close(gamepad_fd);
           gamepad_fd = try_reopen_gamepad_forever(gamepad_path);
+
+          if (!fetch_current_state(&gamepad_led_control, leds, sock, (struct sockaddr *)&sa, sizeof(sa))) {
+            fprintf(stderr, "Could not fetch current state\n");
+            return(1);
+          }
         }
       }
 
