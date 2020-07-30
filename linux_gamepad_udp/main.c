@@ -29,7 +29,7 @@ void print_usage() {
   fprintf(stderr, "TODO: --spi <path to spi dev (default=/dev/spidev0.0)>\n--gamepad <path to gamepad hidraw, default=/dev/hidraw0>\n--verbose - enable verbose output\n");
 }
 
-int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_path, int *btn_map) {
+int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_path, int *btn_map, int *verbose) {
   int argid = 0;
 
   struct option opts[] =
@@ -41,6 +41,7 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
      { .name = "btn-ld", .has_arg = required_argument, .flag = &argid, .val = 't' },
      { .name = "btn-ru", .has_arg = required_argument, .flag = &argid, .val = 'r' },
      { .name = "btn-rd", .has_arg = required_argument, .flag = &argid, .val = 'n' },
+     { .name = "verbose", .has_arg = optional_argument, .flag = &argid, .val = 'v' },
      { 0, 0, 0, 0 }
     };
 
@@ -69,6 +70,9 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
       break;
     case 'n':
       btn_map[BTN_RD] = atoi(optarg);
+      break;
+    case 'v':
+      *verbose = 1;
       break;
     default:
       fprintf(stderr, "Invalid argument\n");
@@ -180,7 +184,8 @@ int main(int argc, char *argv[]) {
   GamepadLedControlState gamepad_led_control;
   init_gamepad_led_control_state(&gamepad_led_control);
 
-  if (!parse_args(argc, argv, &host, &port, &gamepad_path, gamepad_led_control.btn_map)) {
+  int verbose = 0;
+  if (!parse_args(argc, argv, &host, &port, &gamepad_path, gamepad_led_control.btn_map, &verbose)) {
     exit(1);
   }
 
@@ -270,6 +275,12 @@ int main(int argc, char *argv[]) {
     }
 
     update_leds_sine(leds);
+    if (verbose) {
+      fprintf(stderr, "\n");
+      for (int i = 0; i < 4; i++) {
+        print_led(&leds[i]);
+      }
+    }
     modify_msg_by_gamepad(leds, &msg, &gamepad_led_control);
 
     sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&sa, sizeof(sa));
