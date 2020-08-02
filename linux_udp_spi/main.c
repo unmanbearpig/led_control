@@ -51,14 +51,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "accept failed\n");
         exit(1);
       }
-      // read(sock, &msg, sizeof(msg));
       xfer_msg_2(spi_fd, &msg, &recv_msg, 0);
-      // write(sock, &msg, sizeof(msg));
       sendto(sock, &recv_msg, sizeof(recv_msg), 0, (struct sockaddr *)&peer_addr, peer_addr_len);
-
-      // print_msg(&msg);
     }
-    // usleep(sleep_us);
   }
 
   return 0;
