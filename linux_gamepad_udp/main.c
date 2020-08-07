@@ -26,29 +26,37 @@ void report_error(int err) {
 }
 
 void print_usage() {
-  fprintf(stderr, "TODO: --spi <path to spi dev (default=/dev/spidev0.0)>\n--gamepad <path to gamepad hidraw, default=/dev/hidraw0>\n--verbose - enable verbose output\n");
+  fprintf(stderr, "\n\
+--host - host\n\
+--port - port\n\
+--btn-lu, btn-ld, btn-ru, btn-rd - button remapping\n\
+--gamepad <path to gamepad hidraw, default=/dev/hidraw0>\n\
+--verbose - enable verbose output\n\
+--no-fetch - don't fetch state at startup\n\
+");
 }
 
-int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_path, int *btn_map, int *verbose) {
+int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_path, int *btn_map, int *verbose, int *no_fetch) {
   int argid = 0;
 
   struct option opts[] =
     {
-     { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g' },
-     { .name = "host", .has_arg = required_argument, .flag = &argid, .val = 'h' },
-     { .name = "port", .has_arg = required_argument, .flag = &argid, .val = 'p' },
-     { .name = "btn-lu", .has_arg = required_argument, .flag = &argid, .val = 'c' },
-     { .name = "btn-ld", .has_arg = required_argument, .flag = &argid, .val = 't' },
-     { .name = "btn-ru", .has_arg = required_argument, .flag = &argid, .val = 'r' },
-     { .name = "btn-rd", .has_arg = required_argument, .flag = &argid, .val = 'n' },
-     { .name = "verbose", .has_arg = optional_argument, .flag = &argid, .val = 'v' },
-     { 0, 0, 0, 0 }
+      { .name = "gamepad", .has_arg = required_argument, .flag = &argid, .val = 'g' },
+      { .name = "host", .has_arg = required_argument, .flag = &argid, .val = 'h' },
+      { .name = "port", .has_arg = required_argument, .flag = &argid, .val = 'p' },
+      { .name = "btn-lu", .has_arg = required_argument, .flag = &argid, .val = 'c' },
+      { .name = "btn-ld", .has_arg = required_argument, .flag = &argid, .val = 't' },
+      { .name = "btn-ru", .has_arg = required_argument, .flag = &argid, .val = 'r' },
+      { .name = "btn-rd", .has_arg = required_argument, .flag = &argid, .val = 'n' },
+      { .name = "verbose", .has_arg = optional_argument, .flag = &argid, .val = 'v' },
+      { .name = "no-fetch", .has_arg = optional_argument, .flag = &argid, .val = 's' },
+      { 0, 0, 0, 0 }
     };
 
   int longindex = 0;
   int ch = 0;
 
-  while( (ch = getopt_long(argc, argv, "s:g:c:t:r:n:v", opts, &longindex)) != -1 ) {
+  while( (ch = getopt_long(argc, argv, "s:g:c:t:r:n:v:s", opts, &longindex)) != -1 ) {
     switch(argid) {
     case 'h':
       *host = optarg;
@@ -74,6 +82,9 @@ int parse_args(int argc, char *argv[], char **host, int *port, char **gamepad_pa
     case 'v':
       *verbose = 1;
       break;
+    case 's':
+      *no_fetch = 1;
+      break;
     default:
       fprintf(stderr, "Invalid argument\n");
       print_usage();
@@ -95,14 +106,14 @@ int open_gamepad(char *gamepad_path) {
 
 int fetch_current_config(GamepadLedControlState *control, int sock, struct sockaddr *sa, size_t sa_size) {
   LedValuesMessage msg = {
-                          .magic = LED_VALUES_MESSAGE_MAGIC,
-                          .type = LED_READ | LED_CONFIG
+    .magic = LED_VALUES_MESSAGE_MAGIC,
+    .type = LED_READ | LED_CONFIG
   };
 
   LedValuesMessage input_msg;
   memset(&input_msg, 0, sizeof(input_msg));
 
-  while(1) {
+  for(int retry = 0; retry < 1000; retry++) {
     sendto(sock, &msg, sizeof(msg), 0, sa, sa_size);
     ssize_t bytes_received = recv(sock, &input_msg, sizeof(input_msg), 0);
 
@@ -122,15 +133,15 @@ int fetch_current_config(GamepadLedControlState *control, int sock, struct socka
 
 int fetch_current_values(Led *leds, int sock, struct sockaddr *sa, size_t sa_size) {
   LedValuesMessage msg = {
-                          .magic = LED_VALUES_MESSAGE_MAGIC,
-                          .type = LED_READ,
-                          .payload.data.flags = LED_VALUES_FLAG_FLOAT
+    .magic = LED_VALUES_MESSAGE_MAGIC,
+    .type = LED_READ,
+    .payload.data.flags = LED_VALUES_FLAG_FLOAT
   };
 
   LedValuesMessage input_msg;
   memset(&input_msg, 0, sizeof(input_msg));
 
-  while(1) {
+  for(int retry = 0; retry < 1000; retry++) {
     sendto(sock, &msg, sizeof(msg), 0, sa, sa_size);
     ssize_t bytes_received = recv(sock, &input_msg, sizeof(input_msg), 0);
 
@@ -185,7 +196,8 @@ int main(int argc, char *argv[]) {
   init_gamepad_led_control_state(&gamepad_led_control);
 
   int verbose = 0;
-  if (!parse_args(argc, argv, &host, &port, &gamepad_path, gamepad_led_control.btn_map, &verbose)) {
+  int no_fetch = 0;
+  if (!parse_args(argc, argv, &host, &port, &gamepad_path, gamepad_led_control.btn_map, &verbose, &no_fetch)) {
     exit(1);
   }
 
@@ -212,13 +224,13 @@ int main(int argc, char *argv[]) {
 
   LedValuesMessage msg =
     {
-     .magic = LED_VALUES_MESSAGE_MAGIC,
-     .type = LED_WRITE | LED_READ,
-     .payload.data = {
-                      .flags = LED_VALUES_FLAG_FLOAT,
-                      .amount = 1.0,
-                      .values.values_float = { 0, 0, 0, 0 }
-                      }
+      .magic = LED_VALUES_MESSAGE_MAGIC,
+      .type = LED_WRITE | LED_READ,
+      .payload.data = {
+        .flags = LED_VALUES_FLAG_FLOAT,
+        .amount = 1.0,
+        .values.values_float = { 0, 0, 0, 0 }
+      }
     };
 
   int sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
@@ -238,13 +250,19 @@ int main(int argc, char *argv[]) {
 
   memset(buf, 0, sizeof(buf));
 
-  int sleep_us = 10;
+  int sleep_us = 100;
 
   uint8_t input_buf[sizeof(LedValuesMessage)];
 
-  if (!fetch_current_state(&gamepad_led_control, leds, sock, (struct sockaddr *)&sa, sizeof(sa))) {
-    fprintf(stderr, "Could not fetch current state\n");
-    return(1);
+  if (!no_fetch) {
+    if (verbose) {
+      fprintf(stderr, "fetching current state...\n");
+    }
+
+    if (!fetch_current_state(&gamepad_led_control, leds, sock, (struct sockaddr *)&sa, sizeof(sa))) {
+      fprintf(stderr, "Could not fetch current state\n");
+      return(1);
+    }
   }
 
   int gamepad_io_error_count = 0;

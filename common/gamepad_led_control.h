@@ -104,28 +104,35 @@ void print_led(Led *led) {
   fprintf(stderr, "%s\n", bar);
 }
 
-void update_led_sine(Led *led, uint64_t t) {
+void update_led_sine(Led *led, uint64_t us) {
   double new_val = led->sine_target;
   double f = led->attrs.sine_freq;
   double amp = led->attrs.sine_amplitude;
   double phi = led->attrs.sine_phi;
 
-  uint64_t dt = t - led->attrs.last_upd;
+  uint64_t dt = us - led->attrs.last_upd;
 
-  double delta = dt * f * 0.2;
+  double dt_secs = dt / 1000000.0;
+
+  if (led->attrs.sine_phi > M_PI * 2.0) {
+    led->attrs.sine_phi -= M_PI * 2.0;
+  }
+
+  double delta = dt_secs * f * M_PI * 2.0;
   double new_sin = sin(phi);
 
-  led->attrs.last_upd = t;
+  led->attrs.last_upd = us;
 
   add_stick_value(&new_val, (new_sin * amp) / 2.0);
+
   led->attrs.sine_phi += delta;
 
   led->value = new_val;
 }
 
 void update_led_sine_attrs(Led *led, double freq_delta, double amp_delta) {
-  led->attrs.sine_freq += freq_delta;
-  add_stick_value(&led->attrs.sine_amplitude, amp_delta);
+  led->attrs.sine_freq += freq_delta * 100000.0;
+  add_stick_value(&led->attrs.sine_amplitude, amp_delta * 10.0);
 }
 
 uint64_t utime() {
