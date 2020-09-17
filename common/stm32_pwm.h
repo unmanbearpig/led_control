@@ -86,6 +86,5 @@ void set_4_leds(uint16_t *leds, uint16_t pwm_period) {
   timer_set_oc_value(TIM1, TIM_OC1, (pwm_period-leds[3]));
   timer_set_oc_value(TIM1, TIM_OC2, (pwm_period-leds[2]));
   timer_set_oc_value(TIM1, TIM_OC3, (pwm_period-leds[1]));
-  timer_set_oc_value(TIM1, TIM_OC4, (pwm_period-leds[0])); //leds[3] is cursed?
-  // timer_set_oc_value(TIM1, TIM_OC4, (0xFFFF-leds[3])); // corrupted value in leds[3] ???
+  timer_set_oc_value(TIM1, TIM_OC4, (pwm_period-leds[0]));
 }
