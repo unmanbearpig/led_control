@@ -49,7 +49,7 @@ volatile int spi_command_received = 0;
 //   DFF: 8 or 16 bit frame format
 //
 void spi_setup() {
-  // need it?
+  // need it? -- duplicated in main
   rcc_periph_clock_enable(RCC_GPIOA);
 
   rcc_periph_clock_enable(RCC_SPI1);
