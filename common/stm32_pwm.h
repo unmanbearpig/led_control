@@ -17,7 +17,7 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
   // timer_reset(TIM1); // missing
 
   timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
-  timer_set_prescaler(TIM1, 0); // it's the default, but whatever
+  timer_set_prescaler(TIM1, 0); // it's the default, set it anyway to be extra certain
 
   /* Set Timer output compare mode:
    * - Channel 1
@@ -25,33 +25,24 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
    */
 	timer_set_oc_mode(TIM1, TIM_OC1, oc_mode);
 	timer_set_oc_mode(TIM1, TIM_OC2, oc_mode);
-
-
-  // maybe we need other channels or something?
   timer_set_oc_mode(TIM1, TIM_OC3, oc_mode);
   timer_set_oc_mode(TIM1, TIM_OC4, oc_mode);
-
 
   // this works without TIM_OC1N
 	timer_enable_oc_output(TIM1, TIM_OC1);
   // this doesn't work without TIM_OC1, so does nothing?
-	timer_enable_oc_output(TIM1, TIM_OC1N);
+	/* timer_enable_oc_output(TIM1, TIM_OC1N); /\* TODO: we don't need it do we? *\/ */
 
 	timer_set_oc_mode(TIM1, TIM_OC2, TIM_OCM_PWM2);
 
   timer_enable_oc_output(TIM1, TIM_OC2);
-	timer_enable_oc_output(TIM1, TIM_OC2N);
-
-  // try more channels
+	/* timer_enable_oc_output(TIM1, TIM_OC2N); /\* TODO: we don't need it do we? *\/ */
   timer_enable_oc_output(TIM1, TIM_OC3);
-	// timer_enable_oc_output(TIM1, TIM_OC3N);
   timer_enable_oc_output(TIM1, TIM_OC4);
-	// timer_enable_oc_output(TIM1, TIM_OC4N); // no such thing as OC4N
 
   // @note It is necessary to call this function to enable the output on an advanced
   // timer <b>even if break or deadtime features are not being used</b>.
   timer_enable_break_main_output(TIM1);
-
 
   /* Set the polarity of OCN to be high to match that of the OC, for switching
      the low MOSFET through an inverting level shifter */
@@ -61,7 +52,6 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
      72 MHz clock.*/
 	timer_enable_preload(TIM1);
 	timer_set_period(TIM1, pwm_period);
-
 
   /* The CCR1 (capture/compare register 1) sets the PWM duty cycle to default 50% */
 	timer_enable_oc_preload(TIM1, TIM_OC1);
