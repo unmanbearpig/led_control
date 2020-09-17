@@ -65,15 +65,9 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
 
   /* The CCR1 (capture/compare register 1) sets the PWM duty cycle to default 50% */
 	timer_enable_oc_preload(TIM1, TIM_OC1);
-	// timer_set_oc_value(TIM1, TIM_OC1, 10000);
 	timer_enable_oc_preload(TIM1, TIM_OC2);
-	// timer_set_oc_value(TIM1, TIM_OC2, 20000);
-
-  // try more channels
-	timer_enable_oc_preload(TIM1, TIM_OC3);
-	// timer_set_oc_value(TIM1, TIM_OC3, 30000);
+  timer_enable_oc_preload(TIM1, TIM_OC3);
   timer_enable_oc_preload(TIM1, TIM_OC4);
-	// timer_set_oc_value(TIM1, TIM_OC4, 40000);
 
   /* Force an update to load the shadow registers */
 	timer_generate_event(TIM1, TIM_EGR_UG);
