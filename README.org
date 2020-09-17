@@ -1,16 +1,33 @@
 * Get started
-** bluepill
+** Bluepill
+*** Pins
+**** STM32
+***** PWM -> LEDs
+      PA8, PA9, PA10, PA11 (PA11 is used by USB, so only 3 other pins are available)
+***** SPI
+      Current set up:
+      PA4: SPI1_NSS
+      PA5: SPI1_SCK
+      PA6: SPI1_MISO
+      PA7: SPI1_MOSI
+
+      This could probably be changed to other SPI on other pins, but I haven't checked that.
+***** USB
+      PA11: D-
+      PA12: D+
+      USB port on the blue pill is connected to the same pins.
 *** Weird power issue
     doesn't work if stm32 connected by itself, works if ground is connected to rpi group (???)
 ** Software
-   - openocd
+   - openocd or Black Magic Probe which implements openocd internaly
    - gcc-arm-none-eabi
-** CKS32 bluepill clone
+   - newlib
+** CKS32 bluepill clone + openocd
    copy openocd files to:
    /usr/share/openocd/scripts/target/cs32f1x.cfg
    /usr/share/openocd/scripts/board/cs32f103c8t6.cfg
 
-** Make and flash
+** Build and flash
    Connect st-link
 
    make -C my-project
