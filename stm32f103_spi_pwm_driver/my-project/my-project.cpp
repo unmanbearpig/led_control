@@ -21,18 +21,20 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 	for(;;);	// Loop forever here..
 }
 
-uint16_t pwm_period = 16383;
-
 LedValuesMessage input_msg_buf;
 
 LedValuesMessage output_msgs[2];
 LedValuesMessage *output_msg;
 
 #define INITIAL_LED_VALUE 0xEEEE
-uint16_t led_values[LED_COUNT + 1] = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE };
-float float_led_values[LED_COUNT] = { 0, 0, 0, 0 };
-int use_float = 0;
-float led_gamma = 2.0;
+
+// uint16_t pwm_period = 16383;
+// uint16_t led_values[LED_COUNT + 1] = { INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE, INITIAL_LED_VALUE };
+// float float_led_values[LED_COUNT] = { 0, 0, 0, 0 };
+// int use_float = 0;
+// float led_gamma = 2.0;
+
+struct driver_state state;
 
 volatile int spi_command_received = 0;
 
@@ -50,7 +52,6 @@ volatile int spi_command_received = 0;
 void spi_setup() {
   // need it? -- duplicated in main
   rcc_periph_clock_enable(RCC_GPIOA);
-
   rcc_periph_clock_enable(RCC_SPI1);
 
   gpio_set_mode(GPIOA,
@@ -225,7 +226,7 @@ static void set_msg_values_task(void *_value) {
     //   led_values_convert_float_to_16(led_values, float_led_values);
     // }
 
-    set_4_leds(led_values, pwm_period);
+    set_leds(&state);
 
     // vTaskDelay(pdMS_TO_TICKS(50));
     vTaskDelay(1); // xxx?
@@ -240,8 +241,8 @@ typedef struct {
 
 } DmaChanStats;
 
-DmaChanStats chan2_stats = { 0 };
-DmaChanStats chan3_stats = { 0 };
+DmaChanStats chan2_stats;
+DmaChanStats chan3_stats;
 
 void dma1_channel2_isr() {
   cm_disable_interrupts();
@@ -253,8 +254,7 @@ void dma1_channel2_isr() {
     chan2_stats.tcif_count += 1;
     dma_clear_interrupt_flags(DMA1, DMA_CHANNEL2, DMA_TCIF);
 
-    handle_msg(led_values, float_led_values, &pwm_period, &led_gamma,
-               &input_msg_buf, output_msg, &restart_dma);
+    handle_msg(&state, &input_msg_buf, output_msg, &restart_dma);
   }
 
   if (dma_get_interrupt_flag(DMA1, DMA_CHANNEL2, DMA_HTIF)) {
@@ -301,8 +301,14 @@ void dma1_channel3_isr() {
 
 extern "C" int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
-	rcc_periph_clock_enable(RCC_GPIOC);
 
+  // if USB, then TIM_OC4 should be removed
+  int num_leds = 4;
+  enum tim_oc_id oc_channels[] = { TIM_OC1, TIM_OC2, TIM_OC3, TIM_OC4 };
+
+  init_driver_state(&state, INITIAL_LED_VALUE, num_leds, oc_channels);
+
+	rcc_periph_clock_enable(RCC_GPIOC);
   rcc_periph_clock_enable(RCC_GPIOA);
 
   // built-in LED
@@ -319,7 +325,7 @@ extern "C" int main(void) {
   spi_dma_setup();
   start_dma();
 
-  pwm_setup(TIM_OCM_PWM2, pwm_period);
+  pwm_setup(TIM_OCM_PWM2, state.pwm_period);
 
   // xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);

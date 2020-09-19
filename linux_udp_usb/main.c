@@ -5,8 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
-#include "../common/linux_spi_protocol.h"
-#include "../common/secrets.h"
+#include "../common/stm32_driver.h"
 
 void print_hex_bytes(char *buf, int len) {
   for (int i = 0; i < len; i++) {
