@@ -24,9 +24,18 @@ func main() {
 	// udpTee := MakeTee(4)
 	udp, err := MakeUDPOut("192.168.0.102:8932")
 	if err != nil {
-		panic(fmt.Sprint("make udp:", err))
+		panic(fmt.Sprint("make udp out:", err))
 	}
 	// link := MakeLink(&constant, 0, &logger, 0)
+
+	udpIn, err := MakeUDPIn("0.0.0.0:9999")
+	if err != nil {
+		panic(fmt.Sprint("make udp in: %s", err))
+	}
+
+	logUdpIn := MakeLogger("UDPIn", []Port{
+		Port{0, "udp-in chan1"},
+	})
 
 	links := make([]Link, 0)
 	links = append(links, MakeLink(&constant1, 0, &add, 0))
@@ -34,7 +43,8 @@ func main() {
 	links = append(links, MakeLink(&add, 0, &logger, 0))
 	links = append(links, MakeLink(&freq, 0, &sine, 0))
 	links = append(links, MakeLink(&amp, 0, &sine, 1))
-	links = append(links, MakeLink(&sine, 0, &sine2, 0))
+	// links = append(links, MakeLink(&sine, 0, &sine2, 0))
+	links = append(links, MakeLink(&udpIn, 0, &sine2, 0))
 	links = append(links, MakeLink(&sine, 0, &sine1outMod, 0))
 	links = append(links, MakeLink(&sine1outConst, 0, &sine1outMod, 1))
 	links = append(links, MakeLink(&sine1outMod, 0, &udp, 1))
@@ -42,7 +52,9 @@ func main() {
 	links = append(links, MakeLink(&sine2, 0, &logger, 1))
 	links = append(links, MakeLink(&logger, 1, &udp, 0))
 	// links = append(links, MakeLink(&logger, 1, &udp, 1))
-	links = append(links, MakeLink(&logger, 1, &udp, 2))
+	// links = append(links, MakeLink(&logger, 1, &udp, 2))
+	links = append(links, MakeLink(&udpIn, 0, &logUdpIn, 0))
+	links = append(links, MakeLink(&udpIn, 0, &udp, 2))
 	links = append(links, MakeLink(&logger, 1, &udp, 3))
 
 
