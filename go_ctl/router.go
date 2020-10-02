@@ -36,9 +36,10 @@ func MakeRouter(name string, links []*Link) (r Router, err error) {
 	// fmt.Println("Making router")
 
 	for _, l := range links {
-		// fmt.Println("link ", l.String())
+		if l.DevFrom == l.DevTo {
+			panic(fmt.Sprintf("link has the same in and out dev: %v", l.String()))
+		}
 
-		// todo error if fromDev = toDev
 		if !DevExists(devs, l.DevFrom) {
 			devs = append(devs, l.DevFrom)
 		}
