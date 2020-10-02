@@ -34,7 +34,7 @@ func MakeUDPOut(addr string) (UDPOut, error) {
 }
 
 func (u *UDPOut) Name() string {
-	return fmt.Sprintf("UDPOut %s %d channels", u.addr, len(u.ports))
+	return fmt.Sprintf("UDPOut %s (%d channels)", u.addr, len(u.ports))
 }
 
 func (u *UDPOut) Inputs() []Port {

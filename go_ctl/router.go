@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"strings"
+	"sort"
 )
 
 type Router struct {
+	name string
 	Debug bool
 	Devs []Dev
 	Links []*Link
@@ -20,7 +23,11 @@ func DevExists(devs []Dev, dev Dev) bool {
 	return false
 }
 
-func MakeRouter(links []*Link) (r Router, err error) {
+func (r *Router) Name() string {
+	return fmt.Sprint("Router", r.Name)
+}
+
+func MakeRouter(name string, links []*Link) (r Router, err error) {
 	r.Debug = false
 	devs := make([]Dev, 0)
 	sourceDevs := make([]Dev, 0)
@@ -55,9 +62,55 @@ func MakeRouter(links []*Link) (r Router, err error) {
 	r.Links = links
 	r.sourceDevs = sourceDevs
 
+	r.ValidateRouting()
+
 	// fmt.Println("Made router")
 
 	return r, nil
+}
+
+func (r *Router) ValidateRouting() {
+	errors := make([]string, 0)
+
+	for _, dev := range r.Devs {
+		expectedInPorts := make([]uint64, 0)
+		for i := range dev.Inputs() {
+			expectedInPorts = append(expectedInPorts, uint64(i))
+		}
+
+		actualInPorts := make([]uint64, 0)
+		for _, l := range r.InputLinks(dev) {
+			actualInPorts = append(actualInPorts, l.PortTo)
+		}
+
+		if len(expectedInPorts) != len(actualInPorts) {
+			errors = append(errors, (fmt.Sprintf(
+				"Routing error: Device %v should have %v inputs but %v are routed",
+				dev.Name(),
+				len(expectedInPorts),
+				len(actualInPorts),
+			)))
+			continue
+		}
+
+		sort.Slice(actualInPorts, func(i, j int) bool {
+			return actualInPorts[i] < actualInPorts[j]
+		})
+
+		for i := range expectedInPorts {
+			if expectedInPorts[i] != actualInPorts[i] {
+				errors = append(errors, fmt.Sprintf("Routing error: Device %v has input %v instead of %v",
+					dev.Name(),
+					actualInPorts[i],
+					expectedInPorts[i],
+				))
+			}
+		}
+	}
+
+	if len(errors) != 0 {
+		panic(strings.Join(errors, "\n"))
+	}
 }
 
 func (r *Router) Reset() {
@@ -67,12 +120,8 @@ func (r *Router) Reset() {
 }
 
 func (r *Router) InputLinks(dev Dev) (links []*Link) {
-	if IsSource(dev) {
-		return []*Link{}
-	}
-
 	links = make([]*Link, 0, len(dev.Inputs()))
-	for _, l := range (*r).Links {
+	for _, l := range r.Links {
 		if l.DevTo == dev {
 			links = append(links, l)
 		}
@@ -95,9 +144,9 @@ func (r *Router) OutputLinks(dev Dev) (links []*Link) {
 func (r *Router) InputValues(dev Dev) []float64 {
 	inputs := make([]float64, len(dev.Inputs()))
 
-	for i, l := range r.InputLinks(dev) {
+	for _, l := range r.InputLinks(dev) {
 		if l.HasValue {
-			inputs[i] = l.Value
+			inputs[l.PortTo] = l.Value
 		} else {
 			panic("missing value when trying to get input values")
 			// inputs[i] = math.NaN()
@@ -105,6 +154,25 @@ func (r *Router) InputValues(dev Dev) []float64 {
 	}
 
 	return inputs
+}
+
+func (r *Router) PrintDevs() {
+	fmt.Println("Devices:")
+	for _, dev := range r.Devs {
+		fmt.Printf("%v: %d inputs, %d outputs\n",
+			dev.Name(),
+			len(r.InputLinks(dev)),
+			len(r.OutputLinks(dev)))
+	}
+	fmt.Println("")
+}
+
+func (r *Router) PrintLinks() {
+	fmt.Println("Links:")
+	for _, link := range r.Links {
+		fmt.Printf("%v\n", link.String())
+	}
+	fmt.Println("")
 }
 
 func (r *Router) HasAllInputs(dev Dev) bool {
@@ -138,14 +206,14 @@ func (r *Router) processDev(dev Dev) {
 
 		if r.HasAllInputs(l.DevTo) {
 			if r.Debug {
-				fmt.Println(l.DevTo.Name(), "has all inputs")
+				fmt.Println(l.DevTo.Name(), "has all inputs: ", r.InputValues(l.DevTo))
 			}
 			r.processDev(l.DevTo)
 		}
 	}
 }
 
-func (r *Router) Xfer(_inputs []float64) []float64 {
+func (r *Router) Xfer(inputs []float64) []float64 {
 	if r.Debug {
 		fmt.Println("router xfer\n---------------")
 	}
