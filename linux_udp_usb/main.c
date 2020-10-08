@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "../common/protocol.h"
-#include "../common/stm32_driver.h"
+#include "../common/secrets.h"
 
 void print_hex_bytes(char *buf, int len) {
   for (int i = 0; i < len; i++) {
@@ -323,7 +323,7 @@ int main(int argc, char **argv) {
   memset(&recv_msg, 0xEE, sizeof(recv_msg));
 
   uint16_t usb_msg[3] = { 0, 0, 0 };
-  ssize_t sent_bytes = 0;
+  int sent_bytes = 0;
   int usb_transfer_timeout = 60;
 
   for (;;) {
@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
 
       err = libusb_interrupt_transfer(usb.dev_handle,
                                       0x05,
-                                      usb_msg, sizeof(usb_msg),
+                                      (unsigned char *)usb_msg, sizeof(usb_msg),
                                       &sent_bytes,
                                       usb_transfer_timeout);
 

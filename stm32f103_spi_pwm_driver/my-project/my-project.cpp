@@ -12,7 +12,9 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/cm3/cortex.h>
+#include <libopencm3/usb/usbd.h>
 #include "../../common/protocol.h"
+#include "usb.h"
 #include "../../common/stm32_driver.h"
 
 extern "C" void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName );
@@ -21,8 +23,10 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), ch
 	for(;;);	// Loop forever here..
 }
 
-LedValuesMessage input_msg_buf;
+#define STATUS_LED_PORT GPIOC
+#define STATUS_LED_PIN GPIO13
 
+LedValuesMessage input_msg_buf;
 LedValuesMessage output_msgs[2];
 LedValuesMessage *output_msg;
 
@@ -302,9 +306,17 @@ void dma1_channel3_isr() {
 extern "C" int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
 
-  // if USB, then TIM_OC4 should be removed
-  int num_leds = 4;
+  // if using USB, then TIM_OC4 should be removed
+  int use_usb = 1;
+  int num_leds;
   enum tim_oc_id oc_channels[] = { TIM_OC1, TIM_OC2, TIM_OC3, TIM_OC4 };
+
+  if (use_usb) {
+    // the last oc channel (TIM_OC4) wouldn't be used
+    num_leds = 3;
+  } else {
+    num_leds = 4;
+  }
 
   init_driver_state(&state, INITIAL_LED_VALUE, num_leds, oc_channels);
 
@@ -321,11 +333,30 @@ extern "C" int main(void) {
   memset((void *)output_msgs, 0, sizeof(output_msgs));
   output_msg = &output_msgs[0];
 
-  spi_setup();
-  spi_dma_setup();
-  start_dma();
-
   pwm_setup(TIM_OCM_PWM2, state.pwm_period);
+
+  // theoretically we could use both, but I don't see why
+  if (use_usb) {
+    usbd_device *usb_dev = init_usb();
+    uint32_t ipoll = 0;
+
+    while (1) {
+      ipoll++;
+      usbd_poll(usb_dev);
+
+      // LED status indicator, kind of
+      if (ipoll % 400000 == 0) {
+        gpio_toggle(STATUS_LED_PORT, STATUS_LED_PIN);
+        // printf("%s\r\n", test_str);
+        // usbd_ep_write_packet(usbd_dev, 0x82, test_str, sizeof(test_str)-1);
+        // usbd_ep_write_packet(usbd_dev, 0x86, test_str, sizeof(test_str)-1);
+      }
+    }
+  } else {
+    spi_setup();
+    spi_dma_setup();
+    start_dma();
+  }
 
   // xTaskCreate(set_msg_values_task, "SET_MSG_LED_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
   // xTaskCreate(set_temp_initial_values_task, "SET_TEMP_INITAIL_VALUE", 100, (void *)&led_values, configMAX_PRIORITIES-1, NULL);
