@@ -6,47 +6,46 @@ import (
 )
 
 type PowConst struct {
-	Value float64
-	numChannels uint64
+	Adjustments []float64
 }
 
 
-func MakePowConst(numChannels uint64, value float64) PowConst {
-	return PowConst{value, numChannels}
+func MakePowConst(adjustments []float64) PowConst {
+	return PowConst{adjustments}
 }
 
 func (c *PowConst) Name() string {
-	return fmt.Sprintf("PowConst x^%f (%d channels)", c.Value, c.numChannels)
+	return fmt.Sprintf("PowConst %v", c.Adjustments)
 }
 
 func (c *PowConst) Inputs() []Port {
-	inputs := make([]Port, 0, c.numChannels)
+	inputs := make([]Port, len(c.Adjustments))
 
-	for i := uint64(0); i < c.numChannels; i++ {
-		inputs = append(inputs, Port{uint64(i), fmt.Sprintf("input %d", i)})
+	for i, adj := range c.Adjustments {
+		inputs[i] = Port{ uint64(i), fmt.Sprintf("input x^%v", adj) }
 	}
 
 	return inputs
 }
 
 func (c *PowConst) Outputs() []Port {
-	outputs := make([]Port, 0, c.numChannels)
+	outputs := make([]Port, len(c.Adjustments))
 
-	for i := uint64(0); i < c.numChannels; i++ {
-		outputs = append(outputs, Port{uint64(i), fmt.Sprintf("output %d", i)})
+	for i, adj := range c.Adjustments {
+		outputs[i] = Port{ uint64(i), fmt.Sprintf("output x^%v", adj) }
 	}
 
 	return outputs
 }
 
 func (c *PowConst) Xfer(inputs []float64) []float64 {
-	if uint64(len(inputs)) != c.numChannels {
-		panic(fmt.Sprintf("PowConst expected %d inputs, got %d", c.numChannels, len(inputs)))
+	if len(inputs) != len(c.Adjustments) {
+		panic(fmt.Sprintf("PowConst expected %d inputs, got %d", len(c.Adjustments), len(inputs)))
 	}
 
 	outputs := make([]float64, len(inputs))
 	for i, f := range inputs {
-		outputs[i] = math.Pow(f, c.Value)
+		outputs[i] = math.Pow(f, c.Adjustments[i])
 	}
 
 	return outputs

@@ -72,7 +72,7 @@ func (u *UDPIn) listen() {
 }
 
 func (u *UDPIn) Name() string {
-	return fmt.Sprintf("UDP-In at [todo port]")
+	return fmt.Sprintf("UDP-In at %v", u.addr)
 }
 
 func (u *UDPIn) Inputs() []Port {

@@ -11,6 +11,12 @@ type Router struct {
 	Debug bool
 	Devs []Dev
 	Links []*Link
+	inputLinks []*Link
+	outputLinks []*Link
+	inputPorts []Port
+	outputPorts []Port
+	inputs []float64
+	outputs []float64
 	sourceDevs []Dev // should only include device from Devs
 }
 
@@ -24,11 +30,12 @@ func DevExists(devs []Dev, dev Dev) bool {
 }
 
 func (r *Router) Name() string {
-	return fmt.Sprint("Router", r.Name)
+	return fmt.Sprintf("Router \"%s\"", r.name)
 }
 
 func MakeRouter(name string, links []*Link) (r Router, err error) {
 	r.Debug = false
+	r.name = name
 	devs := make([]Dev, 0)
 	sourceDevs := make([]Dev, 0)
 	devsWithInputs := make([]Dev, 0)
@@ -40,16 +47,24 @@ func MakeRouter(name string, links []*Link) (r Router, err error) {
 			panic(fmt.Sprintf("link has the same in and out dev: %v", l.String()))
 		}
 
-		if !DevExists(devs, l.DevFrom) {
-			devs = append(devs, l.DevFrom)
+		if l.DevFrom == nil {
+			r.inputLinks = append(r.inputLinks, l)
+		} else {
+			if !DevExists(devs, l.DevFrom) {
+				devs = append(devs, l.DevFrom)
+			}
 		}
 
-		if !DevExists(devs, l.DevTo) {
-			devs = append(devs, l.DevTo)
-		}
+		if l.DevTo == nil {
+			r.outputLinks = append(r.outputLinks, l)
+		} else {
+			if !DevExists(devs, l.DevTo) {
+				devs = append(devs, l.DevTo)
+			}
 
-		if !DevExists(devsWithInputs, l.DevTo) {
-			devsWithInputs = append(devsWithInputs, l.DevTo)
+			if !DevExists(devsWithInputs, l.DevTo) {
+				devsWithInputs = append(devsWithInputs, l.DevTo)
+			}
 		}
 	}
 
@@ -63,11 +78,78 @@ func MakeRouter(name string, links []*Link) (r Router, err error) {
 	r.Links = links
 	r.sourceDevs = sourceDevs
 
+	r.makeInputs()
+	r.makeOutputs()
+
 	r.ValidateRouting()
 
-	// fmt.Println("Made router")
-
 	return r, nil
+}
+
+func (r *Router) Inputs() []Port {
+	return r.inputPorts
+}
+
+func (r *Router) Outputs() []Port {
+	return r.outputPorts
+}
+
+func (r *Router) makeInputs() {
+	ports := make([]Port, 0)
+
+	maxInput := uint64(0)
+
+	for _, l := range r.inputLinks {
+		alreadyExists := false
+		if l.PortFrom > maxInput {
+			maxInput = l.PortFrom
+		}
+		for _, p := range ports {
+			if p.Index == l.PortFrom {
+				alreadyExists = true
+				break
+			}
+		}
+
+		if alreadyExists {
+			continue
+		}
+
+		ports = append(ports,
+			Port{l.PortFrom, fmt.Sprint("router input ", l.PortFrom)})
+	}
+
+	r.inputs = make([]float64, maxInput+1)
+	r.inputPorts = ports
+}
+
+func (r *Router) makeOutputs() {
+	ports := make([]Port, 0)
+	maxOutput := uint64(0)
+
+	for _, l := range r.outputLinks {
+		if l.PortTo > maxOutput {
+			maxOutput = l.PortTo
+		}
+
+		alreadyExists := false
+		for _, p := range ports {
+			if p.Index == l.PortTo {
+				alreadyExists = true
+				break
+			}
+		}
+
+		if alreadyExists {
+			continue
+		}
+
+		ports = append(ports,
+			Port{l.PortTo, fmt.Sprint("router output ", l.PortTo)})
+	}
+
+	r.outputs = make([]float64, maxOutput+1)
+	r.outputPorts = ports
 }
 
 func (r *Router) ValidateRouting() {
@@ -121,6 +203,10 @@ func (r *Router) Reset() {
 }
 
 func (r *Router) InputLinks(dev Dev) (links []*Link) {
+	if dev == nil {
+		return r.inputLinks
+	}
+
 	links = make([]*Link, 0, len(dev.Inputs()))
 	for _, l := range r.Links {
 		if l.DevTo == dev {
@@ -132,6 +218,10 @@ func (r *Router) InputLinks(dev Dev) (links []*Link) {
 }
 
 func (r *Router) OutputLinks(dev Dev) (links []*Link) {
+	if dev == nil {
+		return r.outputLinks
+	}
+
 	links = make([]*Link, 0, len(dev.Outputs()))
 	for _, l := range (*r).Links {
 		if l.DevFrom == dev {
@@ -143,9 +233,18 @@ func (r *Router) OutputLinks(dev Dev) (links []*Link) {
 }
 
 func (r *Router) InputValues(dev Dev) []float64 {
-	inputs := make([]float64, len(dev.Inputs()))
+	var inputs []float64
+	var inputLinks []*Link
 
-	for _, l := range r.InputLinks(dev) {
+	if dev == nil {
+		inputs = r.inputs
+		inputLinks = r.inputLinks
+	} else {
+		inputs = make([]float64, len(dev.Inputs()))
+		inputLinks = r.InputLinks(dev)
+	}
+
+	for _, l := range inputLinks {
 		if l.HasValue {
 			inputs[l.PortTo] = l.Value
 		} else {
@@ -171,7 +270,7 @@ func (r *Router) PrintDevs() {
 func (r *Router) PrintLinks() {
 	fmt.Println("Links:")
 	for _, link := range r.Links {
-		fmt.Printf("%v\n", link.String())
+		fmt.Printf("%v\n", link.Inspect())
 	}
 	fmt.Println("")
 }
@@ -186,10 +285,14 @@ func (r *Router) HasAllInputs(dev Dev) bool {
 }
 
 func (r *Router) processDev(dev Dev) {
-	if r.Debug {
-		fmt.Println("processDev", dev.Name())
-	}
+	// if r.Debug {
+	// 	fmt.Println("processDev", dev.Name())
+	// }
 	var outputs []float64
+
+	if dev == nil {
+		return
+	}
 
 	if r.HasAllInputs(dev) {
 		outputs = dev.Xfer(r.InputValues(dev))
@@ -198,17 +301,17 @@ func (r *Router) processDev(dev Dev) {
 		// TODO: get inputs and Xfer
 	}
 
-	for i, l := range r.OutputLinks(dev) {
-		if r.Debug {
-			fmt.Println("output ", i, ": ", l.Inspect())
-		}
+	for _, l := range r.OutputLinks(dev) {
+		// if r.Debug {
+		// 	fmt.Println("output ", i, ": ", l.Inspect())
+		// }
 		l.HasValue = true
 		l.Value = outputs[l.PortFrom] // outputs[i] worked
 
 		if r.HasAllInputs(l.DevTo) {
-			if r.Debug {
-				fmt.Println(l.DevTo.Name(), "has all inputs: ", r.InputValues(l.DevTo))
-			}
+			// if r.Debug {
+			// 	fmt.Println(l.DevTo.Name(), "has all inputs: ", r.InputValues(l.DevTo))
+			// }
 			r.processDev(l.DevTo)
 		}
 	}
@@ -220,16 +323,33 @@ func (r *Router) Xfer(inputs []float64) []float64 {
 	}
 	r.Reset()
 
+	r.inputs = inputs
+
+	for _, l := range r.inputLinks {
+		l.HasValue = true
+		l.Value = inputs[l.PortFrom]
+	}
+
+	for _, l := range r.inputLinks {
+		r.processDev(l.DevTo)
+	}
+
 	for _, srcDev := range r.sourceDevs {
-		if r.Debug {
-			fmt.Println("Router Xfer dev", srcDev.Name())
-		}
 		r.processDev(srcDev)
 	}
 
-	// for _, l := range r.Links {
-	// 	fmt.Println(l.Inspect())
-	// }
+	for _, l := range r.outputLinks {
+		if !l.HasValue {
+			r.PrintLinks()
+			panic(fmt.Sprintf("output link %v has no value", (*l).String()))
+		}
 
-	return []float64{}
+		r.outputs[l.PortTo] = l.Value
+	}
+
+	if r.Debug {
+		r.PrintLinks()
+	}
+
+	return r.outputs
 }

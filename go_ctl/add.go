@@ -5,21 +5,22 @@ import (
 )
 
 type Add struct {
+	name string
 	inputChannels uint64
 	inputPorts []Port
 }
 
-func MakeAdd(numChannels uint64) Add {
+func MakeAdd(name string, numChannels uint64) Add {
 	ports := make([]Port, numChannels)
 	for i := uint64(0); i < numChannels; i++ {
 		ports[i] = Port{i, fmt.Sprint("add input ", i)}
 	}
 
-	return Add{numChannels, ports}
+	return Add{name, numChannels, ports}
 }
 
 func (a *Add) Name() string {
-	return fmt.Sprint("Add (", a.inputChannels, " channels)")
+	return fmt.Sprintf("Add %s (%v channels)", a.name, a.inputChannels)
 }
 
 func (a *Add) Inputs() []Port {

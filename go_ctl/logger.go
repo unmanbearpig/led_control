@@ -6,11 +6,12 @@ import (
 
 type Logger struct {
 	description string
+	Enabled bool
 	inputPorts []Port
 }
 
-func MakeLogger(description string, inputPorts []Port) Logger {
-	return Logger{description, inputPorts}
+func MakeLogger(description string, enabled bool, inputPorts []Port) Logger {
+	return Logger{description, enabled, inputPorts}
 }
 
 func (l *Logger) Name() string {
@@ -26,6 +27,10 @@ func (l *Logger) Outputs() []Port {
 }
 
 func (l *Logger) Xfer(inputs []float64) []float64 {
+	if !l.Enabled {
+		return inputs
+	}
+
 	if len(inputs) != len(l.inputPorts) {
 		panic(fmt.Sprint(
 			"Logger: invalid number of inputs: ",

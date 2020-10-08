@@ -15,11 +15,26 @@ type Link struct {
 }
 
 func (l *Link) String() string {
-	return fmt.Sprintf("%s[%d] -> %s[%d]", l.DevFrom.Name(), l.PortFrom, l.DevTo.Name(), l.PortTo)
+	var devFromName string
+	var devToName string
+
+	if l.DevFrom == nil {
+		devFromName = "router-input-dev"
+	} else {
+		devFromName = l.DevFrom.Name()
+	}
+
+	if l.DevTo == nil {
+		devToName = "router-output-dev"
+	} else {
+		devToName = l.DevTo.Name()
+	}
+
+	return fmt.Sprintf("%s[%d] -> %s[%d]", devFromName, l.PortFrom, devToName, l.PortTo)
 }
 
 func (l *Link) Inspect() string {
-	return fmt.Sprintf("%s[%d] -> %s[%d]: %v %v", l.DevFrom.Name(), l.PortFrom, l.DevTo.Name(), l.PortTo, l.HasValue, l.Value)
+	return fmt.Sprintf("%s: %v %v", l.String(), l.HasValue, l.Value)
 }
 
 func MakeLink(devFrom Dev, portFrom uint64, devTo Dev, portTo uint64) Link {
