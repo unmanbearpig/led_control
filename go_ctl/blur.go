@@ -36,9 +36,7 @@ func (b *Blur) Outputs() []Port {
 }
 
 func (b *Blur) Xfer(inputs []float64) []float64 {
-	fmt.Printf("blur  inputs: %v\n", inputs)
 	outputs := blur(b.radius, inputs)
-	fmt.Printf("blur outputs: %v\n", outputs)
 	return outputs
 }
 
