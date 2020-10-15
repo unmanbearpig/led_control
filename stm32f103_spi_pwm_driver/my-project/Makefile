@@ -1,11 +1,12 @@
 PROJECT = stm32f103_spi_pwm_driver
 BUILD_DIR = bin
 
-SHARED_DIR = ../my-common-code
-CPPFILES = my-project.cpp
+# SHARED_DIR = ../my-common-code
+# CPPFILES =
+CFILES = my-project.c
 
 # heap_5.c doesn't work, 1-4 work
-CFILES = FreeRTOS/heap_4.c FreeRTOS/list.c FreeRTOS/port.c FreeRTOS/queue.c FreeRTOS/tasks.c
+# CFILES = FreeRTOS/heap_4.c FreeRTOS/list.c FreeRTOS/port.c FreeRTOS/queue.c FreeRTOS/tasks.c
 
 LDLIBS += -lm
 
@@ -17,7 +18,7 @@ OOCD_TARGET=cs32f1x
 # OOCD_TARGET=stm32f1x
 
 # You shouldn't have to edit anything below here.
-VPATH += $(SHARED_DIR)
+# VPATH += $(SHARED_DIR)
 INCLUDES += $(patsubst %,-I%, . $(SHARED_DIR))
 OPENCM3_DIR=../../libopencm3
 

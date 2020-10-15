@@ -1,8 +1,9 @@
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/task.h>
-
 #include <string.h>
 #include <math.h>
+
+/* #include <FreeRTOS/FreeRTOS.h> */
+/* #include <FreeRTOS/task.h> */
+
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
@@ -17,11 +18,11 @@
 #include "usb.h"
 #include "../../common/stm32_driver.h"
 
-extern "C" void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName );
+/* void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName ); */
 
-void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), char *pcTaskName __attribute((unused))) {
-	for(;;);	// Loop forever here..
-}
+/* void vApplicationStackOverflowHook( TaskHandle_t xTask __attribute((unused)), char *pcTaskName __attribute((unused))) { */
+/* 	for(;;);	// Loop forever here.. */
+/* } */
 
 #define STATUS_LED_PORT GPIOC
 #define STATUS_LED_PIN GPIO13
@@ -187,55 +188,55 @@ void restart_dma() {
   start_dma();
 }
 
-void init_tmp_fade_down_to(uint16_t *led_values, uint16_t *value, uint16_t target_value) {
-  for(; *value > target_value; *value = *value*=0.99 ) {
-    if (spi_command_received) {
-      break;
-    }
+/* void init_tmp_fade_down_to(uint16_t *led_values, uint16_t *value, uint16_t target_value) { */
+/*   for(; *value > target_value; *value = *value*=0.99 ) { */
+/*     if (spi_command_received) { */
+/*       break; */
+/*     } */
 
-    for(int i = 0; i < LED_COUNT; i++) {
-      led_values[i] = *value;
-    }
+/*     for(int i = 0; i < LED_COUNT; i++) { */
+/*       led_values[i] = *value; */
+/*     } */
 
-    vTaskDelay(pdMS_TO_TICKS(25));
-  }
-}
+/*     vTaskDelay(pdMS_TO_TICKS(25)); */
+/*   } */
+/* } */
 
-static void set_temp_initial_values_task(void *_value) {
-  uint16_t *led_values = (uint16_t *)_value;
-  vTaskDelay(pdMS_TO_TICKS(3000));
+/* static void set_temp_initial_values_task(void *_value) { */
+/*   uint16_t *led_values = (uint16_t *)_value; */
+/*   vTaskDelay(pdMS_TO_TICKS(3000)); */
 
-  uint16_t value = INITIAL_LED_VALUE;
+/*   uint16_t value = INITIAL_LED_VALUE; */
 
-  init_tmp_fade_down_to(led_values, &value, 0x8888);
-  vTaskDelay(pdMS_TO_TICKS(5000));
-  init_tmp_fade_down_to(led_values, &value, 0x0111);
-  vTaskDelay(pdMS_TO_TICKS(2000));
-  init_tmp_fade_down_to(led_values, &value, 0);
-  vTaskDelete(NULL);
-}
+/*   init_tmp_fade_down_to(led_values, &value, 0x8888); */
+/*   vTaskDelay(pdMS_TO_TICKS(5000)); */
+/*   init_tmp_fade_down_to(led_values, &value, 0x0111); */
+/*   vTaskDelay(pdMS_TO_TICKS(2000)); */
+/*   init_tmp_fade_down_to(led_values, &value, 0); */
+/*   vTaskDelete(NULL); */
+/* } */
 
-static void set_msg_values_task(void *_value) {
-  // uint16_t *led_values = (uint16_t *)_value;
+/* static void set_msg_values_task(void *_value) { */
+/*   // uint16_t *led_values = (uint16_t *)_value; */
 
-  for(;;) {
-    // if (use_float) {
-    //   // xxx
-    //   float temp = float_led_values[2];
-    //   float_led_values[2] = float_led_values[3];
-    //   float_led_values[3] = temp;
+/*   for(;;) { */
+/*     // if (use_float) { */
+/*     //   // xxx */
+/*     //   float temp = float_led_values[2]; */
+/*     //   float_led_values[2] = float_led_values[3]; */
+/*     //   float_led_values[3] = temp; */
 
-    //   // ----
+/*     //   // ---- */
 
-    //   led_values_convert_float_to_16(led_values, float_led_values);
-    // }
+/*     //   led_values_convert_float_to_16(led_values, float_led_values); */
+/*     // } */
 
-    set_leds(&state);
+/*     set_leds(&state); */
 
-    // vTaskDelay(pdMS_TO_TICKS(50));
-    vTaskDelay(1); // xxx?
-  }
-}
+/*     // vTaskDelay(pdMS_TO_TICKS(50)); */
+/*     vTaskDelay(1); // xxx? */
+/*   } */
+/* } */
 
 typedef struct {
   uint32_t isrs;
@@ -303,7 +304,7 @@ void dma1_channel3_isr() {
   cm_enable_interrupts();
 }
 
-extern "C" int main(void) {
+int main(void) {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz(); // For "blue pill"
 
   // if using USB, then TIM_OC4 should be removed
