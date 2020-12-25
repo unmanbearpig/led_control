@@ -7,6 +7,8 @@
 #include "../common/protocol.h"
 #include "../common/secrets.h"
 
+#define PWM_PERIOD 22126
+
 void print_hex_bytes(char *buf, int len) {
   for (int i = 0; i < len; i++) {
     printf("%02x", buf[i]);
@@ -122,7 +124,7 @@ int find_device(libusb_context *usb_ctx, libusb_device_handle **out_dev_handle) 
   ssize_t cnt = libusb_get_device_list(usb_ctx, &dev_list);
 
   if (cnt <= 0) {
-    fprintf(stderr, "find_device error: found %d devices\n", cnt);
+    fprintf(stderr, "find_device error: found %ld devices\n", cnt);
     exit(1);
     return 1;
   }
@@ -285,6 +287,13 @@ void free_and_close_usb(struct usb *usb) {
   libusb_exit(usb->ctx);
 }
 
+void print_hex(char *bytes, size_t len) {
+  for(size_t i = 0; i < len; i++) {
+    fprintf(stderr, "%x ", bytes[i]);
+  }
+  fprintf(stderr, "\n");
+}
+
 int main(int argc, char **argv) {
   struct usb usb = { 0, 0, 0 };
   int err = setup_usb(&usb);
@@ -331,6 +340,17 @@ int main(int argc, char **argv) {
     fprintf(stderr, "got packet; size: %d\n", recsize);
 
     if (recsize != -1) {
+      char printbuf[512];
+      int printed = 0;
+
+      printf("hello");
+      printed += sprintf(printbuf, "bytes:");
+      for (int i = 0; i < recsize; i++) {
+        printed += sprintf(printbuf + printed -1, " %02x", ((uint8_t *)&msg)[i]);
+      }
+      printbuf[printed] = 0;
+      fprintf(stderr, "%s\n", printbuf);
+
       if (sock < 0) {
         fprintf(stderr, "accept failed\n");
         exit(1);
@@ -347,17 +367,40 @@ int main(int argc, char **argv) {
       }
 
       LedMsgData *data = &msg.payload.data;
+      fprintf(stderr, "flags = %x amount = %f\n", data->flags, data->amount);
 
       if (data->flags & LED_VALUES_FLAG_FLOAT != 0) {
+        fprintf(stderr, "float\n");
         // convert float to uint16_t
-        usb_msg[0] = data->values.values_float[0] * 0xFFFF;
-        usb_msg[1] = data->values.values_float[1] * 0xFFFF;
-        usb_msg[2] = data->values.values_float[2] * 0xFFFF;
+        usb_msg[0] = data->values.values_float[0] * PWM_PERIOD;
+        usb_msg[1] = data->values.values_float[1] * PWM_PERIOD;
+        usb_msg[2] = data->values.values_float[2] * PWM_PERIOD;
       } else {
+        fprintf(stderr, "u16\n");
         usb_msg[0] = data->values.values16[0];
         usb_msg[1] = data->values.values16[1];
         usb_msg[2] = data->values.values16[2];
       }
+
+      // todo print hex byte values of floats
+      fprintf(stderr, "vals 16: %x %x %x %x (last ignored)\n",
+              data->values.values16[0], data->values.values16[1],
+              data->values.values16[2], data->values.values16[3]);
+      fprintf(stderr, "vals 32: %f %f %f %f (last ignored)\n",
+              data->values.values_float[0], data->values.values_float[1],
+              data->values.values_float[2], data->values.values_float[3]);
+
+      fprintf(stderr, "f1: ");
+      print_hex((char *)&data->values.values_float[0], sizeof(data->values.values_float[0]));
+      fprintf(stderr, "f2: ");
+      print_hex((char *)&data->values.values_float[1], sizeof(data->values.values_float[1]));
+      fprintf(stderr, "f3: ");
+      print_hex((char *)&data->values.values_float[2], sizeof(data->values.values_float[2]));
+      fprintf(stderr, "f4: ");
+      print_hex((char *)&data->values.values_float[3], sizeof(data->values.values_float[3]));
+
+      fprintf(stderr, "values : %x %x %x %x (last ignored)\n", usb_msg[0], usb_msg[1], usb_msg[2], usb_msg[3]);
+      fprintf(stderr, "usb_msg: %x %x %x\n", usb_msg[0], usb_msg[1], usb_msg[2]);
 
       err = libusb_interrupt_transfer(usb.dev_handle,
                                       0x05,
