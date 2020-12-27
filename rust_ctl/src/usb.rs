@@ -45,6 +45,7 @@ impl dev::Dev for UsbDev {
 
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
+        eprintln!("usb write: {:?}", self.raw_msg);
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
         let data = self.raw_msg.into_slice();
@@ -81,7 +82,7 @@ impl UsbDev {
     }
 
     fn usb_endpoint(&self) -> u8 {
-        2
+        5
     }
 
     fn timeout(&self) -> Duration {

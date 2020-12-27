@@ -60,6 +60,12 @@ fn main() -> Result<(), String> {
         config::Action::DemoTestSeq => {
             demo::test_seq::run(&mut srv)?;
         }
+        config::Action::DemoGlitch => {
+            demo::glitch::run(&mut srv)?;
+        }
+        config::Action::DemoHello => {
+            demo::hello::run(&mut srv)?;
+        }
         _ => unimplemented!()
     }
 
