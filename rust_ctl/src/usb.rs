@@ -5,13 +5,21 @@ use rusb;
 use crate::old_proto;
 use crate::dev::{self, Dev};
 use std::time::Duration;
+use std::fmt;
 
+#[allow(dead_code)]
 pub struct UsbDev {
     devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
     bus_number: u8,
     dev_addr: u8,
     raw_msg: old_proto::LedMsg16,
     _name: String,
+}
+
+impl fmt::Display for UsbDev {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
 }
 
 impl dev::Dev for UsbDev {

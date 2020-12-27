@@ -3,6 +3,7 @@
 use std::mem;
 use std::time::{Duration, SystemTime};
 use std::slice;
+use std::fmt;
 
 // protocol for sending data via UDP / (or Unix sockets?)
 // not intended for SPI or USB communication with the PWM controller
@@ -14,8 +15,15 @@ pub const MSG_HEADER_SIZE: usize = 4 + 4 + 8 + 4 + 4;
 pub const MSG_MAX_SIZE: usize = MSG_HEADER_SIZE + MSG_MAX_PAYLOAD;
 pub const MSG_MAGIC: u8 = 0x1c;
 
-#[derive(PartialEq, Eq, Debug)]
-pub struct ChanId(u16);
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct ChanId(pub u16);
+
+impl fmt::Display for ChanId{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[chan {}]", self.0)
+    }
+}
+
 
 #[derive(PartialEq, Debug)]
 pub enum Val {
@@ -40,7 +48,7 @@ impl SerErr {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct ChanVal(ChanId, Val);
+pub struct ChanVal(pub ChanId, pub Val);
 
 impl ChanVal {
     pub fn serialize_to_struct(&self, out: &mut ChanValSer) {
@@ -109,10 +117,9 @@ impl Default for ChanValSer {
 
 #[derive(PartialEq, Debug)]
 pub struct Msg {
-    seq_num: u16,
-    timestamp: SystemTime,
-    vals: Vec<ChanVal>,
-    // vals: &'a [ChanVal],
+    pub seq_num: u16,
+    pub timestamp: SystemTime,
+    pub vals: Vec<ChanVal>,
 }
 
 impl Msg {
