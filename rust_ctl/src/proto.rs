@@ -27,7 +27,7 @@ impl fmt::Display for ChanId{
 
 #[derive(PartialEq, Debug)]
 pub enum Val {
-    U32(u32),
+    U16(u16),
     F32(f32),
 }
 
@@ -55,9 +55,10 @@ impl ChanVal {
         out.chan_id = self.0.0;
 
         match self.1 {
-            Val::U32(val) => {
+            Val::U16(val) => {
                 out.tag = 0;
-                out.val.copy_from_slice(&val.to_le_bytes()[..]);
+                out.val[0..2].copy_from_slice(&val.to_le_bytes()[..]);
+                out.val[2..].fill(0);
             }
 
             Val::F32(val) => {
@@ -78,10 +79,14 @@ impl ChanVal {
     }
 
     pub fn deserialize_from_struct(ser: &ChanValSer) -> Result<Self, SerErr> {
+        println!("deserialize_from_struct");
         Ok(ChanVal(
             ChanId(ser.chan_id),
             match ser.tag {
-                0 => Val::U32(unsafe { mem::transmute(ser.val) }),
+                0 => {
+                    let bytes = [ser.val[0], ser.val[1]];
+                    Val::U16(u16::from_le_bytes(bytes))
+                },
                 1 => Val::F32(unsafe { mem::transmute(ser.val) }),
                 _ => panic!("invalid ChanVal tag {}", ser.tag)
             }
@@ -243,13 +248,14 @@ mod tests {
 
     #[test]
     fn test_chan_val_serialize() {
-        let cv = ChanVal(ChanId(42), Val::U32(123456789));
+        let cv = ChanVal(ChanId(42), Val::U16(12345));
         let buf = &mut [0u8; 8];
 
         const EXPECTED_BYTES: [u8; 8] = [
             0x2a, 0x00,  // chan
             0x00, 0x00,  // flags
-            0x15, 0xcd, 0x5b, 0x07, // value
+            0x39, 0x30,  // value
+            0x00, 0x00,  // not used
         ];
 
         assert_eq!(cv.serialize_to_buf(buf), 8);
@@ -258,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_chan_val_roundtrip() {
-        let cv = ChanVal(ChanId(42), Val::U32(123456789));
+        let cv = ChanVal(ChanId(42), Val::U16(12345));
         let buf = &mut [0u8; 8];
         cv.serialize_to_buf(buf);
         let newcv = ChanVal::deserialize(buf).unwrap();
@@ -276,7 +282,7 @@ mod tests {
         let msg = Msg {
             seq_num: 12345,
             timestamp: SystemTime::now(),
-            vals: vec!(ChanVal(ChanId(32), Val::U32(54))),
+            vals: vec!(ChanVal(ChanId(32), Val::U16(54))),
         };
 
         assert_eq!(512, MSG_MAX_SIZE);
@@ -305,7 +311,7 @@ mod tests {
             let msg = Msg {
                 seq_num: 12345,
                 timestamp: SystemTime::now(),
-                vals: vec!(ChanVal(ChanId(32), Val::U32(54))),
+                vals: vec!(ChanVal(ChanId(32), Val::U16(54))),
             };
             let buf = &mut [0u8; MSG_MAX_SIZE];
             let len = msg.serialize(buf);

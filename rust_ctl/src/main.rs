@@ -1,4 +1,4 @@
-#![feature(test)]
+#![feature(test, slice_fill)]
 
 mod proto;
 mod usb;
@@ -11,6 +11,7 @@ mod udpv1_dev;
 mod demo;
 
 use std::env;
+use std::time;
 
 // inputs: new udp
 // outputs: usb, old udp, new udp, spi (later?)
@@ -57,6 +58,37 @@ fn main() -> Result<(), String> {
                 println!("chan {} {}", id, name);
             }
         }
+        config::Action::SetSameF32(val) => {
+            let mut msg = proto::Msg {
+                seq_num: 0,
+                timestamp: time::SystemTime::now(),
+                vals: Vec::new(),
+            };
+
+            for c in 0..srv.chans().len() {
+                msg.vals.push(
+                    proto::ChanVal(proto::ChanId(c as u16),
+                                   proto::Val::F32(val)));
+            }
+
+            srv.handle_msg(&mut msg)?;
+        }
+        config::Action::SetSameU16(val) => {
+            let mut msg = proto::Msg {
+                seq_num: 0,
+                timestamp: time::SystemTime::now(),
+                vals: Vec::new(),
+            };
+
+            for c in 0..srv.chans().len() {
+                msg.vals.push(
+                    proto::ChanVal(proto::ChanId(c as u16),
+                                   proto::Val::U16(val)));
+            }
+
+            srv.handle_msg(&mut msg)?;
+        }
+
         config::Action::DemoTestSeq => {
             demo::test_seq::run(&mut srv)?;
         }

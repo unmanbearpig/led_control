@@ -22,6 +22,13 @@ impl fmt::Display for UsbDev {
     }
 }
 
+fn print_bytes(bytes: &[u8]) {
+    for b in bytes.iter() {
+        print!("{:02x}", b);
+    }
+    println!("");
+}
+
 impl dev::Dev for UsbDev {
     fn name(&self) -> &String {
         &self._name
@@ -50,16 +57,17 @@ impl dev::Dev for UsbDev {
         let timeout = self.timeout();
         let data = self.raw_msg.into_slice();
 
+        eprintln!("writing to USB");
+        print_bytes(data);
+
         let res = self.devhandle.write_interrupt(endpoint, data, timeout);
         match res {
             Ok(numbytes) => {
-                if numbytes != data.len() {
-                    eprintln!("USB sync: written {} of {}", numbytes, data.len())
-                }
+                eprintln!("USB sync: written {} of {} bytes", numbytes, data.len());
                 Ok(())
             }
             Err(e) => {
-                Err(format!("USB sync: {}", e))
+                Err(format!("USB sync error: {}", e))
             }
         }
     }
@@ -86,7 +94,7 @@ impl UsbDev {
     }
 
     fn timeout(&self) -> Duration {
-        Duration::from_millis(2)
+        Duration::from_millis(5)
     }
 
     // not sure if needed
