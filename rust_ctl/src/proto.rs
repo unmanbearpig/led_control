@@ -25,7 +25,7 @@ impl fmt::Display for ChanId{
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Val {
     U16(u16),
     F32(f32),
@@ -47,7 +47,7 @@ impl SerErr {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct ChanVal(pub ChanId, pub Val);
 
 impl ChanVal {
@@ -175,13 +175,13 @@ impl Msg {
             MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
         dbg!(header.num_vals);
 
-        if expected_size != buf.len() {
-            return Err(SerErr::InvalidSize {
-                num_vals: header.num_vals as usize,
-                expected_size: expected_size,
-                actual_size: buf.len(),
-            })
-        }
+        // if expected_size != buf.len() {
+        //     return Err(SerErr::InvalidSize {
+        //         num_vals: header.num_vals as usize,
+        //         expected_size: expected_size,
+        //         actual_size: buf.len(),
+        //     })
+        // }
         // ignoring flags and _reserved
 
         let vals: &[ChanValSer] = unsafe {

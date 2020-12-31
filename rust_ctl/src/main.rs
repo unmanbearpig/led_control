@@ -8,6 +8,7 @@ mod old_proto;
 mod config;
 mod udp_srv;
 mod udpv1_dev;
+mod udpv2_dev;
 mod demo;
 
 use std::env;
@@ -29,7 +30,9 @@ fn init_devs(dev_configs: &[config::DevConfig]) -> Result<Vec<Box<dyn dev::Dev>>
             config::DevConfig::UdpV1(ip, port) => {
                 devs.push(Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?));
             }
-            _ => { unimplemented!() }
+            config::DevConfig::UdpV2 { ip, port, chans } => {
+                devs.push(Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?))
+            }
         }
     }
 
@@ -73,6 +76,26 @@ fn main() -> Result<(), String> {
 
             srv.handle_msg(&mut msg)?;
         }
+        config::Action::SetAllF32(fvals) => {
+            if fvals.len() != srv.chans().len() {
+                let msg = format!(
+                    "we have {} chans but you've specified only {} values",
+                    srv.chans().len(), fvals.len());
+                return Err(msg)
+            }
+
+            let vals = srv.chans().iter().zip(fvals)
+                .map(|((cid, _), v)| proto::ChanVal(*cid, proto::Val::F32(v)))
+                .collect();
+
+            let mut msg = proto::Msg {
+                seq_num: 0,
+                timestamp: time::SystemTime::now(),
+                vals: vals,
+            };
+            srv.handle_msg(&mut msg)?;
+
+        }
         config::Action::SetSameU16(val) => {
             let mut msg = proto::Msg {
                 seq_num: 0,
@@ -98,7 +121,30 @@ fn main() -> Result<(), String> {
         config::Action::DemoHello => {
             demo::hello::run(&mut srv)?;
         }
-        _ => unimplemented!()
+        config::Action::DemoWhoosh => {
+            demo::whoosh::run(&mut srv)?;
+        }
+        config::Action::Srv { listen_ip: ip, listen_port: port } => {
+            let mut udp = udp_srv::UdpSrv::new(ip, port)?;
+
+            loop {
+                match udp.recv() {
+                    Ok(msg) => {
+                        match srv.handle_msg(&msg) {
+                            Ok(_) => continue,
+                            Err(e) => eprintln!("Error handling msg: {}", e),
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("udp msg error: {}", e);
+                    }
+                }
+            }
+        }
+        action => {
+            eprintln!("action {:?} not implemented", action);
+            unimplemented!();
+        }
     }
 
     Ok(())

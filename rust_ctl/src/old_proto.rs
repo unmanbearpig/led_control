@@ -53,6 +53,7 @@ impl<'a> LedMsgF32 {
 
 
 impl<'a> LedMsg16 {
+    #[allow(dead_code)]
     pub fn into_slice(&'a mut self) -> &'a mut [u8] {
         unsafe {
             std::slice::from_raw_parts_mut(

@@ -51,7 +51,7 @@ impl Srv {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
                 Val::F32(fval) => {
-                    // TODO error handling
+                    // TODO error handling?
                     let chan = self.chans[*cid as usize];
                     let dev = &mut self.devs[chan.0.0 as usize];
                     dev.set_f32(chan.1, *fval)?;
@@ -62,7 +62,13 @@ impl Srv {
 
         // sync all devs for now, optimize later
         for dev in self.devs.iter_mut() {
-            dev.as_mut().sync()?;
+            let res = dev.as_mut().sync();
+            match res {
+                Err(e) => {
+                    eprintln!("sync: {}", e);
+                }
+                Ok(_) => continue
+            }
         }
 
         Ok(())

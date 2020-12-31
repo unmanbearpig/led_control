@@ -2,7 +2,6 @@
 use rusb;
 // #[path = "old_proto.rs"] mod old_proto;
 // #[path = "dev.rs"] mod dev;
-use crate::old_proto;
 use crate::dev::{self, Dev};
 use std::time::Duration;
 use std::fmt;
@@ -12,7 +11,7 @@ pub struct UsbDev {
     devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
     bus_number: u8,
     dev_addr: u8,
-    raw_msg: old_proto::LedMsg16,
+    raw_vals: [u16; 3],
     _name: String,
 }
 
@@ -20,13 +19,6 @@ impl fmt::Display for UsbDev {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
-}
-
-fn print_bytes(bytes: &[u8]) {
-    for b in bytes.iter() {
-        print!("{:02x}", b);
-    }
-    println!("");
 }
 
 impl dev::Dev for UsbDev {
@@ -46,24 +38,33 @@ impl dev::Dev for UsbDev {
                 val, chan
             ))
         }
+
+        if chan >= self.num_chans() {
+            return Err(format!(
+                "UsbDev set_f32: Invalid chan {}, only {} are available",
+                chan, self.num_chans()))
+        }
+
         let raw_val = (val * self.max_int() as f32).round() as u16;
         self.set_raw(chan, raw_val)
     }
 
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
-        eprintln!("usb write: {:?}", self.raw_msg);
+        // eprintln!("usb write: {:?}", self.raw_vals);
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
-        let data = self.raw_msg.into_slice();
+        // let data = self.raw_msg.into_slice();
+        let data: &[u8; 6] = unsafe { std::mem::transmute(&self.raw_vals) };
 
-        eprintln!("writing to USB");
-        print_bytes(data);
+        // print_bytes(data);
 
         let res = self.devhandle.write_interrupt(endpoint, data, timeout);
         match res {
             Ok(numbytes) => {
-                eprintln!("USB sync: written {} of {} bytes", numbytes, data.len());
+                if numbytes != data.len() {
+                    eprintln!("USB sync: written {} of {} bytes", numbytes, data.len());
+                }
                 Ok(())
             }
             Err(e) => {
@@ -84,7 +85,7 @@ impl UsbDev {
             devhandle: devhandle,
             bus_number: bus_number,
             dev_addr: dev_addr,
-            raw_msg: old_proto::LedMsg16::default(),
+            raw_vals: [0u16; 3],
             _name: name,
         }
     }
@@ -94,7 +95,7 @@ impl UsbDev {
     }
 
     fn timeout(&self) -> Duration {
-        Duration::from_millis(5)
+        Duration::from_millis(6)
     }
 
     // not sure if needed
@@ -110,7 +111,8 @@ impl UsbDev {
                 chan, self.num_chans()))
         }
 
-        self.raw_msg.values[chan as usize] = val;
+
+        self.raw_vals[chan as usize] = val;
         Ok(())
     }
 
