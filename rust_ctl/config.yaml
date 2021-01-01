@@ -1,14 +1,14 @@
 ---
 action: PrintConfig
 devs:
-  - dev:
-      UdpV2:
-        ip: 192.168.0.111
-        port: 8932
-        chans: 3
-    chans:
-      - 0
-      - 2
-      - 1
+  # - dev:
+  #     UdpV2:
+  #       ip: 192.168.0.111
+  #       port: 8932
+  #       chans: 3
+  #   chans:
+  #     - 0
+  #     - 2
+  #     - 1
   - dev: Usb
     chans: ~

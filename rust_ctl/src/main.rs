@@ -142,6 +142,9 @@ fn main() -> Result<(), String> {
         config::Action::DemoHello => {
             demo::hello::run(&mut srv)?;
         }
+        config::Action::DemoHello2 => {
+            demo::hello2::run(&mut srv)?;
+        }
         config::Action::DemoWhoosh => {
             demo::whoosh::run(&mut srv)?;
         }

@@ -34,6 +34,7 @@ pub enum Action {
     DemoTestSeq,
     DemoGlitch,
     DemoHello,
+    DemoHello2,
     DemoWhoosh,
 }
 
@@ -310,6 +311,7 @@ impl Config {
                         "test_seq" => action = Some(Action::DemoTestSeq),
                         "glitch" => action = Some(Action::DemoGlitch),
                         "hello" => action = Some(Action::DemoHello),
+                        "hello2" => action = Some(Action::DemoHello2),
                         "whoosh" => action = Some(Action::DemoWhoosh),
                         other => return Err(format!(
                             "demo \"{}\" does not exist", other))
