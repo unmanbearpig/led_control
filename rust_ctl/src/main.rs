@@ -13,25 +13,43 @@ mod demo;
 
 use std::env;
 use std::time;
+use serde_yaml;
 
 // inputs: new udp
 // outputs: usb, old udp, new udp, spi (later?)
 
-fn init_devs(dev_configs: &[config::DevConfig]) -> Result<Vec<Box<dyn dev::Dev>>, String> {
-    let mut devs: Vec<Box<dyn dev::Dev>> = Vec::new();
+fn init_devs(dev_configs: &[config::DevChanConfig]) ->
+    Result<Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)>, String> {
 
-    for devcfg in dev_configs.iter() {
+    let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)> = Vec::new();
+
+    for config::DevChanConfig(devcfg, chancfg) in dev_configs.iter() {
         match devcfg {
             config::DevConfig::Usb => {
                 for usbdev in usb::UsbDev::find_devs()? {
-                    devs.push(Box::new(usbdev));
+                    devs.push(
+                        (
+                            Box::new(usbdev),
+                            chancfg.clone(),
+                        )
+                    );
                 }
             }
             config::DevConfig::UdpV1(ip, port) => {
-                devs.push(Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?));
+                devs.push(
+                    (
+                        Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?),
+                        chancfg.clone(),
+                    )
+                );
             }
             config::DevConfig::UdpV2 { ip, port, chans } => {
-                devs.push(Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?))
+                devs.push(
+                    (
+                        Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?),
+                        chancfg.clone(),
+                    )
+                );
             }
         }
     }
@@ -44,17 +62,20 @@ fn main() -> Result<(), String> {
     println!("config: {:?}", config);
 
     let devs = init_devs(&config.devs[..])?;
-    println!("found {} devs:", devs.len());
-    for d in devs.iter() {
-        println!("{}", d.as_ref());
-    }
+    println!("found {} devs", devs.len());
+    // for d in devs.iter() {
+    //     println!("{}", d.as_ref());
+    // }
 
     let mut srv = srv::Srv::new();
-    for dev in devs.into_iter() {
-        srv.add_dev(dev);
+    for (dev, chancfg) in devs.into_iter() {
+        srv.add_dev(dev, chancfg);
     }
 
     match config.action {
+        config::Action::PrintConfig => {
+            println!("{}", serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e) )?);
+        }
         config::Action::ListChans => {
             println!("chans:");
             for (id, name) in srv.chans().iter() {

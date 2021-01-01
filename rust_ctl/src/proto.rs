@@ -158,9 +158,9 @@ impl Msg {
             val.serialize_to_struct(&mut data[i]);
         }
 
-        dbg!(MSG_HEADER_SIZE);
-        dbg!(self.vals.len());
-        dbg!(mem::size_of_val(&*data));
+        // dbg!(MSG_HEADER_SIZE);
+        // dbg!(self.vals.len());
+        // dbg!(mem::size_of_val(&*data));
 
         // MSG_HEADER_SIZE + (self.vals.len() * MSG_VAL_SIZE)
         MSG_HEADER_SIZE + mem::size_of_val(&*data)
@@ -173,15 +173,15 @@ impl Msg {
         }
         let expected_size =
             MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
-        dbg!(header.num_vals);
+        // dbg!(header.num_vals);
 
-        // if expected_size != buf.len() {
-        //     return Err(SerErr::InvalidSize {
-        //         num_vals: header.num_vals as usize,
-        //         expected_size: expected_size,
-        //         actual_size: buf.len(),
-        //     })
-        // }
+        if expected_size != buf.len() {
+            return Err(SerErr::InvalidSize {
+                num_vals: header.num_vals as usize,
+                expected_size: expected_size,
+                actual_size: buf.len(),
+            })
+        }
         // ignoring flags and _reserved
 
         let vals: &[ChanValSer] = unsafe {
