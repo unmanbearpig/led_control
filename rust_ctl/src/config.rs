@@ -37,8 +37,17 @@ pub enum Action {
     DemoWhoosh,
 }
 
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct ChanCnofig {
+//     index: u16,
+
+// }
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct DevChanConfig(pub DevConfig, pub Option<Vec<u16>>);
+pub struct DevChanConfig {
+    pub dev: DevConfig,
+    pub chans: Option<Vec<u16>>
+}
 
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,21 +109,23 @@ impl DevChanConfig {
         }
 
         match dev_parts[0] {
-            "usb" => Ok(DevChanConfig(DevConfig::Usb, chan_config)),
+            "usb" => Ok(DevChanConfig { dev: DevConfig::Usb, chans: chan_config }),
             "udpv1" => {
                 let (ip, maybe_port) = parse_ip_port(
                     &dev_parts[1..3.min(dev_parts.len())])?;
-                Ok(DevChanConfig(DevConfig::UdpV1(ip, maybe_port), chan_config))
+                Ok(DevChanConfig { dev: DevConfig::UdpV1(ip, maybe_port), chans: chan_config })
             },
             "udpv2" => {
                 let (ip, maybe_port) = parse_ip_port(
                     &dev_parts[1..3.min(dev_parts.len())])?;
                 let chans = 3; // fix hardcoded
-                Ok(DevChanConfig(DevConfig::UdpV2 {
-                    ip: ip,
-                    port: maybe_port.unwrap_or(8932),
-                    chans: chans
-                }, chan_config))
+                Ok(DevChanConfig {
+                    dev: DevConfig::UdpV2 {
+                        ip: ip,
+                        port: maybe_port.unwrap_or(8932),
+                        chans: chans
+                    }, chans: chan_config
+                })
             }
             other => Err(format!("invalid device type \"{}\"", other))
         }
@@ -130,19 +141,21 @@ mod dev_config_test {
         assert!(DevChanConfig::parse("aoeustnh").is_err());
         assert_eq!(
             DevChanConfig::parse("usb"),
-            Ok(DevChanConfig(DevConfig::Usb, None))
+            Ok(DevChanConfig{ dev: DevConfig::Usb, chans: None })
         );
         assert_eq!(
             DevChanConfig::parse("udpv1:127.0.0.2"),
-            Ok(DevChanConfig(
-                DevConfig::UdpV1("127.0.0.2".parse().unwrap(), None),
-                None))
+            Ok(DevChanConfig {
+                dev: DevConfig::UdpV1("127.0.0.2".parse().unwrap(), None),
+                chans: None
+            })
         );
         assert_eq!(
             DevChanConfig::parse("udpv1:127.0.0.2:1234"),
-            Ok(DevChanConfig(
-                DevConfig::UdpV1("127.0.0.2".parse().unwrap(), Some(1234)),
-                None))
+            Ok(DevChanConfig {
+                dev: DevConfig::UdpV1("127.0.0.2".parse().unwrap(), Some(1234)),
+                chans: None
+            })
         );
     }
 }
@@ -313,7 +326,7 @@ impl Config {
             Some(mut cfg) => {
                 cfg.devs.extend(devs);
                 Config {
-                action: action.unwrap_or(cfg.action),
+                    action: action.unwrap_or(cfg.action),
                     devs: cfg.devs,
                 }
             },

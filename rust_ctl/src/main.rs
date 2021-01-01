@@ -21,41 +21,41 @@ use serde_yaml;
 fn init_devs(dev_configs: &[config::DevChanConfig]) ->
     Result<Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)>, String> {
 
-    let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)> = Vec::new();
+        let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)> = Vec::new();
 
-    for config::DevChanConfig(devcfg, chancfg) in dev_configs.iter() {
-        match devcfg {
-            config::DevConfig::Usb => {
-                for usbdev in usb::UsbDev::find_devs()? {
+        for config::DevChanConfig { dev: devcfg, chans: chancfg } in dev_configs.iter() {
+            match devcfg {
+                config::DevConfig::Usb => {
+                    for usbdev in usb::UsbDev::find_devs()? {
+                        devs.push(
+                            (
+                                Box::new(usbdev),
+                                chancfg.clone(),
+                            )
+                        );
+                    }
+                }
+                config::DevConfig::UdpV1(ip, port) => {
                     devs.push(
                         (
-                            Box::new(usbdev),
+                            Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?),
+                            chancfg.clone(),
+                        )
+                    );
+                }
+                config::DevConfig::UdpV2 { ip, port, chans } => {
+                    devs.push(
+                        (
+                            Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?),
                             chancfg.clone(),
                         )
                     );
                 }
             }
-            config::DevConfig::UdpV1(ip, port) => {
-                devs.push(
-                    (
-                        Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?),
-                        chancfg.clone(),
-                    )
-                );
-            }
-            config::DevConfig::UdpV2 { ip, port, chans } => {
-                devs.push(
-                    (
-                        Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?),
-                        chancfg.clone(),
-                    )
-                );
-            }
         }
-    }
 
-    Ok(devs)
-}
+        Ok(devs)
+    }
 
 fn main() -> Result<(), String> {
     let config = config::Config::from_args(env::args())?;
