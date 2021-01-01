@@ -22,8 +22,8 @@ pub enum Action {
     ListChans,
     PrintConfig,
     Srv {
-        listen_ip: IpAddr,
-        listen_port: u16,
+        listen_ip: Option<IpAddr>,
+        listen_port: Option<u16>,
     },
 
     SetSameU16(u16),
@@ -213,21 +213,28 @@ impl Config {
                     action = Some(Action::PrintConfig)
                 }
                 "srv" => {
-                    let default_ip: IpAddr = "0.0.0.0".parse().unwrap();
-                    let default_port: u16 = 8932;
-
                     let listen_arg = args.next();
-                    let listen_ip_port = match listen_arg {
-                        None => (default_ip, default_port),
-                        Some(listen_arg) => {
-                            let parts: Vec<&str> = listen_arg.split(":").collect();
-                            let (ip, maybe_port) = parse_ip_port(&parts[1..3.min(parts.len())])?;
-                            (ip, maybe_port.unwrap_or(default_port))
+                    // let listen_ip_port = match listen_arg {
+                    //     None => (default_ip, default_port),
+                    //     Some(listen_arg) => {
+                    //         let parts: Vec<&str> = listen_arg.split(":").collect();
+                    //         let (ip, maybe_port) = parse_ip_port(&parts[1..3.min(parts.len())])?;
+                    //         (ip, maybe_port.unwrap_or(default_port))
+                    //     }
+                    // };
+
+                    let (listen_ip, listen_port) = match listen_arg {
+                        Some(arg) => {
+                            let parts: Vec<&str> = arg.split(":").collect();
+                            let (ip, port) = parse_ip_port(&parts[1..3.min(parts.len())])?;
+                            (Some(ip), port)
                         }
+                        None => (None, None)
                     };
+
                     action = Some(Action::Srv {
-                        listen_ip: listen_ip_port.0,
-                        listen_port: listen_ip_port.1,
+                        listen_ip: listen_ip,
+                        listen_port: listen_port,
                     });
 
                     if args.len() != 0 {
