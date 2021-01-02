@@ -17,6 +17,10 @@ pub struct Srv {
     chans: Vec<(DevId, ChanConfig)>,
 }
 
+fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
+    (chan_cfg.min +  (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
+}
+
 impl Srv {
     pub fn new() -> Self {
         Srv {
@@ -34,7 +38,7 @@ impl Srv {
             Some(chancfg) => {
                 if chancfg.len() as u16 != dev.num_chans() {
                     panic!("invalid number of chans specified in chancfg: {} instead of {}",
-                    chancfg.len(), dev.num_chans());
+                           chancfg.len(), dev.num_chans());
                 }
                 chancfg
             }
@@ -74,8 +78,9 @@ impl Srv {
                 Val::F32(fval) => {
                     // TODO error handling?
                     let chan = &self.chans[*cid as usize];
+                    let chan_cfg = &chan.1;
                     let dev = &mut self.devs[chan.0.0 as usize];
-                    dev.set_f32(chan.1.index, *fval)?;
+                    dev.set_f32(chan_cfg.index, adjust_chan_val(chan_cfg, *fval))?;
                 },
                 _ => unimplemented!(),
             }

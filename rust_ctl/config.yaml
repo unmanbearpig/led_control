@@ -3,28 +3,39 @@ action: PrintConfig
 devs:
   - dev: Usb
     chans:
-      - index: 0 # red
+      - index: 0
         min: 0.0
         max: 1.0
-        exp: 2.4
+        exp: 2.5
         tags: ["Red"]
-      - index: 1 # blue
+      - index: 1
         min: 0.0
         max: 1.0
-        exp: 2.2
+        exp: 2.3
         tags: ["Blue"]
-      - index: 2 # green
+      - index: 2
         min: 0.0
         max: 1.0
-        exp: 3.2
+        exp: 3.3
         tags: ["Green"]
-
-  # - dev:
-  #     UdpV2:
-  #       ip: 192.168.0.111
-  #       port: 8932
-  #       chans: 3
-  #   chans:
-  #     - 0
-  #     - 2
-  #     - 1
+  - dev:
+      UdpV2:
+        ip: 192.168.0.111
+        port: 8932
+        chans: 3
+    chans:
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 2.28
+        tags: ["Bed"]
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.35
+        tags: ["Top"]
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.7
+        tags: ["Bottom"]
