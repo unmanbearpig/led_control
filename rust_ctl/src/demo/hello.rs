@@ -46,7 +46,6 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
         for (i, d) in dchans.iter_mut().enumerate() {
             let amp = (d.max - d.min);
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
-            // let new_sin = ( d.phi.sin() * (amp / 2.0) + amp / 2.0).powf(2.2) * 2.2 + d.min;
             let new_sin = ( ((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
             d.phi += delta;
             msg.vals[i].1 = Val::F32(new_sin as f32);
