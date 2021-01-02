@@ -34,7 +34,7 @@ pub enum Action {
     DemoTestSeq,
     DemoGlitch,
     DemoHello,
-    DemoHello2,
+    DemoFade,
     DemoWhoosh,
 }
 
@@ -53,6 +53,7 @@ pub struct DevChanConfig {
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
+    TestDev,
     Usb,
     UdpV1(IpAddr, Option<u16>),
     UdpV2 {
@@ -110,6 +111,7 @@ impl DevChanConfig {
         }
 
         match dev_parts[0] {
+            "testdev" => Ok(DevChanConfig { dev: DevConfig::TestDev, chans: chan_config }),
             "usb" => Ok(DevChanConfig { dev: DevConfig::Usb, chans: chan_config }),
             "udpv1" => {
                 let (ip, maybe_port) = parse_ip_port(
@@ -311,7 +313,7 @@ impl Config {
                         "test_seq" => action = Some(Action::DemoTestSeq),
                         "glitch" => action = Some(Action::DemoGlitch),
                         "hello" => action = Some(Action::DemoHello),
-                        "hello2" => action = Some(Action::DemoHello2),
+                        "fade" => action = Some(Action::DemoFade),
                         "whoosh" => action = Some(Action::DemoWhoosh),
                         other => return Err(format!(
                             "demo \"{}\" does not exist", other))

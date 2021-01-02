@@ -9,6 +9,7 @@ mod config;
 mod udp_srv;
 mod udpv1_dev;
 mod udpv2_dev;
+mod test_dev;
 mod demo;
 
 use std::env;
@@ -25,6 +26,14 @@ fn init_devs(dev_configs: &[config::DevChanConfig]) ->
 
         for config::DevChanConfig { dev: devcfg, chans: chancfg } in dev_configs.iter() {
             match devcfg {
+                config::DevConfig::TestDev => {
+                    devs.push(
+                        (
+                            Box::new(test_dev::TestDev::new()),
+                            chancfg.clone(),
+                        )
+                    );
+                }
                 config::DevConfig::Usb => {
                     for usbdev in usb::UsbDev::find_devs()? {
                         devs.push(
@@ -142,8 +151,8 @@ fn main() -> Result<(), String> {
         config::Action::DemoHello => {
             demo::hello::run(&mut srv)?;
         }
-        config::Action::DemoHello2 => {
-            demo::hello2::run(&mut srv)?;
+        config::Action::DemoFade => {
+            demo::fade::run(&mut srv)?;
         }
         config::Action::DemoWhoosh => {
             demo::whoosh::run(&mut srv)?;
