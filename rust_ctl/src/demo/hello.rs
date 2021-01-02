@@ -26,13 +26,13 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 
-    let freq_dist = rand::distributions::Uniform::new(0.1, 0.3);
+    let freq_dist = rand::distributions::Uniform::new(0.001, 0.01);
     let mut rng = rand::thread_rng();
     for _ in 0..msg.vals.len() {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.01,
-            max: 0.999,
+            min: 0.7,
+            max: 1.0,
             phi: 0.0,
         });
     }
@@ -44,14 +44,15 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
         let dt = t.elapsed().as_secs_f64();
         t = time::Instant::now();
         for (i, d) in dchans.iter_mut().enumerate() {
-            let amp = (d.max - d.min) / 2.0;
+            let amp = (d.max - d.min);
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
-            let new_sin = (d.phi.sin() * (amp / 2.0) + amp / 2.0).powf(2.2) * 2.2 + d.min;
+            // let new_sin = ( d.phi.sin() * (amp / 2.0) + amp / 2.0).powf(2.2) * 2.2 + d.min;
+            let new_sin = ( ((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
             d.phi += delta;
-            msg.vals[i].1 = Val::F32(new_sin as f32 * 2.0);
+            msg.vals[i].1 = Val::F32(new_sin as f32);
         }
 
-        // dbg!(&msg.vals);
+        dbg!(&msg.vals);
 
         srv.handle_msg(&msg).expect("demo: handle_msg error");
         sleep(delay);
