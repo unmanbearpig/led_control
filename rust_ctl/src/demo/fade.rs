@@ -31,6 +31,7 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 
     // temporarily assume first 3 chans are red blue green
+    // todo: change these to be set in config
     dchans.push(DemoChan {
         start: 0.0,
         end: 1.0,
@@ -65,6 +66,13 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
         let elapsed = start_t.elapsed().as_secs_f64();
         let progress = elapsed / dur_secs;
         if progress > 1.0 {
+            let progress: f64 = 1.0;
+
+            for (i, d) in dchans.iter_mut().enumerate() {
+                msg.vals[i].1 = Val::F32( ( d.start + (progress.powf(d.exp) * (d.end - d.start)) ) as f32 )
+            }
+            srv.handle_msg(&msg).expect("demo: handle_msg error");
+
             println!("done");
             process::exit(0);
         }
