@@ -4,6 +4,7 @@ mod proto;
 mod usb;
 mod srv;
 mod dev;
+mod chan;
 mod old_proto;
 mod config;
 mod udp_srv;
@@ -16,21 +17,26 @@ use std::env;
 use std::time;
 use serde_yaml;
 
+use crate::chan::ChanConfig;
+
 // inputs: new udp
 // outputs: usb, old udp, new udp, spi (later?)
 
 fn init_devs(dev_configs: &[config::DevChanConfig]) ->
-    Result<Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)>, String> {
+    Result<Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)>, String> {
 
-        let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<u16>>)> = Vec::new();
+        let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)> = Vec::new();
 
-        for config::DevChanConfig { dev: devcfg, chans: chancfg } in dev_configs.iter() {
+        for devchanconfig in dev_configs.iter() {
+            let devcfg = devchanconfig.dev;
+            let chancfg: Option<Vec<ChanConfig>> = devchanconfig.chans.clone();
+
             match devcfg {
                 config::DevConfig::TestDev => {
                     devs.push(
                         (
                             Box::new(test_dev::TestDev::new()),
-                            chancfg.clone(),
+                            chancfg,
                         )
                     );
                 }
@@ -47,16 +53,16 @@ fn init_devs(dev_configs: &[config::DevChanConfig]) ->
                 config::DevConfig::UdpV1(ip, port) => {
                     devs.push(
                         (
-                            Box::new(udpv1_dev::UdpV1Dev::new(*ip, *port)?),
-                            chancfg.clone(),
+                            Box::new(udpv1_dev::UdpV1Dev::new(ip, port)?),
+                            chancfg,
                         )
                     );
                 }
                 config::DevConfig::UdpV2 { ip, port, chans } => {
                     devs.push(
                         (
-                            Box::new(udpv2_dev::UdpV2Dev::new(*ip, Some(*port), *chans)?),
-                            chancfg.clone(),
+                            Box::new(udpv2_dev::UdpV2Dev::new(ip, Some(port), chans)?),
+                            chancfg,
                         )
                     );
                 }

@@ -2,13 +2,29 @@
 action: PrintConfig
 devs:
   - dev: Usb
-    chans: ~
-  - dev:
-      UdpV2:
-        ip: 192.168.0.111
-        port: 8932
-        chans: 3
     chans:
-      - 0
-      - 2
-      - 1
+      - index: 0 # red
+        min: 0.0
+        max: 1.0
+        exp: 2.4
+        tags: ["Red"]
+      - index: 1 # blue
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["Blue"]
+      - index: 2 # green
+        min: 0.0
+        max: 1.0
+        exp: 3.2
+        tags: ["Green"]
+
+  # - dev:
+  #     UdpV2:
+  #       ip: 192.168.0.111
+  #       port: 8932
+  #       chans: 3
+  #   chans:
+  #     - 0
+  #     - 2
+  #     - 1

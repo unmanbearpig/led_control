@@ -9,6 +9,7 @@ use core::num::ParseIntError;
 
 use serde_derive::{Serialize, Deserialize};
 
+use crate::chan::ChanConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -44,14 +45,8 @@ pub enum Action {
 
 // }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct DevChanConfig {
-    pub dev: DevConfig,
-    pub chans: Option<Vec<u16>>
-}
-
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
     TestDev,
     Usb,
@@ -61,6 +56,12 @@ pub enum DevConfig {
         port: u16,
         chans: u16, // assume we know number of chans upfront
     },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct DevChanConfig {
+    pub dev: DevConfig,
+    pub chans: Option<Vec<ChanConfig>>
 }
 
 fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
@@ -88,22 +89,29 @@ impl DevChanConfig {
     pub fn parse<S: AsRef<str>>(string: S) -> Result<Self, String> {
         let parts: Vec<&str> = string.as_ref().split("@").collect();
 
-        let mut chan_config = None;
-        match parts.len() {
-            0 => unreachable!(),
-            1 => {},
-            2 => {
-                let res: Result<Vec<u16>, ParseIntError> =
-                    parts[1]
-                    .split(",")
-                    .map(|n| n.parse())
-                    .collect();
-                chan_config = Some(res.map_err(|e| e.to_string())?);
-            },
-            _ => {
-                return Err("too many @ in spec".to_string())
-            }
-        }
+        let chan_configs: Option<Vec<ChanConfig>> =
+            match parts.len() {
+                0 => unreachable!(),
+                1 => {
+                    None
+                },
+                2 => {
+                    let res: Result<Vec<u16>, ParseIntError> =
+                        parts[1]
+                        .split(",")
+                        .map(|n| n.parse())
+                        .collect();
+                    let indexes = res.map_err(|e| e.to_string())?;
+                    Some(indexes.into_iter().map(|i| {
+                        let mut cc = ChanConfig::default();
+                        cc.index = i;
+                        cc
+                    }).collect())
+                },
+                _ => {
+                    return Err("too many @ in spec".to_string())
+                }
+            };
 
         let dev_parts: Vec<&str> = parts[0].split(":").collect();
         if dev_parts.len() == 0 {
@@ -111,12 +119,12 @@ impl DevChanConfig {
         }
 
         match dev_parts[0] {
-            "testdev" => Ok(DevChanConfig { dev: DevConfig::TestDev, chans: chan_config }),
-            "usb" => Ok(DevChanConfig { dev: DevConfig::Usb, chans: chan_config }),
+            "testdev" => Ok(DevChanConfig { dev: DevConfig::TestDev, chans: chan_configs }),
+            "usb" => Ok(DevChanConfig { dev: DevConfig::Usb, chans: chan_configs }),
             "udpv1" => {
                 let (ip, maybe_port) = parse_ip_port(
                     &dev_parts[1..3.min(dev_parts.len())])?;
-                Ok(DevChanConfig { dev: DevConfig::UdpV1(ip, maybe_port), chans: chan_config })
+                Ok(DevChanConfig { dev: DevConfig::UdpV1(ip, maybe_port), chans: chan_configs })
             },
             "udpv2" => {
                 let (ip, maybe_port) = parse_ip_port(
@@ -127,7 +135,7 @@ impl DevChanConfig {
                         ip: ip,
                         port: maybe_port.unwrap_or(8932),
                         chans: chans
-                    }, chans: chan_config
+                    }, chans: chan_configs
                 })
             }
             other => Err(format!("invalid device type \"{}\"", other))

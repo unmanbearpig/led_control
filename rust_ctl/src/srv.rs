@@ -1,4 +1,5 @@
 use crate::dev;
+use crate::chan::ChanConfig;
 use crate::proto::{ChanId, ChanVal, Val, Msg};
 use std::fmt::{Display, Formatter};
 
@@ -13,7 +14,7 @@ impl Display for DevId {
 
 pub struct Srv {
     devs: Vec<Box<dyn dev::Dev>>,
-    chans: Vec<(DevId, u16)>,
+    chans: Vec<(DevId, ChanConfig)>,
 }
 
 impl Srv {
@@ -24,7 +25,7 @@ impl Srv {
         }
     }
 
-    pub fn add_dev(&mut self, dev: Box<dyn dev::Dev>, chancfg: Option<Vec<u16>>)
+    pub fn add_dev(&mut self, dev: Box<dyn dev::Dev>, chancfg: Option<Vec<ChanConfig>>)
                    -> DevId {
 
         let dev_id = DevId(self.devs.len() as u16);
@@ -37,7 +38,11 @@ impl Srv {
                 }
                 chancfg
             }
-            None => (0..dev.num_chans()).collect()
+            None => (0..dev.num_chans()).map(|i| {
+                let mut cc = ChanConfig::default();
+                cc.index = i;
+                cc
+            }).collect()
         };
 
         dbg!(&chancfg);
@@ -68,9 +73,9 @@ impl Srv {
             match val {
                 Val::F32(fval) => {
                     // TODO error handling?
-                    let chan = self.chans[*cid as usize];
+                    let chan = &self.chans[*cid as usize];
                     let dev = &mut self.devs[chan.0.0 as usize];
-                    dev.set_f32(chan.1, *fval)?;
+                    dev.set_f32(chan.1.index, *fval)?;
                 },
                 _ => unimplemented!(),
             }
