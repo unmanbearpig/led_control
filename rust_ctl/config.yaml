@@ -6,17 +6,17 @@ devs:
       - index: 0
         min: 0.0
         max: 1.0
-        exp: 2.5
+        exp: 2.8
         tags: ["Red"]
       - index: 1
-        min: 0.0
+        min: 0.002
         max: 1.0
-        exp: 2.3
+        exp: 1.9
         tags: ["Blue"]
       - index: 2
-        min: 0.0
+        min: 0.0001
         max: 1.0
-        exp: 3.3
+        exp: 3.7
         tags: ["Green"]
   - dev:
       UdpV2:
@@ -27,12 +27,12 @@ devs:
       - index: 0
         min: 0.0
         max: 1.0
-        exp: 2.28
+        exp: 2.27
         tags: ["Bed"]
       - index: 2
         min: 0.0
         max: 1.0
-        exp: 2.35
+        exp: 2.30
         tags: ["Top"]
       - index: 1
         min: 0.0

@@ -13,7 +13,7 @@ struct DemoChan {
 pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
     println!("running fade...");
 
-    let dur_secs = 50.0;
+    let dur_secs = 200.0;
 
     let mut msg: Msg = Msg {
         seq_num: 0,
