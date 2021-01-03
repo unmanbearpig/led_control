@@ -78,9 +78,6 @@ fn main() -> Result<(), String> {
 
     let devs = init_devs(&config.devs[..])?;
     println!("found {} devs", devs.len());
-    // for d in devs.iter() {
-    //     println!("{}", d.as_ref());
-    // }
 
     let mut srv = srv::Srv::new();
     for (dev, chancfg) in devs.into_iter() {
