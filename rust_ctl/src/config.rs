@@ -17,7 +17,6 @@ pub struct Config {
     pub devs: Vec<DevChanConfig>
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Action {
     ListChans,
@@ -39,13 +38,6 @@ pub enum Action {
     DemoWhoosh,
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct ChanCnofig {
-//     index: u16,
-
-// }
-
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
     TestDev,

@@ -51,7 +51,6 @@ impl Dev for UdpV2Dev {
     }
 }
 
-#[allow(dead_code)]
 const DEFAULT_PORT: u16 = 8932;
 
 impl UdpV2Dev {
