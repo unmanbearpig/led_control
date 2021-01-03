@@ -1,18 +1,14 @@
 
 use rusb;
-// #[path = "old_proto.rs"] mod old_proto;
-// #[path = "dev.rs"] mod dev;
 use crate::dev::{self, Dev};
 use std::time::Duration;
 use std::fmt;
 
-#[allow(dead_code)]
 pub struct UsbDev {
     devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
     bus_number: u8,
     dev_addr: u8,
     raw_vals: [u16; 3],
-    _name: String,
 }
 
 impl fmt::Display for UsbDev {
@@ -23,7 +19,7 @@ impl fmt::Display for UsbDev {
 
 impl dev::Dev for UsbDev {
     fn name(&self) -> String {
-        self._name.clone()
+        format!("USB Bus {} Dev {}", self.bus_number, self.dev_addr)
     }
 
     fn num_chans(&self) -> u16 {
@@ -79,14 +75,11 @@ impl dev::Dev for UsbDev {
 
 impl UsbDev {
     pub fn new(devhandle: rusb::DeviceHandle<rusb::GlobalContext>, bus_number: u8, dev_addr: u8) -> Self {
-        let name = format!("USB Bus {} Dev {}", bus_number, dev_addr);
-
         UsbDev {
             devhandle: devhandle,
             bus_number: bus_number,
             dev_addr: dev_addr,
             raw_vals: [0u16; 3],
-            _name: name,
         }
     }
 
