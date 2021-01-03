@@ -90,7 +90,7 @@ fn main() -> Result<(), String> {
         }
         config::Action::ListChans => {
             println!("chans:");
-            for (id, name) in srv.chans().iter() {
+            for (id, name) in srv.chans() {
                 println!("chan {} {}", id, name);
             }
         }
@@ -117,8 +117,8 @@ fn main() -> Result<(), String> {
                 return Err(msg)
             }
 
-            let vals = srv.chans().iter().zip(fvals)
-                .map(|((cid, _), v)| proto::ChanVal(*cid, proto::Val::F32(v)))
+            let vals = srv.chans().zip(fvals)
+                .map(|((cid, _), v)| proto::ChanVal(cid, proto::Val::F32(v)))
                 .collect();
 
             let mut msg = proto::Msg {

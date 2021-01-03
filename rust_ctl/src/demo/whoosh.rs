@@ -17,8 +17,8 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
     let mut msg: Msg = Msg {
         seq_num: 0,
         timestamp: time::SystemTime::now(),
-        vals: srv.chans().iter()
-            .map(|(id, _)| (ChanVal(*id, Val::F32(0.0))))
+        vals: srv.chans()
+            .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
             .collect(),
     };
 
