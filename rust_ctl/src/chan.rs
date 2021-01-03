@@ -20,15 +20,3 @@ impl Default for ChanConfig {
         }
     }
 }
-
-impl ChanConfig {
-    pub fn defaults(num: u16) -> Vec<Self> {
-        let mut res = Vec::with_capacity(num as usize);
-        for i in  0..num {
-            let mut cc = ChanConfig::default();
-            cc.index = i;
-            res.push(cc);
-        }
-        res
-    }
-}

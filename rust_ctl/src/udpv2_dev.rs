@@ -23,8 +23,8 @@ impl fmt::Display for UdpV2Dev {
 }
 
 impl Dev for UdpV2Dev {
-    fn name(&self) -> &String {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn num_chans(&self) -> u16 {

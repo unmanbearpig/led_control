@@ -44,14 +44,12 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
         let dt = t.elapsed().as_secs_f64();
         t = time::Instant::now();
         for (i, d) in dchans.iter_mut().enumerate() {
-            let amp = (d.max - d.min);
+            let amp = d.max - d.min;
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
             let new_sin = ( ((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
             d.phi += delta;
             msg.vals[i].1 = Val::F32(new_sin as f32);
         }
-
-        // dbg!(&msg.vals);
 
         srv.handle_msg(&msg).expect("demo: handle_msg error");
         sleep(delay);

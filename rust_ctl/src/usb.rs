@@ -22,8 +22,8 @@ impl fmt::Display for UsbDev {
 }
 
 impl dev::Dev for UsbDev {
-    fn name(&self) -> &String {
-        &self._name
+    fn name(&self) -> String {
+        self._name.clone()
     }
 
     fn num_chans(&self) -> u16 {

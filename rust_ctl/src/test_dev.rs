@@ -25,8 +25,8 @@ impl fmt::Display for TestDev {
 }
 
 impl Dev for TestDev {
-    fn name(&self) -> &String {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn num_chans(&self) -> u16 {
