@@ -99,8 +99,4 @@ impl Srv {
 
         Ok(())
     }
-
-    // fn handle_chan_val(&mut self, _chan_val: proto::ChanVal) -> Result<(), String> {
-    //     unimplemented!();
-    // }
 }

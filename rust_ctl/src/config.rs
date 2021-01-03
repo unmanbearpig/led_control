@@ -238,15 +238,6 @@ impl Config {
                 }
                 "srv" => {
                     let listen_arg = args.next();
-                    // let listen_ip_port = match listen_arg {
-                    //     None => (default_ip, default_port),
-                    //     Some(listen_arg) => {
-                    //         let parts: Vec<&str> = listen_arg.split(":").collect();
-                    //         let (ip, maybe_port) = parse_ip_port(&parts[1..3.min(parts.len())])?;
-                    //         (ip, maybe_port.unwrap_or(default_port))
-                    //     }
-                    // };
-
                     let (listen_ip, listen_port) = match listen_arg {
                         Some(arg) => {
                             let parts: Vec<&str> = arg.split(":").collect();
