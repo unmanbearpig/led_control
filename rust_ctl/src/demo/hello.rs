@@ -31,7 +31,7 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
     for _ in 0..msg.vals.len() {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.7,
+            min: 0.5,
             max: 1.0,
             phi: 0.0,
         });
@@ -51,7 +51,7 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
             msg.vals[i].1 = Val::F32(new_sin as f32);
         }
 
-        dbg!(&msg.vals);
+        // dbg!(&msg.vals);
 
         srv.handle_msg(&msg).expect("demo: handle_msg error");
         sleep(delay);
