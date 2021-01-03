@@ -81,7 +81,8 @@ fn main() -> Result<(), String> {
 
     let mut srv = srv::Srv::new();
     for (dev, chancfg) in devs.into_iter() {
-        srv.add_dev(dev, chancfg);
+
+        srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
     }
 
     match config.action {

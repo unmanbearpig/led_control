@@ -29,31 +29,31 @@ impl<'a> Srv {
         }
     }
 
-    pub fn add_dev(&mut self, dev: Box<dyn dev::Dev>, chancfg: Option<Vec<ChanConfig>>)
-                   -> DevId {
-
+    pub fn add_dev<T>(&mut self, dev: Box<dyn dev::Dev>, chancfg: Option<T>) -> DevId
+    where T: ExactSizeIterator<Item = ChanConfig>
+    {
         let dev_id = DevId(self.devs.len() as u16);
 
-        let chancfg = match chancfg {
-            Some(chancfg) => {
-                if chancfg.len() as u16 != dev.num_chans() {
+        match chancfg {
+            Some(chancfgs) => {
+                if chancfgs.len() as u16 != dev.num_chans() {
                     panic!("invalid number of chans specified in chancfg: {} instead of {}",
-                           chancfg.len(), dev.num_chans());
+                           chancfgs.len(), dev.num_chans());
                 }
-                chancfg
+
+                for chan in chancfgs {
+                    self.chans.push((dev_id, chan))
+                }
             }
-            None => (0..dev.num_chans()).map(|i| {
-                let mut cc = ChanConfig::default();
-                cc.index = i;
-                cc
-            }).collect()
+            None => {
+                for i in 0..dev.num_chans() {
+                    let mut cc = ChanConfig::default();
+                    cc.index = i;
+                    self.chans.push((dev_id, cc));
+                }
+            }
         };
 
-        dbg!(&chancfg);
-
-        for chan in chancfg {
-            self.chans.push((dev_id, chan))
-        }
         self.devs.push(dev);
 
         dev_id
