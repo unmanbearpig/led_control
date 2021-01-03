@@ -19,9 +19,6 @@ use serde_yaml;
 
 use crate::chan::ChanConfig;
 
-// inputs: new udp
-// outputs: usb, old udp, new udp, spi (later?)
-
 fn init_devs(dev_configs: &[config::DevChanConfig]) ->
     Result<Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)>, String> {
 
@@ -81,7 +78,6 @@ fn main() -> Result<(), String> {
 
     let mut srv = srv::Srv::new();
     for (dev, chancfg) in devs.into_iter() {
-
         srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
     }
 
@@ -185,23 +181,4 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
-
-    // let mut srv = srv::Srv::new();
-    // let mut usb_devs = usb::UsbDev::find_devs()?;
-    // for dev in usb_devs.iter_mut() {
-    //     srv.add_dev(dev);
-    // }
-
-    // for (chan_id, descr) in srv.chans().iter() {
-    //     println!("chan: {} {}", chan_id, descr);
-    // }
-
-    // let listen_addr = "127.0.0.1:8732";
-    // let mut udp_srv = udp_srv::UdpSrv::new(listen_addr.to_string())?;
-
-    // println!("listening on {}...", listen_addr);
-    // loop {
-    //     let msg = udp_srv.recv().unwrap();
-    //     println!("parsed msg: {:?}", msg);
-    // }
 }
