@@ -7,12 +7,9 @@ use std::net::IpAddr;
 use std::net::UdpSocket;
 
 pub struct UdpV1Dev {
-    #[allow(dead_code)]
     ip: IpAddr,
-    #[allow(dead_code)]
     port: u16,
     socket: UdpSocket,
-    name: String,
     msg: old_proto::LedMsgF32,
 }
 
@@ -24,7 +21,7 @@ impl fmt::Display for UdpV1Dev {
 
 impl Dev for UdpV1Dev {
     fn name(&self) -> String {
-        self.name.clone()
+        format!("UDPv1 {}:{}", self.ip, self.port)
     }
 
     fn num_chans(&self) -> u16 {
@@ -67,7 +64,6 @@ impl UdpV1Dev {
             ip: ip,
             port: port,
             socket: socket,
-            name: format!("UDPv1 {}:{}", ip, port),
             msg: old_proto::LedMsgF32::default(),
         })
     }
