@@ -1,9 +1,9 @@
-use crate::dev;
+use crate::dev::{self, Dev};
 use crate::chan::ChanConfig;
 use crate::proto::{ChanId, ChanVal, Val, Msg};
-use std::fmt::{Display, Formatter};
+use std::fmt::{self, Display, Formatter};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DevId(u16);
 
 impl Display for DevId {
@@ -12,13 +12,20 @@ impl Display for DevId {
     }
 }
 
-pub struct Srv {
-    devs: Vec<Box<dyn dev::Dev>>,
-    chans: Vec<(DevId, ChanConfig)>,
+#[derive(Debug)]
+struct SrvChan {
+    devid: DevId,
+    cfg: ChanConfig,
 }
 
-fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
-    (chan_cfg.min +  (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
+struct SrvDev {
+    dev: Box<dyn Dev>,
+    dirty: bool,
+}
+
+pub struct Srv {
+    devs: Vec<SrvDev>,
+    chans: Vec<SrvChan>,
 }
 
 impl<'a> Srv {
@@ -42,19 +49,27 @@ impl<'a> Srv {
                 }
 
                 for chan in chancfgs {
-                    self.chans.push((dev_id, chan))
+                    self.chans.push(SrvChan {
+                        devid: dev_id,
+                        cfg: chan,
+                    })
                 }
             }
             None => {
                 for i in 0..dev.num_chans() {
                     let mut cc = ChanConfig::default();
                     cc.index = i;
-                    self.chans.push((dev_id, cc));
+                    self.chans.push(
+                        SrvChan {
+                            devid: dev_id,
+                            cfg: cc,
+                        }
+                    );
                 }
             }
         };
 
-        self.devs.push(dev);
+        self.devs.push(SrvDev { dev: dev, dirty: true });
 
         dev_id
     }
@@ -63,43 +78,80 @@ impl<'a> Srv {
         self.chans.as_slice()
             .into_iter()
             .enumerate()
-            .map(move |(chan_id, (dev_id, _dev_chan_id))| {
-                let dev = self.get_dev(&dev_id);
+            .map(move |(chan_id, SrvChan { devid, .. })| {
+                let dev = self.get_dev(&devid);
                 (ChanId(chan_id as u16),
-                 format!("Chan {} {} \"{}\"", chan_id, dev_id, dev.name()))
+                 format!("Chan {} {} \"{}\"", chan_id, devid, dev.name()))
             })
     }
 
     fn get_dev(&self, id: &DevId) -> &dyn dev::Dev {
         let DevId(idx) = id;
-        self.devs[*idx as usize].as_ref()
+        self.devs[*idx as usize].dev.as_ref()
     }
 
     pub fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
                 Val::F32(fval) => {
-                    // TODO error handling?
-                    let chan = &self.chans[*cid as usize];
-                    let chan_cfg = &chan.1;
-                    let dev = &mut self.devs[chan.0.0 as usize];
-                    dev.set_f32(chan_cfg.index, adjust_chan_val(chan_cfg, *fval))?;
+                    self.set_f32(*cid, *fval)?;
                 },
                 _ => unimplemented!(),
             }
         }
 
-        // sync all devs for now, optimize later
-        for dev in self.devs.iter_mut() {
-            let res = dev.as_mut().sync();
-            match res {
-                Err(e) => {
-                    eprintln!("sync: {}", e);
-                }
-                Ok(_) => continue
-            }
-        }
+        self.sync()
+    }
+}
 
+impl Display for Srv {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut res = String::new();
+        for dev in self.devs.iter() {
+            let dev = &dev.dev;
+            res += format!("{} ", dev.name()).as_str();
+        }
+        write!(f, "Srv {}", res)
+    }
+}
+
+fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
+    (chan_cfg.min +  (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
+}
+
+impl Dev for Srv {
+    fn name(&self) -> String {
+        format!("Srv {}", self)
+    }
+
+    fn num_chans(&self) -> u16 {
+        self.chans.len() as u16
+    }
+
+    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        let chan: &mut SrvChan = &mut self.chans[chan as usize];
+        let val = adjust_chan_val(&chan.cfg, val);
+        let dev = &mut self.devs[chan.devid.0 as usize];
+        dev.dirty = true;
+        dev.dev.set_f32(chan.cfg.index, val)?;
+
+        Ok(())
+    }
+
+    fn sync(&mut self) -> Result<(), String> {
+        // minimize the number of syncs to devices by skipping
+        // the ones without dirty bit set,
+        let devs = self.devs.iter_mut()
+            .filter(|d| d.dirty)
+            .map(|d| {
+                d.dirty = false;
+                &mut d.dev
+            });
+
+        // sync all devs for now, optimize later
+        for dev in devs {
+            dev.as_mut().sync()?;
+        }
         Ok(())
     }
 }
