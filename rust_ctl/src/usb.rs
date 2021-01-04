@@ -13,15 +13,11 @@ pub struct UsbDev {
 
 impl fmt::Display for UsbDev {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
+        write!(f, "USB Bus {} Dev {}", self.bus_number, self.dev_addr)
     }
 }
 
 impl dev::Dev for UsbDev {
-    fn name(&self) -> String {
-        format!("USB Bus {} Dev {}", self.bus_number, self.dev_addr)
-    }
-
     fn num_chans(&self) -> u16 {
         3
     }

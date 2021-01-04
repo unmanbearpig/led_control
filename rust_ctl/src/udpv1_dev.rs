@@ -15,15 +15,11 @@ pub struct UdpV1Dev {
 
 impl fmt::Display for UdpV1Dev {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
+        write!(f, "UDPv1 {}:{}", self.ip, self.port)
     }
 }
 
 impl Dev for UdpV1Dev {
-    fn name(&self) -> String {
-        format!("UDPv1 {}:{}", self.ip, self.port)
-    }
-
     fn num_chans(&self) -> u16 {
         4
     }

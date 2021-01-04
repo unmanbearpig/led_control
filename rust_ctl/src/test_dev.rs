@@ -5,14 +5,12 @@ use crate::dev::Dev;
 
 #[derive(Debug)]
 pub struct TestDev {
-    name: String,
     vals: Vec<f32>,
 }
 
 impl TestDev {
     pub fn new() -> Self {
         TestDev {
-            name: "TestDev".to_string(),
             vals: vec![0.0; 3],
         }
     }
@@ -25,10 +23,6 @@ impl fmt::Display for TestDev {
 }
 
 impl Dev for TestDev {
-    fn name(&self) -> String {
-        self.name.clone()
-    }
-
     fn num_chans(&self) -> u16 {
         self.vals.len() as u16
     }

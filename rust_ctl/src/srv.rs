@@ -81,7 +81,7 @@ impl<'a> Srv {
             .map(move |(chan_id, SrvChan { devid, .. })| {
                 let dev = self.get_dev(&devid);
                 (ChanId(chan_id as u16),
-                 format!("Chan {} {} \"{}\"", chan_id, devid, dev.name()))
+                 format!("Chan {} {} \"{}\"", chan_id, devid, dev))
             })
     }
 
@@ -109,7 +109,7 @@ impl Display for Srv {
         let mut res = String::new();
         for dev in self.devs.iter() {
             let dev = &dev.dev;
-            res += format!("{} ", dev.name()).as_str();
+            res += format!("{} ", dev).as_str();
         }
         write!(f, "Srv {}", res)
     }
@@ -120,10 +120,6 @@ fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
 }
 
 impl Dev for Srv {
-    fn name(&self) -> String {
-        format!("Srv {}", self)
-    }
-
     fn num_chans(&self) -> u16 {
         self.chans.len() as u16
     }
