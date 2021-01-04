@@ -144,7 +144,6 @@ impl Dev for Srv {
                 &mut d.dev
             });
 
-        // sync all devs for now, optimize later
         for dev in devs {
             dev.as_mut().sync()?;
         }
