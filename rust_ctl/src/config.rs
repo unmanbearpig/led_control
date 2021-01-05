@@ -10,32 +10,12 @@ use core::num::ParseIntError;
 use serde_derive::{Serialize, Deserialize};
 
 use crate::chan::ChanConfig;
+use crate::action::Action;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub action: Action,
     pub devs: Vec<DevChanConfig>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Action {
-    ListChans,
-    PrintConfig,
-    Srv {
-        listen_ip: Option<IpAddr>,
-        listen_port: Option<u16>,
-    },
-
-    SetSameU16(u16),
-    SetAllU16(Vec<u16>),
-    SetSameF32(f32),
-    SetAllF32(Vec<f32>),
-
-    DemoTestSeq,
-    DemoGlitch,
-    DemoHello,
-    DemoFade,
-    DemoWhoosh,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
