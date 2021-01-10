@@ -1,0 +1,11 @@
+#!/bin/sh
+# flashing device while it's connected breaks usb connection or something
+# not sure if it's my fault
+# reest the device
+devs=$(ls /dev/bus/usb/007/ | grep -v 001)
+if [ $(echo "${devs}" | wc -l) -ne 1 ]; then
+    echo "more than 1 device (apart from root hub) is on bus 007"
+    exit 1
+fi
+
+sudo usbreset /dev/bus/usb/007/$(ls /dev/bus/usb/007/ | grep -v 001)

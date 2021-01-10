@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rsync -azq --progress --delete --filter '- *.bin' --filter '- *.elf' /home/unmanbearpig/projects/stuff/electronics/try-usb/ 192.168.0.100:projects/stuff/electronics/try-usb/

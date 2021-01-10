@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+make -C /home/unmanbearpig/projects/stuff/electronics/try-usb/my-project clean
+make -C /home/unmanbearpig/projects/stuff/electronics/try-usb/my-project
+make -C /home/unmanbearpig/projects/stuff/electronics/try-usb/my-project flash-bmp
+
+sleep 1
+
+if [ "$(hostname)" = "orangepizero" ]; then
+    /home/unmanbearpig/projects/stuff/electronics/try-usb/reset_device
+fi

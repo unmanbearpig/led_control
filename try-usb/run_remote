@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -e
+
+make -C my-project
+./copy_to_remote
+ssh 192.168.0.100 '/home/unmanbearpig/projects/stuff/electronics/try-usb/run_local'
