@@ -26,12 +26,12 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 
-    let freq_dist = rand::distributions::Uniform::new(0.001, 0.01);
+    let freq_dist = rand::distributions::Uniform::new(0.01, 0.1);
     let mut rng = rand::thread_rng();
     for _ in 0..msg.vals.len() {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.5,
+            min: 0.25,
             max: 1.0,
             phi: 0.0,
         });

@@ -3,21 +3,21 @@ action: PrintConfig
 devs:
   - dev: Usb
     chans:
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.0
+        tags: ["r", "rgb", "window"]
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.9
+        tags: ["b", "rgb", "window"]
       - index: 0
         min: 0.0
         max: 1.0
-        exp: 2.8
-        tags: ["Red"]
-      - index: 1
-        min: 0.002
-        max: 1.0
-        exp: 1.9
-        tags: ["Blue"]
-      - index: 2
-        min: 0.0001
-        max: 1.0
-        exp: 3.7
-        tags: ["Green"]
+        exp: 2.4
+        tags: ["g", "rgb", "window"]
   - dev:
       UdpV2:
         ip: 192.168.0.111
@@ -28,14 +28,14 @@ devs:
         min: 0.0
         max: 1.0
         exp: 2.27
-        tags: ["Bed"]
+        tags: ["bed", "white", "wall"]
       - index: 2
         min: 0.0
         max: 1.0
         exp: 2.30
-        tags: ["Top"]
+        tags: ["top", "white", "wall"]
       - index: 1
         min: 0.0
         max: 1.0
         exp: 2.7
-        tags: ["Bottom"]
+        tags: ["bottom", "white", "wall"]

@@ -28,6 +28,12 @@ pub struct Srv {
     chans: Vec<SrvChan>,
 }
 
+pub struct ChanDescription<'a> {
+    pub chan_id: u16,
+    pub name: String,
+    pub tags: &'a [String]
+}
+
 impl<'a> Srv {
     pub fn new() -> Self {
         Srv {
@@ -83,6 +89,17 @@ impl<'a> Srv {
                 (ChanId(chan_id as u16),
                  format!("Chan {} {} \"{}\"", chan_id, devid, dev))
             })
+    }
+
+    pub fn chan_descriptions(&'a self) -> impl ExactSizeIterator<Item = ChanDescription> {
+        self.chans.iter().enumerate().map(|(cid, chan)| {
+            ChanDescription {
+                chan_id: cid as u16,
+                name: format!("[cid: {}, dev {}, chan {}]",
+                              cid, chan.devid.0, chan.cfg.index),
+                tags: chan.cfg.tags.as_slice()
+            }
+        })
     }
 
     fn get_dev(&self, id: &DevId) -> &dyn dev::Dev {

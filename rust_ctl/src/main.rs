@@ -70,11 +70,7 @@ fn init_devs(dev_configs: &[config::DevChanConfig]) ->
 
 fn main() -> Result<(), String> {
     let config = config::Config::from_args(env::args())?;
-    println!("config: {:?}", config);
-
     let devs = init_devs(&config.devs[..])?;
-    println!("found {} devs", devs.len());
-
     let mut srv = srv::Srv::new();
     for (dev, chancfg) in devs.into_iter() {
         srv.add_dev(dev, chancfg.map(|c| c.into_iter()));

@@ -10,7 +10,7 @@ use core::num::ParseIntError;
 use serde_derive::{Serialize, Deserialize};
 
 use crate::chan::ChanConfig;
-use crate::action::Action;
+use crate::action::{ChanSpec, Action};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -228,51 +228,30 @@ impl Config {
                         return Err("too many args for srv".to_string())
                     }
                 }
-                "f32" => {
-                    let arg = args.next();
-                    if arg.is_none() {
-                        return Err("f32 requires an argument".to_string())
+                "set" => {
+                    let setarg = args.next();
+                    if setarg.is_none() {
+                        return Err("set requires an argument: either 'f32' or 'u16'".to_string())
                     }
-                    let arg = arg.unwrap();
+                    let setarg = setarg.unwrap();
+                    let chan_spec_arg = args.next();
+                    if chan_spec_arg.is_none() {
+                        return Err(format!("set {} requires chan spec argument", setarg))
+                    }
+                    let chan_spec_arg = chan_spec_arg.unwrap();
 
-                    let parts: Vec<&str> = arg.split(",").collect();
-                    match parts.len() {
-                        1 => {
-                            action = Some(Action::SetSameF32(
-                                parts[0].parse().map_err(|e| format!("{:?}", e))?))
+                    let chan_spec = match setarg.as_ref() {
+                        "f32" => {
+                            ChanSpec::parse_f32(chan_spec_arg.as_ref())
                         }
-                        _ => {
-                            let vals: Result<Vec<f32>, String> = parts.iter()
-                                .map(|p| p.parse()
-                                     .map_err(|e| format!("{:?}", e)))
-                                .collect();
-                            let vals = vals?;
-                            action = Some(Action::SetAllF32(vals))
+                        "u16" => {
+                            ChanSpec::parse_u16(chan_spec_arg.as_ref())
                         }
-                    }
-                }
-                "u16" => {
-                    let arg = args.next();
-                    if arg.is_none() {
-                        return Err("raw_u16 requires an argument".to_string())
-                    }
-                    let arg = arg.unwrap();
-
-                    let parts: Vec<&str> = arg.split(",").collect();
-                    match parts.len() {
-                        1 => {
-                            action = Some(Action::SetSameU16(
-                                parts[0].parse().map_err(|e| format!("{:?}", e))?))
+                        other => {
+                            return Err(format!("set only supports f32 and u16, got '{}'", other))
                         }
-                        _ => {
-                            let vals: Result<Vec<u16>, String> = parts.iter()
-                                .map(|p| p.parse()
-                                     .map_err(|e| format!("{:?}", e)))
-                                .collect();
-                            let vals = vals?;
-                            action = Some(Action::SetAllU16(vals))
-                        }
-                    }
+                    }?;
+                    action = Some(Action::Set(chan_spec));
                 }
                 "demo" => {
                     let demo_arg = args.next();
