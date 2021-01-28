@@ -79,7 +79,6 @@ impl ChanVal {
     }
 
     pub fn deserialize_from_struct(ser: &ChanValSer) -> Result<Self, SerErr> {
-        println!("deserialize_from_struct");
         Ok(ChanVal(
             ChanId(ser.chan_id),
             match ser.tag {
