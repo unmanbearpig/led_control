@@ -3,20 +3,14 @@
 // use std::env;
 use std::net::IpAddr;
 use std::env;
-use std::fs::File;
-use std::io::{Read};
+use std::fs::{self, File};
+use std::io::{self, Read};
 use core::num::ParseIntError;
 
 use serde_derive::{Serialize, Deserialize};
 
 use crate::chan::ChanConfig;
 use crate::action::{ChanSpec, Action};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Config {
-    pub action: Action,
-    pub devs: Vec<DevChanConfig>
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
@@ -35,6 +29,8 @@ pub struct DevChanConfig {
     pub dev: DevConfig,
     pub chans: Option<Vec<ChanConfig>>
 }
+
+const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
 
 fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
     if args.len() == 0 {
@@ -168,7 +164,25 @@ mod dev_config_test {
 //       test_seq -- fade all LEDs in sequence
 //
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Config {
+    pub action: Action,
+    pub devs: Vec<DevChanConfig>
+}
+
 impl Config {
+    fn from_file(filename: &str) -> Result<Self, String> {
+        let mut file = File::open(filename).map_err(|e| format!("{:?}", e))?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).map_err(|e| format!("{:?}", e))?;
+
+        println!("config:\n{}", buf);
+
+        let cfg: Config = serde_yaml::from_str(buf.as_ref())
+            .map_err(|e| format!("parsing config: {:?}", e))?;
+        Ok(cfg)
+    }
+
     pub fn from_args(mut args: env::Args) -> Result<Self, String> {
         let mut action: Option<Action> = None;
         let mut devs: Vec<DevChanConfig> = Vec::new();
@@ -188,11 +202,7 @@ impl Config {
                     if filename.is_none() {
                         return Err("--cfg requires config filename".to_string())
                     }
-                    let filename = filename.unwrap();
-                    let mut file = File::open(filename).map_err(|e| format!("{:?}", e))?;
-                    let mut buf = String::new();
-                    file.read_to_string(&mut buf).map_err(|e| format!("{:?}", e))?;
-                    cfg = Some(serde_yaml::from_str(buf.as_ref()).map_err(|e| format!("{:?}", e))?);
+                    cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
                 }
                 "--dev" => {
                     let dev_arg = args.next();
@@ -271,6 +281,19 @@ impl Config {
                 }
                 other => {
                     return Err(format!("Unknown arg \"{}\"", other))
+                }
+            }
+        }
+
+        if cfg.is_none() {
+            match fs::metadata(DEFAULT_CONFIG_PATH) {
+                Ok(_) => {
+                    cfg = Some(Self::from_file(DEFAULT_CONFIG_PATH)?)
+                },
+                Err(e) => {
+                    if e.kind() != io::ErrorKind::NotFound {
+                        return Err(format!("Could not read {}: {:?}", DEFAULT_CONFIG_PATH, e))
+                    }
                 }
             }
         }
