@@ -174,7 +174,7 @@ impl Msg {
             MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
         // dbg!(header.num_vals);
 
-        if expected_size != buf.len() {
+        if buf.len() < expected_size {
             return Err(SerErr::InvalidSize {
                 num_vals: header.num_vals as usize,
                 expected_size: expected_size,
