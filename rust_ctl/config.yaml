@@ -24,12 +24,12 @@ devs:
         port: 8932
         chans: 3
     chans:
-      - index: 0
+      - index: 2
         min: 0.0
         max: 1.0
-        exp: 2.27
-        tags: ["bed", "white", "wall"]
-      - index: 2
+        exp: 2.7
+        tags: ["bottom", "white", "wall"]
+      - index: 0
         min: 0.0
         max: 1.0
         exp: 2.30
@@ -37,5 +37,5 @@ devs:
       - index: 1
         min: 0.0
         max: 1.0
-        exp: 2.7
-        tags: ["bottom", "white", "wall"]
+        exp: 2.27
+        tags: ["bed", "white", "wall"]
