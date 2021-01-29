@@ -138,31 +138,39 @@ mod dev_config_test {
         );
     }
 }
-// cli
-//   specifying devices:
-//    --dev udpv1:127.0.0.1       -- udp version1 with default port
-//    --dev udpv2:127.0.0.1       -- v2 with default port
-//    --dev udpv2:127.0.0.1:1234  -- v2 with custom port
-//    --dev usb                   -- all usb devices
-//
-//   actions:
-//     list channels:
-//       ls
-//
-//     serve:
-//       srv              -- listen on 0.0.0.0 and default port
-//       srv 127.0.0.1    -- different ip, default port
-//       srv 0.0.0.0:1234 -- custom port
-//
-//     set values:
-//       f32 0.1                    -- set all chans to f32 value
-//       f32 0.0,0.34,0.88888,0.333 -- set multiple values in chan id order
-//       u16 123                    -- set raw u16 value to all chans
-//       u16 123,0,334              -- set raw u16 value per channel
-//
-//     demo
-//       test_seq -- fade all LEDs in sequence
-//
+/// cli
+///   config (by default /etc/led_ctl.yaml is used):
+///     --cfg config.yaml          -- use config.yaml
+///     --no-cfg                   -- don't use default /etc/led_ctl.yaml
+///
+///   specifying devices:
+///    --dev udpv1:127.0.0.1       -- udp version1 with default port
+///    --dev udpv2:127.0.0.1       -- v2 with default port
+///    --dev udpv2:127.0.0.1:1234  -- v2 with custom port
+///    --dev usb                   -- all usb devices
+///
+///   actions:
+///     list channels:
+///       ls
+///
+///     serve:
+///       srv              -- listen on 0.0.0.0 and default port
+///       srv 127.0.0.1    -- different ip, default port
+///       srv 0.0.0.0:1234 -- custom port
+///
+///     set values:
+///       set f32 0.1                    -- set all chans to f32 value
+///       set f32 0.0,0.34,0.88888,0.333 -- set multiple values in chan id order
+///       set f32 1,r:.9                 -- set all to 1 except channels tagged 'r'
+///                                         which are set to 0.9
+///       set f32 1,2:.7                 -- set all to 1 except 2 which is set to 0.7
+///     unimplemented:
+///       set u16 123                    -- set raw u16 value to all chans
+///       set u16 123,0,334              -- set raw u16 value per channel
+///
+///     demo
+///       test_seq -- fade all LEDs in sequence
+///
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
