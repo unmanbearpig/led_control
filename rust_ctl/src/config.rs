@@ -197,6 +197,9 @@ impl Config {
         let mut cfg: Option<Config> = None;
 
         args.next(); // remove the executable name from args
+
+        let mut skip_default_config: bool = false;
+
         loop {
             let arg = args.next();
             if arg.is_none() {
@@ -211,6 +214,9 @@ impl Config {
                         return Err("--cfg requires config filename".to_string())
                     }
                     cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
+                }
+                "--no-cfg" => {
+                    skip_default_config = true;
                 }
                 "--dev" => {
                     let dev_arg = args.next();
@@ -293,7 +299,7 @@ impl Config {
             }
         }
 
-        if cfg.is_none() {
+        if cfg.is_none() && !skip_default_config {
             match fs::metadata(DEFAULT_CONFIG_PATH) {
                 Ok(_) => {
                     cfg = Some(Self::from_file(DEFAULT_CONFIG_PATH)?)
