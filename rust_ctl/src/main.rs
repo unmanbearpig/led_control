@@ -13,8 +13,12 @@ mod udpv2_dev;
 mod test_dev;
 mod demo;
 mod action;
+mod dev_stats;
+mod msg_handler;
 
 use std::env;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 use crate::chan::ChanConfig;
 
@@ -76,7 +80,14 @@ fn main() -> Result<(), String> {
         srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
     }
 
-    config.action.perform(&mut srv, &config)?;
+    let sync_srv = Arc::new(RwLock::new(srv));
+    let dev_stats = dev_stats::DevStats::new(sync_srv.clone());
+    let mut sync_dev = Arc::new(RwLock::new(dev_stats));
+    {
+        let sync_dev = sync_dev.clone();
+        dev_stats::start_mon(sync_dev, Duration::from_millis(1000));
+    }
+    config.action.perform(&mut sync_dev, &config)?;
 
     Ok(())
 }

@@ -1,8 +1,9 @@
-use crate::srv;
 use crate::proto::{Msg, ChanVal, Val};
+use crate::msg_handler::MsgHandler;
 use std::time;
 use std::thread::sleep;
 use rand::{self, Rng};
+use std::sync::{Arc, RwLock};
 
 struct DemoChan {
     freq: f64,
@@ -11,15 +12,20 @@ struct DemoChan {
     phi: f64,
 }
 
-pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
+pub fn run<D: MsgHandler>(srv: &mut Arc<RwLock<D>>) -> Result<(), String> {
     println!("running glitch demo...");
 
-    let mut msg: Msg = Msg {
-        seq_num: 0,
-        timestamp: time::SystemTime::now(),
-        vals: srv.chans()
-            .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
-            .collect(),
+    let mut msg: Msg = {
+        let srv = srv.clone();
+        let srv = srv.read().map_err(|e| format!("{:?}", e))?;
+
+        Msg {
+            seq_num: 0,
+            timestamp: time::SystemTime::now(),
+            vals: srv.chans().into_iter()
+                .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
+                .collect(),
+        }
     };
 
 
@@ -59,7 +65,10 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
         // }
         // println!("");
 
-        srv.handle_msg(&msg).expect("demo: handle_msg error");
+        {
+            let mut srv = srv.write().map_err(|e| format!("{:?}", e))?;
+            srv.handle_msg(&msg).expect("demo: handle_msg error");
+        }
         sleep(delay);
     }
 }

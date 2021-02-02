@@ -1,17 +1,23 @@
-use crate::srv;
 use crate::proto::{Msg, ChanVal, Val};
+use crate::msg_handler::MsgHandler;
 use std::time;
 use std::thread::sleep;
+use std::sync::{Arc, RwLock};
 
-pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
+pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>) -> Result<(), String> {
     println!("running test_seq...");
 
-    let mut msg: Msg = Msg {
-        seq_num: 0,
-        timestamp: time::SystemTime::now(),
-        vals: srv.chans()
-            .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
-            .collect(),
+    let mut msg: Msg = {
+        let srv = srv.read().map_err(|e| format!("write lock: {:?}", e))?;
+
+        let chans = srv.chans();
+        Msg {
+            seq_num: 0,
+            timestamp: time::SystemTime::now(),
+            vals: chans.iter()
+                .map(|(id, _)| (ChanVal(*id, Val::F32(0.0))))
+                .collect(),
+        }
     };
 
     loop {
@@ -27,7 +33,11 @@ pub fn run(srv: &mut srv::Srv) -> Result<(), String> {
 
             let mut set = |fval: f32| {
                 msg.vals[i].1 = Val::F32(fval.powf(2.2));
-                srv.handle_msg(&msg).expect("demo: handle_msg error");
+                {
+                    let srv = srv.clone();
+                    let mut srv = srv.write().unwrap();
+                    srv.handle_msg(&msg).expect("demo: handle_msg error");
+                }
                 sleep(delay);
             };
 

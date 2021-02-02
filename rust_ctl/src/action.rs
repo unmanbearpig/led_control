@@ -2,13 +2,14 @@ use std::net::IpAddr;
 use std::time;
 
 use serde_derive::{Serialize, Deserialize};
-use crate::srv::{Srv, ChanDescription};
 use crate::proto;
 use crate::config;
 use crate::demo;
 use crate::udp_srv;
+use crate::msg_handler::{MsgHandler, ChanDescription};
 use std::collections::BTreeMap;
 use std::num::ParseIntError;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChanSpecGeneric<F> {
@@ -184,7 +185,7 @@ impl ChanSpec {
         }
     }
 
-    pub fn parse_u16(string: &str) -> Result<ChanSpec, String> {
+    pub fn parse_u16(_string: &str) -> Result<ChanSpec, String> {
         unimplemented!();
     }
 }
@@ -270,7 +271,7 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn perform(&self, srv: &mut Srv, config: &config::Config) -> Result<(), String> {
+    pub fn perform<D: MsgHandler>(&self, srv: &mut Arc<RwLock<D>>, config: &config::Config) -> Result<(), String> {
         match self {
             Action::PrintConfig => {
                 println!("{}", serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e) )?);
@@ -278,18 +279,23 @@ impl Action {
             }
             Action::ListChans => {
                 println!("chans:");
+                let srv = srv.clone();
+                let srv = srv.read().map_err(|e| format!("{:?}", e))?;
                 for (id, name) in srv.chans() {
                     println!("chan {} {}", id, name);
                 }
                 Ok(())
             }
             Action::Set(spec) => {
+                let srv = srv.clone();
+                let mut srv = srv.write().map_err(|e| format!("{:?}", e))?;
+
                 match spec {
                     ChanSpec::F32(spec) => {
                         // need some ChanSpec(Generic?) method
                         // that will give us the values for each specified chan
                         let chan_descriptions: Vec<ChanDescription> =
-                            srv.chan_descriptions().collect();
+                            srv.chan_descriptions();
                         let chanvals = spec.resolve_for_chans(chan_descriptions.as_slice())?;
 
                         let chanvals = chanvals.into_iter()
@@ -328,6 +334,7 @@ impl Action {
                 loop {
                     match udp.recv() {
                         Ok(msg) => {
+                            let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
                             match srv.handle_msg(&msg) {
                                 Ok(_) => continue,
                                 Err(e) => eprintln!("Error handling msg: {}", e),

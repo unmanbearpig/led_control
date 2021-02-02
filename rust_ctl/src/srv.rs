@@ -1,6 +1,7 @@
 use crate::dev::{self, Dev};
 use crate::chan::ChanConfig;
 use crate::proto::{ChanId, ChanVal, Val, Msg};
+use crate::msg_handler::{MsgHandler, ChanDescription};
 use std::fmt::{self, Display, Formatter};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -26,12 +27,6 @@ struct SrvDev {
 pub struct Srv {
     devs: Vec<SrvDev>,
     chans: Vec<SrvChan>,
-}
-
-pub struct ChanDescription<'a> {
-    pub chan_id: u16,
-    pub name: String,
-    pub tags: &'a [String]
 }
 
 impl<'a> Srv {
@@ -80,34 +75,15 @@ impl<'a> Srv {
         dev_id
     }
 
-    pub fn chans(&'a self) -> impl ExactSizeIterator<Item = (ChanId, String)> + 'a {
-        self.chans.as_slice()
-            .into_iter()
-            .enumerate()
-            .map(move |(chan_id, SrvChan { devid, .. })| {
-                let dev = self.get_dev(&devid);
-                (ChanId(chan_id as u16),
-                 format!("Chan {} {} \"{}\"", chan_id, devid, dev))
-            })
-    }
-
-    pub fn chan_descriptions(&'a self) -> impl ExactSizeIterator<Item = ChanDescription> {
-        self.chans.iter().enumerate().map(|(cid, chan)| {
-            ChanDescription {
-                chan_id: cid as u16,
-                name: format!("[cid: {}, dev {}, chan {}]",
-                              cid, chan.devid.0, chan.cfg.index),
-                tags: chan.cfg.tags.as_slice()
-            }
-        })
-    }
-
     fn get_dev(&self, id: &DevId) -> &dyn dev::Dev {
         let DevId(idx) = id;
         self.devs[*idx as usize].dev.as_ref()
     }
 
-    pub fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
+}
+
+impl MsgHandler for Srv {
+    fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
                 Val::F32(fval) => {
@@ -118,6 +94,28 @@ impl<'a> Srv {
         }
 
         self.sync()
+    }
+
+    fn chans(&self) -> Vec<(ChanId, String)> {
+        self.chans.as_slice()
+            .into_iter()
+            .enumerate()
+            .map(|(chan_id, SrvChan { devid, .. })| {
+                let dev = self.get_dev(&devid);
+                (ChanId(chan_id as u16),
+                 format!("Chan {} {} \"{}\"", chan_id, devid, dev))
+            }).collect()
+    }
+
+    fn chan_descriptions(&self) -> Vec<ChanDescription> {
+        self.chans.iter().enumerate().map(|(cid, chan)| {
+            ChanDescription {
+                chan_id: cid as u16,
+                name: format!("[cid: {}, dev {}, chan {}]",
+                              cid, chan.devid.0, chan.cfg.index),
+                tags: chan.cfg.tags.clone(),
+            }
+        }).collect()
     }
 }
 
