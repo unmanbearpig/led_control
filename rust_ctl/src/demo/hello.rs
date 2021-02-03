@@ -55,6 +55,9 @@ pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>) -> Result<(), String> {
             msg.vals[i].1 = Val::F32(new_sin as f32);
         }
 
+        msg.timestamp = time::SystemTime::now();
+        msg.seq_num += 1;
+
         {
             let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
             srv.handle_msg(&msg).expect("demo: handle_msg error");

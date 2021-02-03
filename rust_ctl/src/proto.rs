@@ -157,11 +157,6 @@ impl Msg {
             val.serialize_to_struct(&mut data[i]);
         }
 
-        // dbg!(MSG_HEADER_SIZE);
-        // dbg!(self.vals.len());
-        // dbg!(mem::size_of_val(&*data));
-
-        // MSG_HEADER_SIZE + (self.vals.len() * MSG_VAL_SIZE)
         MSG_HEADER_SIZE + mem::size_of_val(&*data)
     }
 

@@ -43,6 +43,7 @@ impl Dev for UdpV2Dev {
         let mut bytes = [0u8; 1500];
         self.msg.serialize(&mut bytes);
         self.socket.send(&bytes).map_err(|e| e.to_string())?;
+        self.msg.seq_num += 1;
         Ok(())
     }
 }
