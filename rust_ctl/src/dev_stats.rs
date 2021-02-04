@@ -47,12 +47,28 @@ impl ValStats {
 
         self.cnt += 1;
     }
+
+    fn merge_from(&mut self, from: &ValStats) {
+        if from.cnt == 0 {
+            return;
+        }
+        if self.cnt == 0 {
+            *self = from.clone();
+            return;
+        }
+
+        self.min = self.min.min(from.min);
+        self.max = self.max.max(from.max);
+        self.avg = (self.avg * self.cnt as f64 + from.avg * from.cnt as f64)
+            / (self.cnt + from.cnt) as f64;
+        self.cnt += from.cnt;
+    }
 }
 
 impl fmt::Display for ValStats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cnt: {:7} min: {:3.3}  max: {:3.3}  avg: {:3.3}",
-               self.cnt, self.min, self.max, self.avg
+        write!(f, "cnt: {:7} min: {:3.3}  avg: {:3.3}  max: {:3.3}",
+               self.cnt, self.min, self.avg, self.max
         )
     }
 }
@@ -62,14 +78,25 @@ struct Stats {
     last_update: Option<Instant>,
     msg_cnt: u64,
     prev_msg_cnt: u64,
-    f32_vals: Vec<ValStats>,
+    f32_vals_last: Vec<ValStats>,
+    f32_vals_overall: Vec<ValStats>,
     msg_recv_latency_ms: ValStats,
     msg_dups: u64,
     msg_miss: u64,
 }
 
 impl Stats {
+    fn merge(into: &mut Vec<ValStats>, from: &Vec<ValStats>) {
+        into.resize_with(into.len().max(from.len()), Default::default);
+
+        for (i, v) in from.into_iter().enumerate() {
+            into[i].merge_from(v);
+        }
+    }
+
     fn print(&mut self) {
+        Self::merge(&mut self.f32_vals_overall, &self.f32_vals_last);
+
         let prev_update = self.last_update;
         self.last_update = Some(Instant::now());
 
@@ -89,13 +116,17 @@ impl Stats {
             }
         };
 
-        let f32_vals = self.f32_vals.clone();
-        // self.f32_vals.resize_with(0, Default::default);
-
         let mut val_str = String::new();
-        for stat in f32_vals.iter() {
-            val_str += format!("{}\n", stat).as_str();
+        for (i, overall_stat) in self.f32_vals_overall.iter().enumerate() {
+            let last_stat = self.f32_vals_last.get(i);
+            let last_val_str = match last_stat {
+                Some(last_stat) => format!("{}", last_stat),
+                None => "None".to_string()
+            };
+            val_str += format!("{}  {}\n", overall_stat, last_val_str).as_str();
         }
+
+        self.f32_vals_last.resize_with(0, Default::default);
 
         println!("total_msgs: {:7}, msgs_per_sec: {:9.4}  latency_ms: {}  dups: {:4}  miss: {:4}  \n{}",
                  self.msg_cnt,
@@ -174,11 +205,13 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
         }
 
 
-        self.stats.f32_vals.resize_with(self.stats.f32_vals.len().max(msg.vals.len()), Default::default);
+        self.stats.f32_vals_last.resize_with(
+            self.stats.f32_vals_last.len().max(msg.vals.len()),
+            Default::default);
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
                 Val::F32(v) => {
-                    self.stats.f32_vals[*cid as usize].add(*v as f64)
+                    self.stats.f32_vals_last[*cid as usize].add(*v as f64)
                 },
                 _ => {},
             }

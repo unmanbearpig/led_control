@@ -85,7 +85,7 @@ fn main() -> Result<(), String> {
     let mut sync_dev = Arc::new(RwLock::new(dev_stats));
     {
         let sync_dev = sync_dev.clone();
-        dev_stats::start_mon(sync_dev, Duration::from_millis(1000));
+        dev_stats::start_mon(sync_dev, Duration::from_millis(500));
     }
     config.action.perform(&mut sync_dev, &config)?;
 
