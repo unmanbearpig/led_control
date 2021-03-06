@@ -20,14 +20,14 @@ devs:
         tags: ["g", "rgb", "window"]
   - dev:
       UdpV2:
-        ip: 192.168.0.111
+        ip: 192.168.0.102
         port: 8932
         chans: 3
     chans:
       - index: 2
         min: 0.0
         max: 1.0
-        exp: 2.7
+        exp: 2.3
         tags: ["bottom", "white", "wall"]
       - index: 0
         min: 0.0
@@ -39,3 +39,24 @@ devs:
         max: 1.0
         exp: 2.27
         tags: ["bed", "white", "wall"]
+  - dev:
+      UdpV2:
+        ip: 192.168.0.100
+        port: 8932
+        chans: 3
+    chans:
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["test", "test1", "ceiling", "ceiling1"]
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 2.20
+        tags: ["test", "test2", "spotlight"]
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["test", "test3", "ceiling", "ceiling2"]
