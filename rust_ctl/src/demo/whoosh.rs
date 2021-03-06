@@ -69,7 +69,8 @@ pub fn run<D: MsgHandler>(srv: &mut Arc<RwLock<D>>) -> Result<(), String> {
             };
             // let val = d.max * (radius - (1.0 / dist)).max(0.0);
 
-            let val = d.min + (radius - dist).max(0.0).powf(2.2) * d.max;
+            // let val = d.min + (radius - dist).max(0.0).powf(2.2) * d.max;
+            let val = (d.min + (radius - dist).max(0.0) * 1.3 * d.max).min(d.max);
 
             msg.vals[i].1 = Val::F32(val as f32);
             // dbg!(d.position, loc, dist, val);

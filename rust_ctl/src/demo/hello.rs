@@ -30,13 +30,13 @@ pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>) -> Result<(), String> {
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 
-    let freq_dist = rand::distributions::Uniform::new(0.01, 0.1);
+    let freq_dist = rand::distributions::Uniform::new(0.09, 0.5);
     let mut rng = rand::thread_rng();
     for _ in 0..msg.vals.len() {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.65,
-            max: 0.9,
+            min: 0.78,
+            max: 1.0,
             phi: 0.0,
         });
     }
