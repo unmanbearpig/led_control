@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
 use crate::coord::{Coord};
+use crate::wacom;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Config {
@@ -27,6 +28,9 @@ pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>, conf: Config) -> Result<(), 
         }
     };
 
+    let mut wacom_packet = wacom::WacomPacket::default();
+    let mut wacom = wacom::Wacom::new("/dev/hidraw8")?;
+
     let delay = time::Duration::from_micros(2000);
     let t = time::Instant::now();
     let x_freq = 0.15;
@@ -34,10 +38,20 @@ pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>, conf: Config) -> Result<(), 
     let z_freq = 0.15;
     let mut loc = conf.location;
     loop {
-        let dt = t.elapsed().as_secs_f32();
-        loc.x = (dt * x_freq * std::f32::consts::PI * 2.0).sin();
+        // let dt = t.elapsed().as_secs_f32();
+        // loc.x = (dt * x_freq * std::f32::consts::PI * 2.0).sin();
         // loc.y = (dt * y_freq * std::f32::consts::PI * 2.0).sin();
-        loc.z = (dt * z_freq * std::f32::consts::PI * 2.0).cos();
+        // loc.z = (dt * z_freq * std::f32::consts::PI * 2.0).cos();
+
+        wacom.read(&mut wacom_packet)?;
+        // y max: 34bc
+        // x max: 5460
+        // dist: 2a
+        // pressure: ff
+
+        loc.x = 1.0 - (wacom_packet.y as f32 / 0x34bc as f32).min(1.0);
+        loc.y = (wacom_packet.x as f32 / 0x5460 as f32).min(1.0);
+        loc.z = (wacom_packet.distance as f32 / 0x29 as f32).min(1.0);
 
         {
             let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;

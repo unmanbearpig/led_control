@@ -17,6 +17,7 @@ mod dev_stats;
 mod msg_handler;
 mod coord;
 mod cuboid;
+mod wacom;
 
 use std::env;
 use std::sync::{Arc, RwLock};
