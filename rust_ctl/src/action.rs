@@ -7,6 +7,7 @@ use crate::config;
 use crate::demo;
 use crate::udp_srv;
 use crate::msg_handler::{MsgHandler, ChanDescription};
+use crate::coord::{Coord};
 use std::collections::BTreeMap;
 use std::num::ParseIntError;
 use std::sync::{Arc, RwLock};
@@ -260,6 +261,9 @@ pub enum Action {
 
     Set(ChanSpec),
 
+    // location, radius, brightness
+    Space(Coord, f32, f32),
+
     DemoTestSeq,
     DemoGlitch,
     DemoHello,
@@ -285,6 +289,13 @@ impl Action {
                     println!("chan {} {}", id, name);
                 }
                 Ok(())
+            }
+            Action::Space(loc, radius, brightness) => {
+                println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
+
+                demo::space::run(srv, demo::space::Config {
+                    location: *loc, radius: *radius, brightness: *brightness,
+                })
             }
             Action::Set(spec) => {
                 let srv = srv.clone();

@@ -16,7 +16,7 @@ impl Display for DevId {
 #[derive(Debug)]
 struct SrvChan {
     devid: DevId,
-    cfg: ChanConfig,
+    pub cfg: ChanConfig,
 }
 
 struct SrvDev {
@@ -79,7 +79,6 @@ impl<'a> Srv {
         let DevId(idx) = id;
         self.devs[*idx as usize].dev.as_ref()
     }
-
 }
 
 impl MsgHandler for Srv {
@@ -114,6 +113,7 @@ impl MsgHandler for Srv {
                 name: format!("[cid: {}, dev {}, chan {}]",
                               cid, chan.devid.0, chan.cfg.index),
                 tags: chan.cfg.tags.clone(),
+                cuboid: chan.cfg.cuboid,
             }
         }).collect()
     }

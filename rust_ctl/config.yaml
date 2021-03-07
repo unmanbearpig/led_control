@@ -1,5 +1,8 @@
 ---
 action: PrintConfig
+# the room is not actually a cube
+# this transforms it into it's rough proportions
+room_scale: [ 0.6, 0.5, 1.0 ]
 devs:
   - dev: Usb
     chans:
@@ -8,16 +11,52 @@ devs:
         max: 1.0
         exp: 2.0
         tags: ["r", "rgb", "window"]
+        # from room's window top left corner x y z coordinates
+        # when looking at the window:
+        #   x: left-right, left is 0
+        #   y: up-down, ceiling is 0, floor is 1
+        #   z: distance from the window into the room, window is 0
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
       - index: 1
         min: 0.0
         max: 1.0
         exp: 2.9
         tags: ["b", "rgb", "window"]
+        # the same as first channel
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+
       - index: 0
         min: 0.0
         max: 1.0
         exp: 2.4
+        # the same as first channel
         tags: ["g", "rgb", "window"]
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+
   - dev:
       UdpV2:
         ip: 192.168.0.102
@@ -28,17 +67,45 @@ devs:
         min: 0.0
         max: 1.0
         exp: 2.3
-        tags: ["bottom", "white", "wall"]
+        tags: ["top", "white", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.4
+            z: 0.15
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.7
       - index: 0
         min: 0.0
         max: 1.0
         exp: 2.30
-        tags: ["top", "white", "wall"]
+        tags: ["bottom", "white", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.01
+            z: 0.1
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.70
       - index: 1
         min: 0.0
         max: 1.0
         exp: 2.27
         tags: ["bed", "white", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.04
+            z: 1.0
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.7
+
   - dev:
       UdpV2:
         ip: 192.168.0.100
@@ -50,13 +117,41 @@ devs:
         max: 1.0
         exp: 2.2
         tags: ["test", "test1", "ceiling", "ceiling1"]
+        cuboid:
+          start:
+            x: 0.7
+            y: 0.8
+            z: 0.9
+          end:
+            x: 0.9
+            y: 1.0
+            z: 1.0
       - index: 0
         min: 0.0
         max: 1.0
         exp: 2.20
         tags: ["test", "test2", "spotlight"]
+        # not sure about this one, whatever
+        cuboid:
+          start:
+            x: 0.7
+            y: 0.8
+            z: 0.9
+          end:
+            x: 0.9
+            y: 1.0
+            z: 1.0
       - index: 1
         min: 0.0
         max: 1.0
         exp: 2.2
         tags: ["test", "test3", "ceiling", "ceiling2"]
+        cuboid:
+          start:
+            x: 0.8
+            y: 0.8
+            z: 0.9
+          end:
+            x: 1.0
+            y: 1.0
+            z: 1.0

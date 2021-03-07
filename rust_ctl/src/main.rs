@@ -15,6 +15,8 @@ mod demo;
 mod action;
 mod dev_stats;
 mod msg_handler;
+mod coord;
+mod cuboid;
 
 use std::env;
 use std::sync::{Arc, RwLock};

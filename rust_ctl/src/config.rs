@@ -6,11 +6,13 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use core::num::ParseIntError;
+use core::num::ParseFloatError;
 
 use serde_derive::{Serialize, Deserialize};
 
 use crate::chan::ChanConfig;
 use crate::action::{ChanSpec, Action};
+use crate::coord::{Coord};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
@@ -27,7 +29,7 @@ pub enum DevConfig {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct DevChanConfig {
     pub dev: DevConfig,
-    pub chans: Option<Vec<ChanConfig>>
+    pub chans: Option<Vec<ChanConfig>>,
 }
 
 const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
@@ -276,6 +278,51 @@ impl Config {
                         }
                     }?;
                     action = Some(Action::Set(chan_spec));
+                }
+                "space" => {
+                    let location = match args.next() {
+                        None => return Err(
+                            "space needs: location (x,y,z) radius brightness".to_string()),
+                        Some(loc) => loc
+                    };
+
+                    let loc_parts: Vec<&str> = location.split(",").collect();
+                    if loc_parts.len() != 3 {
+                        return Err("location coordinates needs to be x,y,z".to_string())
+                    }
+                    let loc_parts: Vec<f32> =
+                        loc_parts.iter().map(|x| x.parse().map_err(|e| format!("{:?}", e)))
+                        .collect::<Result<Vec<f32>, String>>()?;
+
+                    let radius = match args.next() {
+                        None => return Err(
+                            "space needs: location (x,y,z) radius (missing) brightness (missing)"
+                                .to_string()),
+                        Some(br) => br
+                    };
+                    let radius: f32 = radius.parse()
+                        .map_err(|e: ParseFloatError| return format!("{:?}", e))?;
+
+                    let brightness = match args.next() {
+                        None => return Err(
+                            "space needs: location (x,y,z) radius brightness (missing)".to_string()),
+                        Some(br) => br
+                    };
+                    let brightness: f32 = brightness.parse()
+                        .map_err(|e: ParseFloatError| return format!("{:?}", e))?;
+
+                    action = Some(
+                        Action::Space(
+                            Coord {
+                                x: loc_parts[0],
+                                y: loc_parts[1],
+                                z: loc_parts[2],
+                            },
+                            radius,
+                            brightness,
+                        )
+                    )
+
                 }
                 "demo" => {
                     let demo_arg = args.next();

@@ -141,6 +141,7 @@ impl Stats {
 
 pub struct DevStats<D: MsgHandler> {
     dev: Arc<RwLock<D>>,
+    // add chan tags or something
     stats: Stats,
     last_msg_seq_num: u16,
 }
