@@ -6,13 +6,14 @@ use crate::proto;
 use crate::config;
 use crate::demo;
 use crate::udp_srv;
+use crate::web;
 use crate::msg_handler::{MsgHandler, ChanDescription};
 use crate::coord::{Coord};
 use std::collections::BTreeMap;
 use std::num::ParseIntError;
 use std::sync::{Arc, RwLock};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChanSpecGeneric<F> {
     Each(Vec<F>),
     // (chan_id/tag, value)
@@ -91,7 +92,7 @@ impl<F> ChanSpecGeneric<F> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChanSpec {
     F32(ChanSpecGeneric<f32>),
     U16(ChanSpecGeneric<u16>),
@@ -250,7 +251,7 @@ mod chan_spec_parse_test {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Action {
     ListChans,
     PrintConfig,
@@ -260,6 +261,10 @@ pub enum Action {
     },
 
     Set(ChanSpec),
+
+    Web {
+        listen_addr: Option<String>
+    },
 
     // location, radius, brightness
     Space(Coord, f32, f32),
@@ -275,7 +280,10 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn perform<D: MsgHandler>(&self, srv: &mut Arc<RwLock<D>>, config: &config::Config) -> Result<(), String> {
+    pub fn perform<D: 'static + MsgHandler>(&self,
+                                            srv: Arc<RwLock<D>>,
+                                            config: &config::Config)
+                                            -> Result<(), String> {
         match self {
             Action::PrintConfig => {
                 println!("{}", serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e) )?);
@@ -289,6 +297,12 @@ impl Action {
                     println!("chan {} {}", id, name);
                 }
                 Ok(())
+            }
+            Action::Web { listen_addr } => {
+                let listen_addr: Option<String> = listen_addr.clone();
+                let config = config.clone();
+                let mut web = web::Web::new(listen_addr, config)?;
+                web.run(srv)
             }
             Action::Space(loc, radius, brightness) => {
                 println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");

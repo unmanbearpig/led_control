@@ -26,7 +26,7 @@ pub enum DevConfig {
     },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DevChanConfig {
     pub dev: DevConfig,
     pub chans: Option<Vec<ChanConfig>>,
@@ -99,7 +99,7 @@ impl DevChanConfig {
             "udpv2" => {
                 let (ip, maybe_port) = parse_ip_port(
                     &dev_parts[1..3.min(dev_parts.len())])?;
-                let chans = 3; // fix hardcoded
+                let chans = 3; // TODO fix hardcoded
                 Ok(DevChanConfig {
                     dev: DevConfig::UdpV2 {
                         ip: ip,
@@ -174,7 +174,7 @@ mod dev_config_test {
 ///       test_seq -- fade all LEDs in sequence
 ///
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub action: Action,
     pub devs: Vec<DevChanConfig>
@@ -278,6 +278,13 @@ impl Config {
                         }
                     }?;
                     action = Some(Action::Set(chan_spec));
+                }
+                "web" => {
+                    action = Some(
+                        Action::Web {
+                            listen_addr: args.next(),
+                        }
+                    )
                 }
                 "space" => {
                     let location = match args.next() {

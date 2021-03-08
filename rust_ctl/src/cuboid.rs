@@ -41,13 +41,13 @@ impl Cuboid {
         dists.iter().sum::<f32>() / dists.len() as f32
     }
 
-    pub fn sphere_intersection(&self, center: Coord, radius: f32) -> f32 {
-        let corners = self.corners();
-        let dists: Vec<f32> = corners.into_iter().map(|corn| {
-            let dist = center.dist_to(&corn);
-            radius - dist
-        }).collect();
+    // pub fn sphere_intersection(&self, center: Coord, radius: f32) -> f32 {
+    //     let corners = self.corners();
+    //     let dists: Vec<f32> = corners.into_iter().map(|corn| {
+    //         let dist = center.dist_to(&corn);
+    //         radius - dist
+    //     }).collect();
 
-        dists.iter().sum::<f32>() / dists.len() as f32
-    }
+    //     dists.iter().sum::<f32>() / dists.len() as f32
+    // }
 }

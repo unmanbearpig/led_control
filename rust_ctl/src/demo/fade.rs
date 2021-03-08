@@ -11,7 +11,7 @@ struct DemoChan {
     end: f64,
 }
 
-pub fn run<D: MsgHandler>(srv: &mut Arc<RwLock<D>>) -> Result<(), String> {
+pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
     println!("running fade...");
 
     let dur_secs = 3600.0;

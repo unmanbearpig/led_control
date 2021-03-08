@@ -18,6 +18,7 @@ mod msg_handler;
 mod coord;
 mod cuboid;
 mod wacom;
+mod web;
 
 use std::env;
 use std::sync::{Arc, RwLock};
@@ -85,12 +86,12 @@ fn main() -> Result<(), String> {
 
     let sync_srv = Arc::new(RwLock::new(srv));
     let dev_stats = dev_stats::DevStats::new(sync_srv.clone());
-    let mut sync_dev = Arc::new(RwLock::new(dev_stats));
+    let sync_dev = Arc::new(RwLock::new(dev_stats));
     {
         let sync_dev = sync_dev.clone();
         dev_stats::start_mon(sync_dev, Duration::from_millis(500));
     }
-    config.action.perform(&mut sync_dev, &config)?;
+    config.action.perform(sync_dev.clone(), &config)?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use std::time;
 use std::thread::sleep;
 use std::sync::{Arc, RwLock};
 
-pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>) -> Result<(), String> {
+pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
     println!("running test_seq...");
 
     let mut msg: Msg = {

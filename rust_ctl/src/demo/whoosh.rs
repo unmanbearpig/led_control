@@ -12,7 +12,7 @@ struct DemoChan {
     position: f64,
 }
 
-pub fn run<D: MsgHandler>(srv: &mut Arc<RwLock<D>>) -> Result<(), String> {
+pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
     println!("running hello whoosh...");
 
     let mut msg: Msg = {

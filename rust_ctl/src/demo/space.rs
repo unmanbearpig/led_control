@@ -13,7 +13,7 @@ pub struct Config {
     pub brightness: f32,
 }
 
-pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>, conf: Config) -> Result<(), String> {
+pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>, conf: Config) -> Result<(), String> {
 
     let mut msg: Msg = {
         let srv = srv.read().map_err(|e| format!("write lock: {:?}", e))?;
@@ -32,10 +32,10 @@ pub fn run<T: MsgHandler>(srv: &mut Arc<RwLock<T>>, conf: Config) -> Result<(), 
     let mut wacom = wacom::Wacom::new("/dev/hidraw8")?;
 
     let delay = time::Duration::from_micros(2000);
-    let t = time::Instant::now();
-    let x_freq = 0.15;
-    let y_freq = 0.11;
-    let z_freq = 0.15;
+    // let t = time::Instant::now();
+    // let x_freq = 0.15;
+    // let y_freq = 0.11;
+    // let z_freq = 0.15;
     let mut loc = conf.location;
     loop {
         // let dt = t.elapsed().as_secs_f32();

@@ -1,8 +1,6 @@
 
-use std::env;
-use std::process;
 use std::fs::{File};
-use std::io::{self, Read};
+use std::io::{Read};
 
 // packet format
 // 1b ??
@@ -25,7 +23,7 @@ use std::io::{self, Read};
 //   7 is touching
 
 #[repr(C, packed)]
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct WacomPacket {
     unknown1: u8,
     pub flags: u8,
