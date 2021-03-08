@@ -9,7 +9,12 @@ edition = "2018"
 [dependencies]
 rusb = "0.6"
 rand = "0.8"
+
+# Serialization
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.8"
+
+# Web stuff
 iron = "0.6.1"
+mime = "0.2"

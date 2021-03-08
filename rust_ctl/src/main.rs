@@ -1,5 +1,6 @@
 #![feature(test, slice_fill)]
 
+
 mod proto;
 mod usb;
 mod srv;
@@ -19,6 +20,9 @@ mod coord;
 mod cuboid;
 mod wacom;
 mod web;
+
+#[macro_use]
+extern crate mime;
 
 use std::env;
 use std::sync::{Arc, RwLock};

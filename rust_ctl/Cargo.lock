@@ -543,6 +543,7 @@ name = "rust_ctl"
 version = "0.1.0"
 dependencies = [
  "iron",
+ "mime",
  "rand 0.8.0",
  "rusb",
  "serde",
