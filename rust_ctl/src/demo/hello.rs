@@ -1,10 +1,12 @@
 
 use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
+use crate::task::{Task, TaskMsg};
 use std::time;
 use std::thread::sleep;
 use rand::{self, Rng};
 use std::sync::{Arc, RwLock};
+use std::sync::mpsc;
 
 struct DemoChan {
     freq: f64,
@@ -14,6 +16,17 @@ struct DemoChan {
 }
 
 pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
+    let (sender, receiver) = mpsc::channel::<TaskMsg>();
+
+    // runs indefinitely
+    run_with_channel(srv, receiver)
+}
+
+pub fn run_with_channel<T: MsgHandler> (
+    srv: Arc<RwLock<T>>,
+    stop: mpsc::Receiver<TaskMsg>)
+    -> Result<(), String> {
+
     println!("running hello demo...");
 
     let mut msg: Msg = {
@@ -41,7 +54,7 @@ pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
         });
     }
 
-    let delay = time::Duration::from_micros(2000);
+    let delay = time::Duration::from_micros(4000);
     let mut t = time::Instant::now();
 
     loop {
@@ -62,6 +75,24 @@ pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
             let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
             srv.handle_msg(&msg).expect("demo: handle_msg error");
         }
-        sleep(delay);
+
+        match stop.recv_timeout(delay) {
+            Ok(msg) => {
+                println!("received task msg: {:?}", msg);
+                match msg {
+                    TaskMsg::Stop => return Ok(()),
+                    TaskMsg::Ping => {},
+                }
+            },
+            Err(e) => {
+                match e {
+                    mpsc::RecvTimeoutError::Timeout => {},
+                    mpsc::RecvTimeoutError::Disconnected => {
+                        return Ok(());
+                    },
+                }
+            }
+        }
+        // sleep(delay);
     }
 }

@@ -20,6 +20,7 @@ mod coord;
 mod cuboid;
 mod wacom;
 mod web;
+mod task;
 
 #[macro_use]
 extern crate mime;
