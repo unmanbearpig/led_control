@@ -6,7 +6,8 @@ use iron::Handler;
 use iron::status;
 
 use crate::msg_handler::MsgHandler;
-use crate::action::{Action, ChanSpec, ChanSpecGeneric};
+use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
+use crate::action::Action;
 use crate::config;
 use crate::task::{TaskMsg, Task};
 use crate::demo;
@@ -105,8 +106,16 @@ const LINKS: &str = "
 <a href=\"test\">
   test some new feature
 </a>
+
+<br>
 ";
 
+impl<T: 'static + MsgHandler> Router<T> {
+    fn handle_chans(&self, req: &mut Request) -> IronResult<Response> {
+        unimplemented!()
+    }
+}
+// TODO::
 impl<T: 'static + MsgHandler> Handler for Router<T> {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
         // match self.routes.get(&req.url.path().join("/")) {
@@ -114,9 +123,20 @@ impl<T: 'static + MsgHandler> Handler for Router<T> {
         //     None => Ok(Response::with(status::NotFound))
         // }
 
-        let path = req.url.path().join("/");
 
-        println!("request to path: \"{}\"", path);
+        println!("request to: \"{:?}\"", req.url);
+
+        let path = req.url.path();
+
+        match path.first() {
+            Some(&"chans") => {
+
+            }
+            Some(_) => {}
+            None => {}
+        }
+
+        let path = path.join("/");
 
         match path.as_ref() {
             "" => {
@@ -135,11 +155,41 @@ impl<T: 'static + MsgHandler> Handler for Router<T> {
                         }
                     }
                 };
+
+                let chans = {
+                    let srv = self.srv.clone();
+                    let srv = srv.read().unwrap();
+
+                    let mut out = String::new();
+                    for cd in srv.chan_descriptions().iter() {
+                        out += format!(
+                            "
+<a href=\"/chans/{}/on\">
+  Turn on {}
+</a>
+&nbsp
+|
+&nbsp
+<a href=\"/chans/{}/off\">
+  Turn off {}
+</a>
+<br>\n
+", cd.chan_id,  cd.humanize(), cd.chan_id, cd.humanize()).as_ref();
+                    }
+                    out
+                };
+
                 let resp = Response::with((
                     mime!(Text/Html),
                     status::Ok,
-                    web_page(format!("{}<br>\n{}", task_text, LINKS)),
+                    web_page(format!(
+                        "{}<br>\n{}\n<br>{}",
+                        task_text,
+                        LINKS,
+                        chans,
+                    )),
                 ));
+
                 Ok(resp)
             }
             "off" => {

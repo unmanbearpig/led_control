@@ -11,7 +11,8 @@ use core::num::ParseFloatError;
 use serde_derive::{Serialize, Deserialize};
 
 use crate::chan::ChanConfig;
-use crate::action::{ChanSpec, Action};
+use crate::chan_spec::ChanSpec;
+use crate::action::Action;
 use crate::coord::{Coord};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

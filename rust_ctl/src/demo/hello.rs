@@ -1,9 +1,8 @@
 
 use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use crate::task::{Task, TaskMsg};
+use crate::task::{TaskMsg};
 use std::time;
-use std::thread::sleep;
 use rand::{self, Rng};
 use std::sync::{Arc, RwLock};
 use std::sync::mpsc;
@@ -16,7 +15,7 @@ struct DemoChan {
 }
 
 pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
-    let (sender, receiver) = mpsc::channel::<TaskMsg>();
+    let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
     // runs indefinitely
     run_with_channel(srv, receiver)

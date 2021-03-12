@@ -10,6 +10,20 @@ pub struct ChanDescription {
     pub cuboid: Option<Cuboid>,
 }
 
+impl ChanDescription {
+    pub fn tags_str(&self) -> String {
+        let mut out = String::new();
+        for t in self.tags.iter() {
+            out += format!("{} ", t).as_ref();
+        }
+        out
+    }
+
+    pub fn humanize(&self) -> String {
+        self.tags_str()
+    }
+}
+
 pub trait MsgHandler
 where Self: Dev + Send + Sync
 {

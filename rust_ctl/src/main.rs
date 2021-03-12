@@ -18,6 +18,7 @@ mod dev_stats;
 mod msg_handler;
 mod coord;
 mod cuboid;
+mod chan_spec;
 mod wacom;
 mod web;
 mod task;
