@@ -17,4 +17,5 @@ serde_yaml = "0.8"
 
 # Web stuff
 iron = "0.6.1"
+tiny_http = "0.8.0"
 mime = "0.2"

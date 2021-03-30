@@ -25,6 +25,7 @@ mod task;
 mod controller;
 mod filters;
 mod runner;
+mod web_tiny;
 
 #[macro_use]
 extern crate mime;
@@ -33,11 +34,7 @@ use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use std::sync::mpsc;
-use std::thread;
 use crate::filters::moving_average::MovingAverage;
-use crate::task::{TaskMsg, Task};
-use crate::runner::Runner;
 
 use crate::chan::ChanConfig;
 
@@ -112,25 +109,25 @@ fn main() -> Result<(), String> {
         Duration::from_millis(10),
         Duration::from_millis(3000));
 
-    let (tx, rx) = mpsc::channel::<TaskMsg>();
+    // let (_tx, _rx) = mpsc::channel::<TaskMsg>();
 
     let filter =
         Arc::new(RwLock::new(filter));
 
-    let join_handle = {
-        let filter = filter.clone();
-        let srv = sync_dev.clone();
-        thread::spawn(move || {
-            let res = Runner::run(filter, rx);
-            res
-        })
-    };
+    // let join_handle = {
+    //     let filter = filter.clone();
+    //     // let srv = sync_dev.clone();
+    //     thread::spawn(move || {
+    //         let res = Runner::run(filter, rx);
+    //         res
+    //     })
+    // };
 
-    let task = Some(Task {
-        name: "Hello task from web test".to_string(),
-        chan: tx,
-        join_handle: join_handle,
-    });
+    // let task = Some(Task {
+    //     name: "Hello task from web test".to_string(),
+    //     chan: tx,
+    //     join_handle: join_handle,
+    // });
 
     config.action.perform(filter.clone(), &config)?;
 

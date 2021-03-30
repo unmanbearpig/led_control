@@ -4,7 +4,6 @@ use std::fmt;
 use std::time::{Instant, SystemTime, Duration};
 use std::sync::mpsc;
 use std::collections::VecDeque;
-use std::thread;
 
 use crate::msg_handler::{MsgHandler, ChanDescription};
 use crate::dev::Dev;
@@ -42,13 +41,13 @@ impl<D: MsgHandler + Sync> Dev for MovingAverage<D> {
         dev.num_chans()
     }
 
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        let mut dev = self.output.write().unwrap();
+    fn set_f32(&mut self, _chan: u16, _val: f32) -> Result<(), String> {
+        // let mut dev = self.output.write().unwrap();
         // dev.set_f32(chan, val)
         Ok(())
     }
 
-    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+    fn get_f32(&self, _chan: u16) -> Result<f32, String> {
         // let dev = self.output.read().unwrap();
         // TODO get from msg?
         // dev.get_f32(chan)
@@ -94,13 +93,13 @@ impl<D: MsgHandler> MovingAverage<D> {
         self.frames.pop_front();
     }
 
-    fn chan_avg(&self, cid: usize) -> f32 {
-        let mut sum: f32 = 0.0;
-        for frame in self.frames.iter() {
-            sum += frame[cid]
-        }
-        sum / self.frames.len() as f32
-    }
+    // fn chan_avg(&self, cid: usize) -> f32 {
+    //     let mut sum: f32 = 0.0;
+    //     for frame in self.frames.iter() {
+    //         sum += frame[cid]
+    //     }
+    //     sum / self.frames.len() as f32
+    // }
 
     fn avg_frame(&self) -> Vec<f32> {
         let num_chans = self.frames[0].len();
@@ -113,7 +112,7 @@ impl<D: MsgHandler> MovingAverage<D> {
         }
 
         let num_frames = self.frames.len();
-        for i in (0..num_chans) {
+        for i in 0..num_chans {
             result[i] = result[i] / num_frames as f32;
         }
         result
@@ -136,7 +135,7 @@ impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
                 mov_avg.advance_frame();
 
                 // should I use target_msg's timestamp instead?
-                let now = Instant::now();
+                // let now = Instant::now();
                 // let progress = (now.saturating_duration_since(mov_avg.last_msg_target_time))
                 //     .div_duration_f32(mov_avg.transition_period)
                 //     .min(1.0).max(0.0);
@@ -240,7 +239,7 @@ impl<D: MsgHandler + Sync> MovingAverage<D> {
             as usize;
 
         let mut frames: VecDeque<Vec<f32>> = VecDeque::with_capacity(frames_num);
-        for _ in (0..frames_num) {
+        for _ in 0..frames_num {
             frames.push_back(vec![0.0; num_chans]);
         }
 
@@ -254,7 +253,7 @@ impl<D: MsgHandler + Sync> MovingAverage<D> {
             vals.push(ChanVal(ChanId(i as u16), Val::F32(0.0)))
         }
 
-        let mut msg = Msg {
+        let msg = Msg {
             seq_num: 0,
             timestamp: SystemTime::now(),
             vals: vals,

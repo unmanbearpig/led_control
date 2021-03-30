@@ -111,11 +111,12 @@ const LINKS: &str = "
 ";
 
 impl<T: 'static + MsgHandler> Router<T> {
-    fn handle_chans(&self, req: &mut Request) -> IronResult<Response> {
+    #[allow(dead_code)]
+    fn handle_chans(&self, _req: &mut Request) -> IronResult<Response> {
         unimplemented!()
     }
 }
-// TODO::
+
 impl<T: 'static + MsgHandler> Handler for Router<T> {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
         // match self.routes.get(&req.url.path().join("/")) {

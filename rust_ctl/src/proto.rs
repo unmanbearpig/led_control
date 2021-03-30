@@ -31,12 +31,12 @@ pub enum Val {
 }
 
 impl Val {
-    pub fn get_f32(&self) -> Option<f32> {
-        match self {
-            Val::U16(_) => None,
-            Val::F32(v) => Some(*v),
-        }
-    }
+    // pub fn get_f32(&self) -> Option<f32> {
+    //     match self {
+    //         Val::U16(_) => None,
+    //         Val::F32(v) => Some(*v),
+    //     }
+    // }
 }
 
 #[derive(Debug, PartialEq)]

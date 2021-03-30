@@ -36,6 +36,7 @@ pub struct WacomPacket {
 }
 
 pub struct Wacom<'a> {
+    #[allow(dead_code)]
     filename: &'a str,
     file: File,
 }
