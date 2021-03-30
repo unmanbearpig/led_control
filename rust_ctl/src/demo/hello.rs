@@ -39,7 +39,6 @@ pub fn run_with_channel<T: MsgHandler> (
         }
     };
 
-
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 
     let freq_dist = rand::distributions::Uniform::new(0.09, 0.5);

@@ -141,6 +141,7 @@ mod dev_config_test {
         );
     }
 }
+
 /// cli
 ///   config (by default /etc/led_ctl.yaml is used):
 ///     --cfg config.yaml          -- use config.yaml

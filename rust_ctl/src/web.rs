@@ -42,7 +42,7 @@ struct Router<T: MsgHandler> {
     state: Arc<Mutex<WebState>>,
 }
 
-impl<T: MsgHandler> Router<T> {
+impl<T: 'static + MsgHandler> Router<T> {
     fn new(srv: Arc<RwLock<T>>, config: config::Config) -> Self {
         Router {
             srv: srv.clone(),

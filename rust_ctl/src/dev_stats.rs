@@ -154,7 +154,6 @@ impl<D: 'static + MsgHandler + Sync> DevStats<D> {
             last_msg_seq_num: 0,
         }
     }
-
 }
 
 impl<D: MsgHandler> fmt::Display for DevStats<D> {
@@ -173,6 +172,11 @@ impl<D: MsgHandler + Sync> Dev for DevStats<D> {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         let mut dev = self.dev.write().unwrap();
         dev.set_f32(chan, val)
+    }
+
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        let dev = self.dev.read().unwrap();
+        dev.get_f32(chan)
     }
 
     fn sync(&mut self) -> Result<(), String> {

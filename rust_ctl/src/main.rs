@@ -1,5 +1,5 @@
-#![feature(test, slice_fill)]
-
+#![type_length_limit = "209715200000000000"]
+#![feature(test, slice_fill, div_duration)]
 
 mod proto;
 mod usb;
@@ -22,6 +22,9 @@ mod chan_spec;
 mod wacom;
 mod web;
 mod task;
+mod controller;
+mod filters;
+mod runner;
 
 #[macro_use]
 extern crate mime;
@@ -29,6 +32,12 @@ extern crate mime;
 use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+
+use std::sync::mpsc;
+use std::thread;
+use crate::filters::moving_average::MovingAverage;
+use crate::task::{TaskMsg, Task};
+use crate::runner::Runner;
 
 use crate::chan::ChanConfig;
 
@@ -97,7 +106,33 @@ fn main() -> Result<(), String> {
         let sync_dev = sync_dev.clone();
         dev_stats::start_mon(sync_dev, Duration::from_millis(500));
     }
-    config.action.perform(sync_dev.clone(), &config)?;
+
+    let filter = MovingAverage::new(
+        sync_dev.clone(),
+        Duration::from_millis(10),
+        Duration::from_millis(3000));
+
+    let (tx, rx) = mpsc::channel::<TaskMsg>();
+
+    let filter =
+        Arc::new(RwLock::new(filter));
+
+    let join_handle = {
+        let filter = filter.clone();
+        let srv = sync_dev.clone();
+        thread::spawn(move || {
+            let res = Runner::run(filter, rx);
+            res
+        })
+    };
+
+    let task = Some(Task {
+        name: "Hello task from web test".to_string(),
+        chan: tx,
+        join_handle: join_handle,
+    });
+
+    config.action.perform(filter.clone(), &config)?;
 
     Ok(())
 }

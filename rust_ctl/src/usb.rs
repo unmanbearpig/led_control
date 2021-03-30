@@ -9,6 +9,7 @@ pub struct UsbDev {
     bus_number: u8,
     dev_addr: u8,
     raw_vals: [u16; 3],
+    f32_vals: [f32; 3],
 }
 
 impl fmt::Display for UsbDev {
@@ -37,8 +38,18 @@ impl dev::Dev for UsbDev {
                 chan, self.num_chans()))
         }
 
+        self.f32_vals[chan as usize] = val;
+
         let raw_val = (val * self.max_int() as f32).round() as u16;
         self.set_raw(chan, raw_val)
+    }
+
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        if chan > 2 {
+            return Err(format!("chan {} out of bounds (0-2)", chan));
+        }
+
+        Ok(self.f32_vals[chan as usize])
     }
 
     /// sends the set LED values to the device
@@ -76,6 +87,7 @@ impl UsbDev {
             bus_number: bus_number,
             dev_addr: dev_addr,
             raw_vals: [0u16; 3],
+            f32_vals: [0.0;  3],
         }
     }
 

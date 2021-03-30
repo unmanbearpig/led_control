@@ -149,6 +149,13 @@ impl Dev for Srv {
         Ok(())
     }
 
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        let chan: &SrvChan = &self.chans[chan as usize];
+        let dev = &self.devs[chan.devid.0 as usize];
+
+        dev.dev.get_f32(chan.cfg.index)
+    }
+
     fn sync(&mut self) -> Result<(), String> {
         // minimize the number of syncs to devices by skipping
         // the ones without dirty bit set,

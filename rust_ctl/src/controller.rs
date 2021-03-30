@@ -2,29 +2,12 @@
 use crate::config;
 use crate::action;
 use crate::chan_spec::{ChanSpec};
-
+use crate::task::Task;
+use crate::srv::Srv;
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::mpsc;
+use std::time::{Duration};
 
-#[derive(Default)]
-struct ControllerState {
-    task: Option<Task>,
-}
+struct Controller {
 
-struct Contoller<T: MsgHandler> {
-    srv: Arc<RwLock<T>>,
-    config: config::Config,
-    state: Arc<Mutex<WebState>>,
-}
-
-impl<T: MsgHandler> Controller<T> {
-}
-
-struct CtlMessage {
-    msg: CtlAction,
-}
-
-enum CtlAction {
-    StopTask,
-    FadeTo()
 }

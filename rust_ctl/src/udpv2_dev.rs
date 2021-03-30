@@ -37,6 +37,25 @@ impl Dev for UdpV2Dev {
         Ok(())
     }
 
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        if chan as usize >= self.msg.vals.len() {
+            return Err(
+                format!("chan {} out of bounds (0-{})",
+                        chan, self.msg.vals.len() -1))
+        }
+
+        match self.msg.vals[chan as usize].1 {
+            Val::F32(v) => {
+                return Ok(v);
+            }
+            Val::U16(_) => {
+                return Err(format!(
+                    "no f32 value for chan {}", chan
+                ));
+            }
+        }
+    }
+
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
         // eprintln!("UDPv2: sending msg {:?}...", self.msg);

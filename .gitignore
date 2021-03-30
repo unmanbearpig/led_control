@@ -15,3 +15,5 @@ xtensa-lx106-elf
 esp8266_wifi_bridge/build
 
 common/secrets.h
+
+rust_ctl/target

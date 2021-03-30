@@ -24,11 +24,19 @@ impl fmt::Display for ChanId{
     }
 }
 
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Val {
     U16(u16),
     F32(f32),
+}
+
+impl Val {
+    pub fn get_f32(&self) -> Option<f32> {
+        match self {
+            Val::U16(_) => None,
+            Val::F32(v) => Some(*v),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -119,7 +127,7 @@ impl Default for ChanValSer {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Msg {
     pub seq_num: u16,
     pub timestamp: SystemTime,

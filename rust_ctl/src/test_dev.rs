@@ -32,6 +32,18 @@ impl Dev for TestDev {
         Ok(())
     }
 
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        if chan as usize >= self.vals.len() {
+            return Err(format!(
+                "chan {} out of bounds (0-{})",
+                chan,
+                self.vals.len() -1,
+            ))
+        }
+
+        Ok(self.vals[chan as usize])
+    }
+
     fn sync(&mut self) -> Result<(), String> {
         print!("test_dev sync:  ");
         for v in self.vals.iter() {

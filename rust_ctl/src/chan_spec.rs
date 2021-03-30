@@ -28,7 +28,6 @@ fn find_chans<'a>(chan_descr: &'a str, chans: &'a [ChanDescription]) -> impl Ite
     }).map(|cdesc| cdesc.chan_id)
 }
 
-
 impl<F> ChanSpecGeneric<F> {
     // chans: (id, (tags or something))
     pub fn resolve_for_chans(&self, chans: &[ChanDescription]) -> Result<Vec<(u16, F)>, String>
