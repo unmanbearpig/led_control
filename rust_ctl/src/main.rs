@@ -1,4 +1,3 @@
-#![type_length_limit = "209715200000000000"]
 #![feature(test, slice_fill, div_duration)]
 
 mod proto;
