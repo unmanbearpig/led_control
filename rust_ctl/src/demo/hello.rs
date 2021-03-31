@@ -71,7 +71,13 @@ pub fn run_with_channel<T: MsgHandler> (
 
         {
             let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
-            srv.handle_msg(&msg).expect("demo: handle_msg error");
+            match srv.handle_msg(&msg) {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("demo: handle_msg error: {:?}", e);
+                    continue;
+                }
+            }
         }
 
         match stop.recv_timeout(delay) {
