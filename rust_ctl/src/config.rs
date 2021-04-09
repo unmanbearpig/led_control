@@ -45,11 +45,15 @@ fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
                     args.join(":")))
     }
 
-    let ip: IpAddr = args[0].parse().map_err(|e| format!("parse_ip_port: {:?}", e))?;
+    let ip: IpAddr = args[0].parse()
+        .map_err(|e| format!("parse_ip_port: IP parse error: {:?}", e))?;
 
     let port: Option<u16> = match args.len() {
         1 => None,
-        2 => Some(args[1].parse().map_err(|e| format!("parse_ip_port: {:?}", e))?),
+        2 => {
+            Some(args[1].parse()
+                 .map_err(|e| format!("parse_ip_port: port parse error: {:?}", e))?)
+        },
         _ => unreachable!()
     };
 
@@ -241,7 +245,7 @@ impl Config {
                     let (listen_ip, listen_port) = match listen_arg {
                         Some(arg) => {
                             let parts: Vec<&str> = arg.split(":").collect();
-                            let (ip, port) = parse_ip_port(&parts[1..3.min(parts.len())])?;
+                            let (ip, port) = parse_ip_port(&parts[0..2.min(parts.len())])?;
                             (Some(ip), port)
                         }
                         None => (None, None)
