@@ -29,6 +29,9 @@ mod web_tiny;
 #[macro_use]
 extern crate mime;
 
+#[macro_use]
+extern crate rust_embed;
+
 use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;

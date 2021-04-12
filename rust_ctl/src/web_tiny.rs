@@ -12,6 +12,10 @@ use crate::action::Action;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
 
+#[derive(RustEmbed)]
+#[folder = "src/assets"]
+struct StaticAsset;
+
 pub struct Web {
     pub listen_addr: String,
 }
@@ -68,7 +72,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
             Some(len),
             None
         )
-
     }
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -124,18 +127,46 @@ impl<T: 'static + MsgHandler> WebState<T> {
         )
     }
 
-    fn err404(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        println!("error 404 not implemented");
-        unimplemented!()
+    fn err404(&mut self, path: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let resp_str = format!("404: Not found path {}\n", path);
+        let data = resp_str.into_bytes();
+        let len = data.len();
+        let cur = Cursor::new(data);
+        return tiny_http::Response::new(
+            tiny_http::StatusCode(404),
+            Vec::new(),
+            cur,
+            Some(len),
+            None
+        )
     }
 
     /// path_segments exclude the first segment ("/assets")
     fn handle_static_asset(&mut self, path_segments: Vec<&str>) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        println!("static asset: path_segments: {:?}", path_segments);
+        let path: String = path_segments.join("/");
+        let asset = StaticAsset::get(path.as_ref());
 
-        unimplemented!()
+        let data: Vec<u8> = match asset {
+            Some(content) => {
+                content.to_vec()
+            }
+            None => {
+                return self.err404(path.as_ref())
+            }
+        };
+
+        let len = data.len();
+        let cur = Cursor::new(data);
+        tiny_http::Response::new(
+            tiny_http::StatusCode(200),
+            Vec::new(),
+            cur,
+            Some(len),
+            None
+        )
     }
 
+    /// All static files should start with /assets/
     fn handle_request(&mut self, req: tiny_http::Request) {
         let url = req.url();
         let url = match self.parse_relative_url(url) {
@@ -167,7 +198,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
                 self.handle_static_asset(path_segments.collect())
             }
             Some(_) => {
-                self.err404()
+                self.err404(url.to_string().as_ref())
             }
             None => {
                 // root?
