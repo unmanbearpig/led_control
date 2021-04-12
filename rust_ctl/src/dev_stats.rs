@@ -131,7 +131,7 @@ impl Stats {
         println!("total_msgs: {:7}, msgs_per_sec: {:9.4}  latency_ms: {}  dups: {:4}  miss: {:4}  \n{}",
                  self.msg_cnt,
                  msgs_per_sec,
-                 format!("{}", self.msg_recv_latency_ms),
+                 format!("{}", self.msg_recv_latency_ms.avg),
                  self.msg_dups,
                  self.msg_miss,
                  val_str,
@@ -189,7 +189,7 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         self.stats.msg_cnt += 1;
 
-        if msg.seq_num != self.last_msg_seq_num +1 {
+        if msg.seq_num != self.last_msg_seq_num.overflowing_add(1).0 {
             if msg.seq_num <= self.last_msg_seq_num {
                 self.stats.msg_dups += 1;
             } else {
