@@ -44,7 +44,7 @@ NULL	:= 2>/dev/null
 endif
 
 # Tool paths.
-PREFIX	?= arm-none-eabi-
+PREFIX	?= arm-unknown-eabi-
 CC	= $(PREFIX)gcc
 CXX	= $(PREFIX)g++
 LD	= $(PREFIX)gcc

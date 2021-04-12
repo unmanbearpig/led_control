@@ -103,15 +103,15 @@ fn main() -> Result<(), String> {
         dev_stats::start_mon(sync_dev, Duration::from_millis(500));
     }
 
-    let filter = MovingAverage::new(
-        sync_dev.clone(),
-        Duration::from_millis(10),
-        Duration::from_millis(3000));
+    // let filter = MovingAverage::new(
+    //     sync_dev.clone(),
+    //     Duration::from_millis(10),
+    //     Duration::from_millis(3000));
 
     // let (_tx, _rx) = mpsc::channel::<TaskMsg>();
 
-    let filter =
-        Arc::new(RwLock::new(filter));
+    // let filter =
+    //     Arc::new(RwLock::new(filter));
 
     // let join_handle = {
     //     let filter = filter.clone();
@@ -128,7 +128,7 @@ fn main() -> Result<(), String> {
     //     join_handle: join_handle,
     // });
 
-    config.action.perform(filter.clone(), &config)?;
+    config.action.perform(sync_dev.clone(), &config)?;
 
     Ok(())
 }

@@ -6,6 +6,7 @@ use crate::config;
 use crate::demo;
 use crate::udp_srv;
 use crate::web;
+use crate::web_tiny;
 use crate::msg_handler::{MsgHandler, ChanDescription};
 use crate::coord::{Coord};
 use crate::chan_spec::{ChanSpec};
@@ -128,9 +129,9 @@ impl Action {
             Action::Web { listen_addr } => {
                 let listen_addr: Option<String> = listen_addr.clone();
                 let config = config.clone();
-                let mut web = web::Web::new(listen_addr, config)?;
+                let mut web = web_tiny::Web::new(listen_addr)?;
 
-                web.run(srv)
+                web.run(srv, config)
             }
             Action::Space(loc, radius, brightness) => {
                 println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
