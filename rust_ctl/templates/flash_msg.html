@@ -1,0 +1,12 @@
+{% match self %}
+
+{% when FlashMsg::Ok with (msg) %}
+<div class="flash_msg flash_msg--ok">
+  {{ msg }}
+</div>
+
+{% when FlashMsg::Err with (msg) %}
+<div class="flash_msg flash_msg--err">
+  {{ msg }}
+</div>
+{% endmatch %}

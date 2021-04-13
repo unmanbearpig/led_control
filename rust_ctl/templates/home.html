@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>
+      LED Control
+    </title>
+
+    <link rel="stylesheet" href="assets/main.css">
+  </head>
+
+  <body>
+    <h3>
+      LED Control
+    </h3>
+
+    <div>
+      {% match msg %}
+      {% when Some with (msg) %}
+      {{ msg|safe }}
+      {% when None %}
+      {% endmatch %}
+    </div>
+
+    <div>
+      <div class="flex">
+        <form action="/on" method="POST">
+          <button>
+            ON!
+          </button>
+        </form>
+
+        <span class="separator">
+          |
+        </span>
+
+        <form action="/off" method="POST">
+          <button>
+            OFF!
+          </button>
+        </form>
+      </div>
+
+      <br/>
+
+      <div>
+        <form action="/disco" method="POST">
+          <button class="btn-disco">
+            Disco!
+          </button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

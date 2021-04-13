@@ -11,13 +11,31 @@ use crate::msg_handler::MsgHandler;
 use crate::action::Action;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
+use askama::Template;
+
+use std::thread;
+use crate::demo;
+use crate::task::{Task, TaskMsg};
 
 #[derive(RustEmbed)]
-#[folder = "src/assets"]
+#[folder = "assets"]
 struct StaticAsset;
 
 pub struct Web {
     pub listen_addr: String,
+}
+
+#[derive(Template)]
+#[template(path = "flash_msg.html", escape = "none")]
+enum FlashMsg<'a> {
+    Ok(&'a str),
+    Err(&'a str),
+}
+
+#[derive(Template)]
+#[template(path = "home.html")]
+struct HomeTemplate<'a> {
+    msg: Option<FlashMsg<'a>>,
 }
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:7373";
@@ -61,19 +79,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
         unimplemented!();
     }
 
-    fn string_resp(code: u16, body: String) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let data = body.into_bytes();
-        let len = data.len();
-        let cur = Cursor::new(data);
-        tiny_http::Response::new(
-            tiny_http::StatusCode(code),
-            Vec::new(),
-            cur,
-            Some(len),
-            None
-        )
-    }
-
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         // todo: stop_task
         let action = Action::Set(
@@ -84,19 +89,9 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let srv = self.output.clone();
         let result = action.perform(srv, &self.output_config);
 
-        println!("/on not implemented");
-        let data = "hello".to_string().into_bytes();
-        let len = data.len();
-        let cur = Cursor::new(data);
-        let resp = tiny_http::Response::new(
-            tiny_http::StatusCode(200),
-            Vec::new(),
-            cur,
-            Some(len),
-            None
-        );
-
-        resp
+        self.home_with(HomeTemplate {
+            msg: Some(FlashMsg::Ok("Is everything on?<br> <small>Kick Vanya if it's not!</small>"))
+        })
     }
 
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -109,12 +104,46 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let srv = self.output.clone();
         let result = action.perform(srv, &self.output_config);
 
-        println!("/off not implemented");
-        unimplemented!()
+        self.home_with(HomeTemplate {
+            msg: Some(FlashMsg::Ok("Is everything off? <br> <small>Kick Vanya if it's not!</small>"))
+        })
     }
 
-    fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let resp_str = "home".to_string();
+    fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        // self.stop_task();
+        // let state = self.state.clone();
+        // let mut state = state.lock().unwrap();
+
+        // let mut state = self;
+
+        // let (tx, rx) = mpsc::channel::<TaskMsg>();
+
+        // let join_handle = {
+        //     let output = self.output.clone();
+        //     thread::spawn(move || {
+        //         demo::hello::run_with_channel(output, rx)
+        //     })
+        // };
+
+        // state.task = Some(Task {
+        //     name: "Hello task from web test".to_string(),
+        //     chan: tx,
+        //     join_handle: join_handle,
+        // });
+
+        // self.home_with(HomeTemplate {
+        //     msg: Some(FlashMsg::Ok("Wooooo111!!!"))
+        // })
+
+        self.home_with(HomeTemplate {
+            msg: Some(FlashMsg::Err("Sorry, not implemented yet :("))
+        })
+
+    }
+
+    fn home_with(&mut self, template: HomeTemplate) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        // todo fix unwrap
+        let resp_str = template.render().unwrap();
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
@@ -127,8 +156,16 @@ impl<T: 'static + MsgHandler> WebState<T> {
         )
     }
 
-    fn err404(&mut self, path: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let resp_str = format!("404: Not found path {}\n", path);
+    fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let template = HomeTemplate {
+            msg: None,
+        };
+
+        self.home_with(template)
+    }
+
+    fn err404(&mut self, method: &tiny_http::Method, path: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let resp_str = format!("404: Not found {} {}\n", method, path);
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
@@ -151,7 +188,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
                 content.to_vec()
             }
             None => {
-                return self.err404(path.as_ref())
+                return self.err404(&tiny_http::Method::Get, path.as_ref())
             }
         };
 
@@ -182,25 +219,28 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let first_segment = path_segments.next();
         println!("first_segment = {:?}", first_segment);
 
-        let resp = match first_segment {
-            Some("on") => {
+        let resp = match (req.method(), first_segment) {
+            (tiny_http::Method::Post, Some("on")) => {
                 self.on()
             }
-            Some("off") => {
+            (tiny_http::Method::Post, Some("off")) => {
                 self.off()
             }
-            Some("") => { // why doesn't work?
+            (tiny_http::Method::Post, Some("disco")) => {
+                self.disco()
+            }
+            (tiny_http::Method::Get, Some("")) => {
                 self.home()
             }
-            Some("assets") => {
+            (tiny_http::Method::Get, Some("assets")) => {
                 // TODO: check it's a GET request
                 // TODO: HEAD request
                 self.handle_static_asset(path_segments.collect())
             }
-            Some(_) => {
-                self.err404(url.to_string().as_ref())
+            (m, Some(_)) => {
+                self.err404(m, url.to_string().as_ref())
             }
-            None => {
+            (_, None) => {
                 // root?
                 self.home()
             }
@@ -245,4 +285,4 @@ impl Web {
 
         Ok(())
     }
-}
+ }

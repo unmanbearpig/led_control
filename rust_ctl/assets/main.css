@@ -1,0 +1,57 @@
+body {
+    font-size: 72px;
+    font-family: sans-serif;
+
+    margin-top: 3rem;
+    margin-left: 3rem;
+    margin-right: 3rem;
+    color: #ddd;
+    background-color: #000;
+}
+
+button {
+    background-color: #ddd;
+    border-width: 3px;
+    border-color: #3dd513;
+    font-size: 72px;
+}
+
+button.btn-disco {
+    background-image: linear-gradient(to right, orange , yellow, green, cyan, blue, violet);
+    border-image: linear-gradient(to right, cyan, blue, violet, orange , yellow, green);
+    color: #f60957;
+}
+
+
+h3 {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.flash_msg {
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.flash_msg small {
+    font-size: 42px;
+}
+
+.flash_msg--ok {
+    background-color: #222222;
+}
+
+.flash_msg--err {
+    background-color: #880000;
+}
+
+.flex {
+    display: flex;
+}
+
+.separator {
+    color: #999;
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
