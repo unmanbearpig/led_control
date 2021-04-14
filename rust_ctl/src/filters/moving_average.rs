@@ -213,7 +213,7 @@ impl Runner for MovingAverage {
 
                 let avg_frame = mov_avg.avg_frame();
 
-                if avg_frame != mov_avg.target_frame() {
+                if !mov_avg.has_reached_target() {
                     avg_frame.to_msg(&mut mov_avg.current_msg);
 
                     let mut output = mov_avg.output.lock().unwrap();

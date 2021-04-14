@@ -324,15 +324,14 @@ impl Web {
             let ma = ma.clone();
             // let srv = sync_dev.clone();
             thread::spawn(move || {
-                let res = Runner::run(ma, rx);
-                res
+                Runner::run(ma, rx)
             })
         };
 
         let _task = Some(Task {
             name: "Hello task from web test".to_string(),
             chan: tx,
-            join_handle: join_handle,
+            join_handle,
         });
 
         let mut server = WebState {

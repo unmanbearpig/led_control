@@ -113,7 +113,7 @@ fn main() -> Result<(), String> {
     }
 
     let sync_srv = Arc::new(Mutex::new(srv));
-    let dev_stats = dev_stats::DevStats::new(sync_srv.clone());
+    let dev_stats = dev_stats::DevStats::new(sync_srv);
     let sync_dev = Arc::new(Mutex::new(dev_stats));
     {
         let sync_dev = sync_dev.clone();
