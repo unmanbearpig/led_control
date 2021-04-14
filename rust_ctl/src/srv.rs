@@ -58,8 +58,11 @@ impl<'a> Srv {
             }
             None => {
                 for i in 0..dev.num_chans() {
-                    let mut cc = ChanConfig::default();
-                    cc.index = i;
+                    let cc = ChanConfig {
+                        index: i,
+                        ..Default::default()
+                    };
+
                     self.chans.push(
                         SrvChan {
                             devid: dev_id,
@@ -70,7 +73,7 @@ impl<'a> Srv {
             }
         };
 
-        self.devs.push(SrvDev { dev: dev, dirty: true });
+        self.devs.push(SrvDev { dev, dirty: true });
 
         dev_id
     }
@@ -97,8 +100,7 @@ impl MsgHandler for Srv {
 
     fn chans(&self) -> Vec<(ChanId, String)> {
         self.chans.as_slice()
-            .into_iter()
-            .enumerate()
+            .iter().enumerate()
             .map(|(chan_id, SrvChan { devid, .. })| {
                 let dev = self.get_dev(&devid);
                 (ChanId(chan_id as u16),

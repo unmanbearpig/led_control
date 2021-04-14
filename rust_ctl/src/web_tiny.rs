@@ -76,9 +76,7 @@ struct WebState<T: MsgHandler> {
 
 impl<T: 'static + MsgHandler> WebState<T> {
     fn running_task(&mut self) -> Option<Task> {
-        if self.task.is_none() {
-            return None
-        }
+        self.task.as_ref()?;
 
         let task = self.task.take().unwrap();
         if !task.is_running() {
@@ -171,7 +169,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
         self.task = Some(Task {
             name: "Hello task from web test".to_string(),
             chan: tx,
-            join_handle: join_handle,
+            join_handle,
         });
 
         self.home_with(HomeTemplate {
@@ -207,7 +205,8 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
-        return tiny_http::Response::new(
+
+        tiny_http::Response::new(
             tiny_http::StatusCode(404),
             Vec::new(),
             cur,
@@ -290,11 +289,11 @@ impl<T: 'static + MsgHandler> WebState<T> {
 
 impl Web {
     pub fn new(listen_addr: Option<String>) -> Result<Self, String> {
-        let listen_addr = listen_addr.unwrap_or(
-            DEFAULT_LISTEN_ADDR.to_string());
+        let listen_addr = listen_addr
+            .unwrap_or_else(|| DEFAULT_LISTEN_ADDR.to_string());
 
         Ok(Web {
-            listen_addr: listen_addr,
+            listen_addr,
         })
     }
 
@@ -311,7 +310,7 @@ impl Web {
                 format!("http://{}", self.listen_addr).as_ref()).unwrap(),
             output: srv,
             output_config: config,
-            http: http,
+            http,
             task: None,
         };
 

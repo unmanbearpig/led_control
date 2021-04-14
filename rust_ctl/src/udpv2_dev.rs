@@ -45,14 +45,10 @@ impl Dev for UdpV2Dev {
         }
 
         match self.msg.vals[chan as usize].1 {
-            Val::F32(v) => {
-                return Ok(v);
-            }
-            Val::U16(_) => {
-                return Err(format!(
-                    "no f32 value for chan {}", chan
-                ));
-            }
+            Val::F32(v) => Ok(v),
+            Val::U16(_) => Err(format!(
+                "no f32 value for chan {}", chan
+            ))
         }
     }
 
@@ -79,9 +75,7 @@ impl UdpV2Dev {
         socket.connect((ip, port)).expect("connect failed");
 
         Ok(UdpV2Dev {
-            ip: ip,
-            port: port,
-            socket: socket,
+            ip, port, socket,
             msg: Msg {
                 seq_num: 0,
                 timestamp: time::SystemTime::now(),

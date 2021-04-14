@@ -49,7 +49,7 @@ impl Dev for TestDev {
         for v in self.vals.iter() {
             print!("{:1.08}  ", v);
         }
-        print!("\n");
+        println!();
         Ok(())
     }
 }

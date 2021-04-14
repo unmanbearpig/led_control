@@ -11,6 +11,7 @@ pub struct ChanDescription {
 }
 
 impl ChanDescription {
+    #[allow(dead_code)]
     pub fn tags_str(&self) -> String {
         let mut out = String::new();
         for t in self.tags.iter() {
@@ -19,6 +20,7 @@ impl ChanDescription {
         out
     }
 
+    #[allow(dead_code)]
     pub fn humanize(&self) -> String {
         self.tags_str()
     }

@@ -33,10 +33,9 @@ impl Cuboid {
 
     pub fn avg_dist_to_point(&self, center: Coord) -> f32 {
         let corners = self.corners();
-        let dists: Vec<f32> = corners.into_iter().map(|corn| {
-            let dist = center.dist_to(&corn);
-            dist
-        }).collect();
+        let dists: Vec<f32> = corners.into_iter()
+            .map(|corn| center.dist_to(&corn))
+            .collect();
 
         dists.iter().sum::<f32>() / dists.len() as f32
     }

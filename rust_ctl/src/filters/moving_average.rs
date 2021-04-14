@@ -112,8 +112,8 @@ impl<D: MsgHandler> MovingAverage<D> {
         }
 
         let num_frames = self.frames.len();
-        for i in 0..num_chans {
-            result[i] = result[i] / num_frames as f32;
+        for item in result.iter_mut().take(num_chans) {
+            *item /= num_frames as f32;
         }
         result
     }
@@ -176,7 +176,12 @@ impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
                 frame_to_msg(avg_frame, &mut mov_avg.current_msg);
 
                     let mut output = mov_avg.output.write().unwrap();
-                    output.handle_msg(&mov_avg.current_msg);
+                match output.handle_msg(&mov_avg.current_msg) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        eprintln!("moving_average output.handle_msg err: {:?}", e);
+                    }
+                }
                 // }
             }
 
@@ -225,10 +230,10 @@ impl<D: MsgHandler + Sync> MsgHandler for MovingAverage<D> {
 }
 
 impl<D: MsgHandler + Sync> MovingAverage<D> {
+    #[allow(dead_code)]
     pub fn new(output: Arc<RwLock<D>>,
                frame_period: Duration,
                transition_period: Duration) -> Self {
-        let output = output.clone();
         let num_chans: usize = {
             let dev = output.read().unwrap();
             dev.num_chans() as usize
@@ -256,14 +261,11 @@ impl<D: MsgHandler + Sync> MovingAverage<D> {
         let msg = Msg {
             seq_num: 0,
             timestamp: SystemTime::now(),
-            vals: vals,
+            vals,
         };
 
         MovingAverage {
-            frame_period: frame_period,
-            transition_period: transition_period,
-            frames: frames,
-            output: output,
+            frame_period, transition_period, frames, output,
             current_msg: msg.clone(),
             target_msg: msg,
             last_msg_recv_time: Instant::now(),

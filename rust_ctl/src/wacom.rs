@@ -48,10 +48,7 @@ impl<'a> Wacom<'a> {
             Err(e) => return Err(format!("{:?}", e))
         };
 
-        Ok(Wacom {
-            filename: filename,
-            file: file,
-        })
+        Ok(Wacom { filename, file, })
     }
 
     pub fn read(&mut self, out: &mut WacomPacket) -> Result<(), String> {

@@ -118,7 +118,6 @@ impl Action {
             }
             Action::ListChans => {
                 println!("chans:");
-                let srv = srv.clone();
                 let srv = srv.read().map_err(|e| format!("{:?}", e))?;
                 for (id, name) in srv.chans() {
                     println!("chan {} {}", id, name);
@@ -140,7 +139,6 @@ impl Action {
                 })
             }
             Action::Set(spec) => {
-                let srv = srv.clone();
                 let mut srv = srv.write().map_err(|e| format!("{:?}", e))?;
 
                 match spec {
@@ -155,13 +153,13 @@ impl Action {
                             .map(|(cid, v)| proto::ChanVal(proto::ChanId(cid), proto::Val::F32(v)))
                             .collect();
 
-                        let mut msg = proto::Msg {
+                        let msg = proto::Msg {
                             seq_num: 0,
                             timestamp: time::SystemTime::now(),
                             vals: chanvals,
                         };
 
-                        srv.handle_msg(&mut msg)
+                        srv.handle_msg(&msg)
                     }
                     ChanSpec::U16(_) => unimplemented!()
                 }

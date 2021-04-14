@@ -18,7 +18,7 @@ pub struct Task {
 impl Task {
     pub fn is_running(&self) -> bool {
         let res = self.chan.send(TaskMsg::Ping);
-        !res.is_err()
+        res.is_ok()
     }
 
     pub fn ask_to_stop(&mut self) {

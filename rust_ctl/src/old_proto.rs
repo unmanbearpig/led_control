@@ -41,7 +41,7 @@ impl Default for LedMsgF32 {
 
 impl<'a> LedMsgF32 {
     #[allow(dead_code)]
-    pub fn into_slice(&'a mut self) -> &'a mut [u8] {
+    pub fn as_slice(&'a mut self) -> &'a mut [u8] {
         // am I violating aliasing rules here?
         unsafe {
             std::slice::from_raw_parts_mut(
@@ -54,7 +54,7 @@ impl<'a> LedMsgF32 {
 
 impl<'a> LedMsg16 {
     #[allow(dead_code)]
-    pub fn into_slice(&'a mut self) -> &'a mut [u8] {
+    pub fn as_slice(&'a mut self) -> &'a mut [u8] {
         unsafe {
             std::slice::from_raw_parts_mut(
                 self as *mut LedMsg16 as *mut u8,

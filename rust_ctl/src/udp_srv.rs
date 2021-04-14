@@ -14,10 +14,10 @@ const DEFAULT_PORT: u16 =  8932;
 
 impl UdpSrv {
     pub fn new(listen_ip: Option<net::IpAddr>, listen_port: Option<u16>) -> Result<Self, String> {
-        let listen_ip = listen_ip.unwrap_or(DEFAULT_IP.parse().unwrap());
+        let listen_ip = listen_ip.unwrap_or_else(|| DEFAULT_IP.parse().unwrap());
         let listen_port = listen_port.unwrap_or(DEFAULT_PORT);
 
-        let socket = net::UdpSocket::bind((listen_ip.clone(), listen_port));
+        let socket = net::UdpSocket::bind((listen_ip, listen_port));
         if socket.is_err() {
             return Err(format!("UdpSrv new: {:?}", socket.unwrap_err()))
         }
@@ -25,9 +25,7 @@ impl UdpSrv {
         let socket = socket.unwrap();
 
         Ok(UdpSrv {
-            listen_ip: listen_ip.clone(),
-            listen_port: listen_port,
-            socket: socket,
+            listen_ip, listen_port, socket,
             buf: [0; proto::MSG_MAX_SIZE],
         })
     }

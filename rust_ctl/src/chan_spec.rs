@@ -16,14 +16,16 @@ fn find_chans<'a>(chan_descr: &'a str, chans: &'a [ChanDescription]) -> impl Ite
     let maybe_cid: Result<u16, ParseIntError> = chan_descr.parse();
     chans.iter().filter(move |cdesc| {
         let maybe_cid = maybe_cid.clone();
-        if maybe_cid.is_ok() {
-            cdesc.chan_id == maybe_cid.unwrap()
-        } else {
-            cdesc.tags.iter()
-                .find(|tag| {
-                    let t: &str = tag.as_ref();
-                    t == chan_descr
-                }).is_some()
+
+        match maybe_cid {
+            Ok(cid) => cdesc.chan_id == cid,
+            Err(_) => {
+                cdesc.tags.iter()
+                    .any(|tag| {
+                        let t: &str = tag.as_ref();
+                        t == chan_descr
+                    })
+            }
         }
     }).map(|cdesc| cdesc.chan_id)
 }
@@ -97,9 +99,9 @@ impl ChanSpec {
     ///   .1,1:.7     => SomeWithDefault(0.1, vec![(1, 0.7)])
     // TODO: how to make it generic for f32 and u16?
     pub fn parse_f32(string: &str) -> Result<ChanSpec, String> {
-        let parsed_parts: Vec<(Option<&str>, f32)> = string.split(",").map(|p| {
+        let parsed_parts: Vec<(Option<&str>, f32)> = string.split(',').map(|p| {
             // there must be a better way than Vec
-            let chanval: Vec<&str> = p.split(":").collect();
+            let chanval: Vec<&str> = p.split(':').collect();
             let chanval: (Option<&str>, f32) = match chanval.len() {
                 0 => Err(format!("Invalid blank argument in {}", string)),
                 1 => Ok((None, chanval[0].parse().map_err(|e| format!("{:?}", e))?)),

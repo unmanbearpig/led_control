@@ -86,10 +86,10 @@ struct Stats {
 }
 
 impl Stats {
-    fn merge(into: &mut Vec<ValStats>, from: &Vec<ValStats>) {
+    fn merge(into: &mut Vec<ValStats>, from: &[ValStats]) {
         into.resize_with(into.len().max(from.len()), Default::default);
 
-        for (i, v) in from.into_iter().enumerate() {
+        for (i, v) in from.iter().enumerate() {
             into[i].merge_from(v);
         }
     }
@@ -149,7 +149,7 @@ pub struct DevStats<D: MsgHandler> {
 impl<D: 'static + MsgHandler + Sync> DevStats<D> {
     pub fn new(dev: Arc<RwLock<D>>) -> DevStats<D> {
         DevStats {
-            dev: dev.clone(),
+            dev,
             stats: Stats::default(),
             last_msg_seq_num: 0,
         }
@@ -214,11 +214,8 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
             self.stats.f32_vals_last.len().max(msg.vals.len()),
             Default::default);
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
-            match val {
-                Val::F32(v) => {
-                    self.stats.f32_vals_last[*cid as usize].add(*v as f64)
-                },
-                _ => {},
+            if let Val::F32(v) = val {
+                self.stats.f32_vals_last[*cid as usize].add(*v as f64)
             }
         }
 
@@ -239,8 +236,8 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
 
 
 pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<RwLock<DevStats<D>>>, delay: Duration)
-                                          -> (JoinHandle<()>, Arc<(Mutex<bool>, Condvar)>) {
-    let pair = Arc::new((Mutex::new(false), Condvar::new()));
+                                          -> (JoinHandle<()>, Arc<(Mutex<()>, Condvar)>) {
+    let pair = Arc::new((Mutex::new(()), Condvar::new()));
 
     let exiter = Arc::new(Condvar::new());
     let handle = {
@@ -248,13 +245,9 @@ pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<RwLock<DevStats<D>>>, delay: 
         thread::spawn(move || {
             loop {
                 let waiting = tpair.0.lock().unwrap();
-                match exiter.wait_timeout(waiting, delay).unwrap().1.timed_out() {
-                    false => { // means we got the message
-                        return;
-                    }
-                    _ => {
-                        // keep looping
-                    }
+                if !exiter.wait_timeout(waiting, delay).unwrap().1.timed_out() {
+                    // means we got the message
+                    return;
                 }
 
                 let mut dev = dev.write().unwrap();

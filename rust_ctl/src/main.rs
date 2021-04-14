@@ -19,7 +19,6 @@ mod coord;
 mod cuboid;
 mod chan_spec;
 mod wacom;
-mod web;
 mod task;
 mod controller;
 mod filters;
@@ -27,16 +26,11 @@ mod runner;
 mod web_tiny;
 
 #[macro_use]
-extern crate mime;
-
-#[macro_use]
 extern crate rust_embed;
 
 use std::env;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-
-use crate::filters::moving_average::MovingAverage;
 
 use crate::chan::ChanConfig;
 

@@ -1,5 +1,4 @@
 
-use rusb;
 use crate::dev::{self, Dev};
 use std::time::Duration;
 use std::fmt;
@@ -58,7 +57,9 @@ impl dev::Dev for UsbDev {
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
         // let data = self.raw_msg.into_slice();
-        let data: &[u8; 6] = unsafe { std::mem::transmute(&self.raw_vals) };
+        let data: &[u8; 6] = unsafe {
+            &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6])
+        };
 
         // print_bytes(data);
 
@@ -83,9 +84,7 @@ impl dev::Dev for UsbDev {
 impl UsbDev {
     pub fn new(devhandle: rusb::DeviceHandle<rusb::GlobalContext>, bus_number: u8, dev_addr: u8) -> Self {
         UsbDev {
-            devhandle: devhandle,
-            bus_number: bus_number,
-            dev_addr: dev_addr,
+            devhandle, bus_number, dev_addr,
             raw_vals: [0u16; 3],
             f32_vals: [0.0;  3],
         }

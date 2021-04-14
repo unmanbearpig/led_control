@@ -1,5 +1,3 @@
-#[allow(unused_variables)]
-
 // use std::env;
 use std::net::IpAddr;
 use std::env;
@@ -36,7 +34,7 @@ pub struct DevChanConfig {
 const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
 
 fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
-    if args.len() == 0 {
+    if args.is_empty() {
         return Err("no ip specified".to_string())
     }
     if args.len() > 2 {
@@ -62,7 +60,7 @@ fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
 
 impl DevChanConfig {
     pub fn parse<S: AsRef<str>>(string: S) -> Result<Self, String> {
-        let parts: Vec<&str> = string.as_ref().split("@").collect();
+        let parts: Vec<&str> = string.as_ref().split('@').collect();
 
         let chan_configs: Option<Vec<ChanConfig>> =
             match parts.len() {
@@ -73,14 +71,12 @@ impl DevChanConfig {
                 2 => {
                     let res: Result<Vec<u16>, ParseIntError> =
                         parts[1]
-                        .split(",")
+                        .split(',')
                         .map(|n| n.parse())
                         .collect();
                     let indexes = res.map_err(|e| e.to_string())?;
                     Some(indexes.into_iter().map(|i| {
-                        let mut cc = ChanConfig::default();
-                        cc.index = i;
-                        cc
+                        ChanConfig { index: i, ..Default::default() }
                     }).collect())
                 },
                 _ => {
@@ -88,8 +84,8 @@ impl DevChanConfig {
                 }
             };
 
-        let dev_parts: Vec<&str> = parts[0].split(":").collect();
-        if dev_parts.len() == 0 {
+        let dev_parts: Vec<&str> = parts[0].split(':').collect();
+        if dev_parts.is_empty() {
             return Err(format!("invalid device spec \"{}\"", string.as_ref()));
         }
 
@@ -107,9 +103,9 @@ impl DevChanConfig {
                 let chans = 3; // TODO fix hardcoded
                 Ok(DevChanConfig {
                     dev: DevConfig::UdpV2 {
-                        ip: ip,
+                        ip,
                         port: maybe_port.unwrap_or(8932),
-                        chans: chans
+                        chans
                     }, chans: chan_configs
                 })
             }
@@ -244,7 +240,7 @@ impl Config {
                     let listen_arg = args.next();
                     let (listen_ip, listen_port) = match listen_arg {
                         Some(arg) => {
-                            let parts: Vec<&str> = arg.split(":").collect();
+                            let parts: Vec<&str> = arg.split(':').collect();
                             let (ip, port) = parse_ip_port(&parts[0..2.min(parts.len())])?;
                             (Some(ip), port)
                         }
@@ -252,8 +248,7 @@ impl Config {
                     };
 
                     action = Some(Action::Srv {
-                        listen_ip: listen_ip,
-                        listen_port: listen_port,
+                        listen_ip, listen_port,
                     });
 
                     if args.len() != 0 {
@@ -299,7 +294,7 @@ impl Config {
                         Some(loc) => loc
                     };
 
-                    let loc_parts: Vec<&str> = location.split(",").collect();
+                    let loc_parts: Vec<&str> = location.split(',').collect();
                     if loc_parts.len() != 3 {
                         return Err("location coordinates needs to be x,y,z".to_string())
                     }
@@ -386,10 +381,7 @@ impl Config {
                     Some(a) => a,
                     None => return Err("No action specified".to_string())
                 };
-                Config {
-                    action: action,
-                    devs: devs,
-                }
+                Config { action, devs }
             }
         };
 

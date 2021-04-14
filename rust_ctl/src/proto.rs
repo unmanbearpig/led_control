@@ -1,5 +1,3 @@
-#[allow(soft_unstable, dead_code, unused_variables)]
-
 use std::mem;
 use std::time::{Duration, SystemTime};
 use std::slice;
@@ -30,29 +28,11 @@ pub enum Val {
     F32(f32),
 }
 
-impl Val {
-    // pub fn get_f32(&self) -> Option<f32> {
-    //     match self {
-    //         Val::U16(_) => None,
-    //         Val::F32(v) => Some(*v),
-    //     }
-    // }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum SerErr {
     InvalidMagic,
     InvalidSize { num_vals: usize, expected_size: usize, actual_size: usize },
     InvalidTimestamp { s: u64, ns: u32 }
-}
-
-impl SerErr {
-    pub fn is_invalid_size(&self) -> bool {
-        match self {
-            SerErr::InvalidSize {..} => true,
-            _ => false
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -76,15 +56,16 @@ impl ChanVal {
         }
     }
 
-    pub fn serialize_to_buf(&self, buf: &mut [u8]) -> usize {
-        assert!(buf.len() >= mem::size_of::<ChanValSer>());
+    // dead code, remove later
+    // pub fn serialize_to_buf(&self, buf: &mut [u8]) -> usize {
+    //     assert!(buf.len() >= mem::size_of::<ChanValSer>());
 
-        let ser: &mut ChanValSer = unsafe {
-            mem::transmute(buf.as_ptr())
-        };
-        self.serialize_to_struct(ser);
-        8
-    }
+    //     let ser: &mut ChanValSer = unsafe {
+    //         mem::transmute(buf.as_ptr())
+    //     };
+    //     self.serialize_to_struct(ser);
+    //     8
+    // }
 
     pub fn deserialize_from_struct(ser: &ChanValSer) -> Result<Self, SerErr> {
         Ok(ChanVal(
@@ -100,14 +81,15 @@ impl ChanVal {
         ))
     }
 
-    pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-        assert!(buf.len() >= mem::size_of::<ChanValSer>());
-        let ser: &mut ChanValSer = unsafe {
-            mem::transmute(buf.as_ptr())
-        };
+    // dead code, remove later
+    // pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
+    //     assert!(buf.len() >= mem::size_of::<ChanValSer>());
+    //     let ser: &mut ChanValSer = unsafe {
+    //         mem::transmute(buf.as_ptr())
+    //     };
 
-        ChanVal::deserialize_from_struct(ser)
-    }
+    //     ChanVal::deserialize_from_struct(ser)
+    // }
 }
 
 #[repr(C)]
@@ -138,7 +120,10 @@ impl Msg {
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 
-        let ser: &mut  MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
+        // let ser: &mut  MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
+        let ser: &mut  MsgHeaderSer = unsafe {
+            &mut *(buf.as_ptr() as *mut MsgHeaderSer)
+        };
 
         ser.magic = MSG_MAGIC;
         ser.flags = 0;
@@ -156,7 +141,7 @@ impl Msg {
 
         let data: &mut [ChanValSer] = unsafe {
             let data_ptr: *mut ChanValSer =
-                buf.as_mut_ptr().offset(MSG_HEADER_SIZE as isize)
+                buf.as_mut_ptr().add(MSG_HEADER_SIZE)
                 as *mut ChanValSer;
             slice::from_raw_parts_mut(data_ptr, self.vals.len())
         };
@@ -169,7 +154,10 @@ impl Msg {
     }
 
     pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-        let header: &MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
+        // let header: &MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
+        let header: &MsgHeaderSer = unsafe {
+            &*(buf.as_ptr() as *const MsgHeaderSer)
+        };
         if header.magic != MSG_MAGIC {
             return Err(SerErr::InvalidMagic);
         }
@@ -180,14 +168,14 @@ impl Msg {
         if buf.len() < expected_size {
             return Err(SerErr::InvalidSize {
                 num_vals: header.num_vals as usize,
-                expected_size: expected_size,
+                expected_size,
                 actual_size: buf.len(),
             })
         }
         // ignoring flags and _reserved
 
         let vals: &[ChanValSer] = unsafe {
-            let ptr = buf.as_ptr().offset(MSG_HEADER_SIZE as isize) as * const ChanValSer;
+            let ptr = buf.as_ptr().add(MSG_HEADER_SIZE) as * const ChanValSer;
             slice::from_raw_parts(ptr, header.num_vals as usize)
         };
 
@@ -210,7 +198,7 @@ impl Msg {
 
         Ok(Msg {
             seq_num: header.seq_num,
-            timestamp: timestamp,
+            timestamp,
             vals: out_vals,
         })
     }
@@ -248,31 +236,31 @@ mod tests {
         assert_eq!(mem::size_of::<ChanValSer>(), 8 as usize);
     }
 
-    #[test]
-    fn test_chan_val_serialize() {
-        let cv = ChanVal(ChanId(42), Val::U16(12345));
-        let buf = &mut [0u8; 8];
+    // #[test]
+    // fn test_chan_val_serialize() {
+    //     let cv = ChanVal(ChanId(42), Val::U16(12345));
+    //     let buf = &mut [0u8; 8];
 
-        const EXPECTED_BYTES: [u8; 8] = [
-            0x2a, 0x00,  // chan
-            0x00, 0x00,  // flags
-            0x39, 0x30,  // value
-            0x00, 0x00,  // not used
-        ];
+    //     const EXPECTED_BYTES: [u8; 8] = [
+    //         0x2a, 0x00,  // chan
+    //         0x00, 0x00,  // flags
+    //         0x39, 0x30,  // value
+    //         0x00, 0x00,  // not used
+    //     ];
 
-        assert_eq!(cv.serialize_to_buf(buf), 8);
-        assert_eq!(buf, &EXPECTED_BYTES);
-    }
+    //     assert_eq!(cv.serialize_to_buf(buf), 8);
+    //     assert_eq!(buf, &EXPECTED_BYTES);
+    // }
 
-    #[test]
-    fn test_chan_val_roundtrip() {
-        let cv = ChanVal(ChanId(42), Val::U16(12345));
-        let buf = &mut [0u8; 8];
-        cv.serialize_to_buf(buf);
-        let newcv = ChanVal::deserialize(buf).unwrap();
+    // #[test]
+    // fn test_chan_val_roundtrip() {
+    //     let cv = ChanVal(ChanId(42), Val::U16(12345));
+    //     let buf = &mut [0u8; 8];
+    //     cv.serialize_to_buf(buf);
+    //     let newcv = ChanVal::deserialize(buf).unwrap();
 
-        assert_eq!(cv, newcv);
-    }
+    //     assert_eq!(cv, newcv);
+    // }
 
     #[test]
     fn test_max_msg_size() {
@@ -297,14 +285,14 @@ mod tests {
         assert_eq!(msg, Msg::deserialize(&buf[0..len]).unwrap());
     }
 
-    #[test]
-    fn test_msg_deserialization() {
-        let buf = &mut [0u8; MSG_MAX_SIZE];
-        assert_eq!(SerErr::InvalidMagic,
-                   Msg::deserialize(&buf[..]).unwrap_err());
-        buf[0] = 0x1c;
-        assert!(Msg::deserialize(&buf[..]).unwrap_err().is_invalid_size());
-    }
+    // #[test]
+    // fn test_msg_deserialization() {
+    //     let buf = &mut [0u8; MSG_MAX_SIZE];
+    //     assert_eq!(SerErr::InvalidMagic,
+    //                Msg::deserialize(&buf[..]).unwrap_err());
+    //     buf[0] = 0x1c;
+    //     assert!(Msg::deserialize(&buf[..]).unwrap_err().is_invalid_size());
+    // }
 
     #[bench]
     #[allow(unused_must_use)]

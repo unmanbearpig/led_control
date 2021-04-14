@@ -48,7 +48,7 @@ impl Dev for UdpV1Dev {
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
         // eprintln!("UDPv1: sending msg {:?}...", self.msg);
-        let bytes = &self.msg.into_slice();
+        let bytes = &self.msg.as_slice();
         self.socket.send(bytes).expect("send failed");
         Ok(())
     }
@@ -65,9 +65,7 @@ impl UdpV1Dev {
         socket.connect((ip, port)).expect("connect failed");
 
         Ok(UdpV1Dev {
-            ip: ip,
-            port: port,
-            socket: socket,
+            ip, port, socket,
             msg: old_proto::LedMsgF32::default(),
         })
     }
