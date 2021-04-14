@@ -3,7 +3,7 @@ use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
 use std::time::{self, Duration};
 use std::thread::sleep;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 struct DemoChan {
@@ -12,11 +12,11 @@ struct DemoChan {
     position: f64,
 }
 
-pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
+pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
     println!("running hello whoosh...");
 
     let mut msg: Msg = {
-        let srv = srv.read().map_err(|e| format!("read lock: {:?}", e))?;
+        let srv = srv.lock().map_err(|e| format!("read lock: {:?}", e))?;
 
         Msg {
             seq_num: 0,
@@ -79,7 +79,7 @@ pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
         dbg!(&msg.vals);
 
         {
-            let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
+            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
             srv.handle_msg(&msg).expect("demo: handle_msg error");
         }
         sleep(delay);

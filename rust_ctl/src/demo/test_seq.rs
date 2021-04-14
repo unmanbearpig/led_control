@@ -2,13 +2,13 @@ use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
 use std::time;
 use std::thread::sleep;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
-pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
+pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
     println!("running test_seq...");
 
     let mut msg: Msg = {
-        let srv = srv.read().map_err(|e| format!("write lock: {:?}", e))?;
+        let srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
 
         let chans = srv.chans();
         Msg {
@@ -35,7 +35,7 @@ pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
                 msg.vals[i].1 = Val::F32(fval.powf(2.2));
                 {
                     let srv = srv.clone();
-                    let mut srv = srv.write().unwrap();
+                    let mut srv = srv.lock().unwrap();
                     srv.handle_msg(&msg).expect("demo: handle_msg error");
                 }
                 sleep(delay);

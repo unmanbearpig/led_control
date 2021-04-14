@@ -3,6 +3,7 @@ use crate::chan::ChanConfig;
 use crate::proto::{ChanId, ChanVal, Val, Msg};
 use crate::msg_handler::{MsgHandler, ChanDescription};
 use std::fmt::{self, Display, Formatter};
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DevId(u16);
@@ -20,13 +21,22 @@ struct SrvChan {
 }
 
 struct SrvDev {
-    dev: Box<dyn Dev>,
+    dev: Arc<Mutex<dyn Dev>>,
     dirty: bool,
 }
 
 pub struct Srv {
     devs: Vec<SrvDev>,
     chans: Vec<SrvChan>,
+}
+
+impl fmt::Debug for Srv {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Srv")
+            .field("devs", &format!("<{} devs>", self.devs.len()))
+            .field("chans", &format!("<{} chans>", self.chans.len()))
+            .finish()
+    }
 }
 
 impl<'a> Srv {
@@ -37,16 +47,20 @@ impl<'a> Srv {
         }
     }
 
-    pub fn add_dev<T>(&mut self, dev: Box<dyn dev::Dev>, chancfg: Option<T>) -> DevId
+    pub fn add_dev<T>(&mut self, dev: Arc<Mutex<dyn dev::Dev>>, chancfg: Option<T>) -> DevId
     where T: ExactSizeIterator<Item = ChanConfig>
     {
         let dev_id = DevId(self.devs.len() as u16);
+        let num_chans = {
+            let dev = dev.lock().unwrap();
+            dev.num_chans()
+        };
 
         match chancfg {
             Some(chancfgs) => {
-                if chancfgs.len() as u16 != dev.num_chans() {
+                if chancfgs.len() as u16 != num_chans {
                     panic!("invalid number of chans specified in chancfg: {} instead of {}",
-                           chancfgs.len(), dev.num_chans());
+                           chancfgs.len(), num_chans);
                 }
 
                 for chan in chancfgs {
@@ -57,7 +71,8 @@ impl<'a> Srv {
                 }
             }
             None => {
-                for i in 0..dev.num_chans() {
+
+                for i in 0..num_chans {
                     let cc = ChanConfig {
                         index: i,
                         ..Default::default()
@@ -78,9 +93,9 @@ impl<'a> Srv {
         dev_id
     }
 
-    fn get_dev(&self, id: &DevId) -> &dyn dev::Dev {
+    fn get_dev(&self, id: &DevId) -> Arc<Mutex<dyn dev::Dev>> {
         let DevId(idx) = id;
-        self.devs[*idx as usize].dev.as_ref()
+        self.devs[*idx as usize].dev.clone()
     }
 }
 
@@ -103,6 +118,7 @@ impl MsgHandler for Srv {
             .iter().enumerate()
             .map(|(chan_id, SrvChan { devid, .. })| {
                 let dev = self.get_dev(&devid);
+                let dev = dev.lock().unwrap();
                 (ChanId(chan_id as u16),
                  format!("Chan {} {} \"{}\"", chan_id, devid, dev))
             }).collect()
@@ -126,6 +142,7 @@ impl Display for Srv {
         let mut res = String::new();
         for dev in self.devs.iter() {
             let dev = &dev.dev;
+            let dev = dev.lock().unwrap();
             res += format!("{} ", dev).as_str();
         }
         write!(f, "Srv {}", res)
@@ -146,7 +163,8 @@ impl Dev for Srv {
         let val = adjust_chan_val(&chan.cfg, val);
         let dev = &mut self.devs[chan.devid.0 as usize];
         dev.dirty = true;
-        dev.dev.set_f32(chan.cfg.index, val)?;
+        let mut dev = dev.dev.lock().unwrap();
+        dev.set_f32(chan.cfg.index, val)?;
 
         Ok(())
     }
@@ -155,7 +173,8 @@ impl Dev for Srv {
         let chan: &SrvChan = &self.chans[chan as usize];
         let dev = &self.devs[chan.devid.0 as usize];
 
-        dev.dev.get_f32(chan.cfg.index)
+        let dev = dev.dev.lock().unwrap();
+        dev.get_f32(chan.cfg.index)
     }
 
     fn sync(&mut self) -> Result<(), String> {
@@ -169,7 +188,8 @@ impl Dev for Srv {
             });
 
         for dev in devs {
-            dev.as_mut().sync()?;
+            let mut dev = dev.lock().unwrap();
+            dev.sync()?;
         }
         Ok(())
     }

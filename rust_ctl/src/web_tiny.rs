@@ -2,7 +2,7 @@
 extern crate tiny_http;
 use url::{Url};
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 
 use std::io::Cursor;
@@ -16,6 +16,11 @@ use askama::Template;
 use std::thread;
 use crate::demo;
 use crate::task::{Task, TaskMsg};
+
+use crate::filters::moving_average::MovingAverage;
+use std::time::Duration;
+
+use crate::runner::Runner;
 
 #[derive(RustEmbed)]
 #[folder = "assets"]
@@ -66,15 +71,16 @@ struct HomeTemplate<'a> {
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:7373";
 
-struct WebState<T: MsgHandler> {
+struct WebState {
     base_url: Url,
-    output: Arc<RwLock<T>>,
+    output: Arc<Mutex<dyn MsgHandler>>,
     output_config: config::Config,
     http: tiny_http::Server,
     task: Option<Task>,
+    smoother: Arc<Mutex<MovingAverage>>,
 }
 
-impl<T: 'static + MsgHandler> WebState<T> {
+impl WebState {
     fn running_task(&mut self) -> Option<Task> {
         self.task.as_ref()?;
 
@@ -98,7 +104,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
 
     pub fn run(&mut self) {
         loop {
-            println!("recving...");
             let res = self.http.recv();
             let req = match res {
                 Ok(req) => req,
@@ -123,7 +128,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
                 ChanSpecGeneric::<f32>::SomeWithDefault(1.0, vec![])
             )
         );
-        let srv = self.output.clone();
+        let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
         let flash_msg = FlashMsg::Ok(
@@ -142,7 +147,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
                 ChanSpecGeneric::<f32>::SomeWithDefault(0.0, vec![])
             )
         );
-        let srv = self.output.clone();
+        let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
         let flash_msg = FlashMsg::Ok(
@@ -161,8 +166,9 @@ impl<T: 'static + MsgHandler> WebState<T> {
 
         let join_handle = {
             let output = self.output.clone();
+
             thread::spawn(move || {
-                demo::hello::run_with_channel(output, rx)
+                demo::hello::run_with_channel(output.clone(), rx)
             })
         };
 
@@ -254,8 +260,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let mut path_segments = url.path_segments().unwrap();
 
         let first_segment = path_segments.next();
-        println!("first_segment = {:?}", first_segment);
-
         let resp = match (req.method(), first_segment) {
             (tiny_http::Method::Post, Some("on")) => {
                 self.on()
@@ -297,13 +301,39 @@ impl Web {
         })
     }
 
-    pub fn run<T: 'static + MsgHandler>(&mut self, srv: Arc<RwLock<T>>, config: config::Config)
-                                        -> Result<(), String> {
+    pub fn run(&mut self, srv: Arc<Mutex<dyn MsgHandler>>, config: config::Config)
+               -> Result<(), String> {
 
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
             .map_err(|e| {
                 format!("server err: {:?}", e)
             })?;
+
+        let ma = MovingAverage::new(
+            srv.clone(),
+            Duration::from_millis(4),
+            Duration::from_millis(900),
+        );
+
+        let (tx, rx) = mpsc::channel::<TaskMsg>();
+
+        let ma =
+            Arc::new(Mutex::new(ma));
+
+        let join_handle = {
+            let ma = ma.clone();
+            // let srv = sync_dev.clone();
+            thread::spawn(move || {
+                let res = Runner::run(ma, rx);
+                res
+            })
+        };
+
+        let _task = Some(Task {
+            name: "Hello task from web test".to_string(),
+            chan: tx,
+            join_handle: join_handle,
+        });
 
         let mut server = WebState {
             base_url: Url::parse(
@@ -312,6 +342,7 @@ impl Web {
             output_config: config,
             http,
             task: None,
+            smoother: ma,
         };
 
         server.run();

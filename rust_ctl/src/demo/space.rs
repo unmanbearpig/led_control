@@ -1,6 +1,6 @@
 use std::time;
 use std::thread::sleep;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
 use crate::coord::{Coord};
@@ -13,10 +13,10 @@ pub struct Config {
     pub brightness: f32,
 }
 
-pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>, conf: Config) -> Result<(), String> {
+pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>, conf: Config) -> Result<(), String> {
 
     let mut msg: Msg = {
-        let srv = srv.read().map_err(|e| format!("write lock: {:?}", e))?;
+        let srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
 
         let chans = srv.chans();
         Msg {
@@ -54,7 +54,7 @@ pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>, conf: Config) -> Result<(), Strin
         loc.z = (wacom_packet.distance as f32 / 0x29 as f32).min(1.0);
 
         {
-            let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
+            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
             for (i, cuboid) in srv.chan_descriptions()
                 .iter().enumerate()
                 .filter_map(|(i, cfg)| cfg.cuboid.map(|c| (i, c))) {

@@ -1,6 +1,7 @@
-use crate::dev::{Dev};
 use crate::proto::{ChanId, Msg};
 use crate::cuboid::Cuboid;
+
+use std::fmt::{Display, Debug};
 
 #[derive(Clone)]
 pub struct ChanDescription {
@@ -27,7 +28,7 @@ impl ChanDescription {
 }
 
 pub trait MsgHandler
-where Self: Dev + Send + Sync
+where Self: Display + Debug + Send
 {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String>;
     fn chans(&self) -> Vec<(ChanId, String)>;

@@ -4,7 +4,7 @@ use crate::msg_handler::MsgHandler;
 use crate::task::{TaskMsg};
 use std::time;
 use rand::{self, Rng};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 
 struct DemoChan {
@@ -14,22 +14,22 @@ struct DemoChan {
     phi: f64,
 }
 
-pub fn run<T: MsgHandler>(srv: Arc<RwLock<T>>) -> Result<(), String> {
+pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
     let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
     // runs indefinitely
     run_with_channel(srv, receiver)
 }
 
-pub fn run_with_channel<T: MsgHandler> (
-    srv: Arc<RwLock<T>>,
+pub fn run_with_channel<T: MsgHandler + ?Sized> (
+    srv: Arc<Mutex<T>>,
     stop: mpsc::Receiver<TaskMsg>)
     -> Result<(), String> {
 
     println!("running hello demo...");
 
     let mut msg: Msg = {
-        let srv = srv.read().map_err(|e| format!("read lock: {:?}", e))?;
+        let srv = srv.lock().map_err(|e| format!("read lock: {:?}", e))?;
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
@@ -70,7 +70,7 @@ pub fn run_with_channel<T: MsgHandler> (
         msg.seq_num += 1;
 
         {
-            let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
+            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
             match srv.handle_msg(&msg) {
                 Ok(_) => {},
                 Err(e) => {

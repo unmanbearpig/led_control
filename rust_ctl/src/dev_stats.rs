@@ -1,13 +1,12 @@
 use crate::proto::{ChanId, ChanVal, Val, Msg};
-use crate::dev::{Dev};
 use crate::msg_handler::{MsgHandler, ChanDescription};
 
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 use std::fmt;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ValStats {
     cnt: u64,
     min: f64,
@@ -73,7 +72,7 @@ impl fmt::Display for ValStats {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Stats {
     last_update: Option<Instant>,
     msg_cnt: u64,
@@ -128,26 +127,28 @@ impl Stats {
 
         self.f32_vals_last.resize_with(0, Default::default);
 
-        println!("total_msgs: {:7}, msgs_per_sec: {:9.4}  latency_ms: {}  dups: {:4}  miss: {:4}  \n{}",
-                 self.msg_cnt,
-                 msgs_per_sec,
-                 format!("{}", self.msg_recv_latency_ms.avg),
-                 self.msg_dups,
-                 self.msg_miss,
-                 val_str,
+        println!(
+            "msg count: {:7}, msgs per sec: {:9.4}  dups: {:4}  loss: {:4}  \n  latency: {}\n{}",
+            self.msg_cnt,
+            msgs_per_sec,
+            self.msg_dups,
+            self.msg_miss,
+            self.msg_recv_latency_ms,
+            val_str,
         );
     }
 }
 
+#[derive(Debug)]
 pub struct DevStats<D: MsgHandler> {
-    dev: Arc<RwLock<D>>,
+    dev: Arc<Mutex<D>>,
     // add chan tags or something
     stats: Stats,
     last_msg_seq_num: u16,
 }
 
 impl<D: 'static + MsgHandler + Sync> DevStats<D> {
-    pub fn new(dev: Arc<RwLock<D>>) -> DevStats<D> {
+    pub fn new(dev: Arc<Mutex<D>>) -> DevStats<D> {
         DevStats {
             dev,
             stats: Stats::default(),
@@ -158,32 +159,32 @@ impl<D: 'static + MsgHandler + Sync> DevStats<D> {
 
 impl<D: MsgHandler> fmt::Display for DevStats<D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let dev = self.dev.read().unwrap();
+        let dev = self.dev.lock().unwrap();
         write!(f, "Stats for {}", dev)
     }
 }
 
-impl<D: MsgHandler + Sync> Dev for DevStats<D> {
-    fn num_chans(&self) -> u16 {
-        let dev = self.dev.read().unwrap();
-        dev.num_chans()
-    }
+// impl<D: MsgHandler + Sync> Dev for DevStats<D> {
+//     fn num_chans(&self) -> u16 {
+//         let dev = self.dev.read().unwrap();
+//         dev.num_chans()
+//     }
 
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        let mut dev = self.dev.write().unwrap();
-        dev.set_f32(chan, val)
-    }
+//     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+//         let mut dev = self.dev.write().unwrap();
+//         dev.set_f32(chan, val)
+//     }
 
-    fn get_f32(&self, chan: u16) -> Result<f32, String> {
-        let dev = self.dev.read().unwrap();
-        dev.get_f32(chan)
-    }
+//     fn get_f32(&self, chan: u16) -> Result<f32, String> {
+//         let dev = self.dev.read().unwrap();
+//         dev.get_f32(chan)
+//     }
 
-    fn sync(&mut self) -> Result<(), String> {
-        let mut dev = self.dev.write().unwrap();
-        dev.sync()
-    }
-}
+//     fn sync(&mut self) -> Result<(), String> {
+//         let mut dev = self.dev.write().unwrap();
+//         dev.sync()
+//     }
+// }
 
 impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
@@ -219,30 +220,33 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
             }
         }
 
-        let mut dev = self.dev.write().unwrap();
+        let mut dev = self.dev.lock().unwrap();
         dev.handle_msg(msg)
     }
 
     fn chans(&self) -> Vec<(ChanId, String)> {
-        let dev = self.dev.read().unwrap();
+        let dev = self.dev.lock().unwrap();
         dev.chans()
     }
 
     fn chan_descriptions(&self) -> Vec<ChanDescription> {
-        let dev = self.dev.read().unwrap();
+        let dev = self.dev.lock().unwrap();
         dev.chan_descriptions()
     }
 }
 
 
-pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<RwLock<DevStats<D>>>, delay: Duration)
+pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<Mutex<DevStats<D>>>, delay: Duration)
                                           -> (JoinHandle<()>, Arc<(Mutex<()>, Condvar)>) {
     let pair = Arc::new((Mutex::new(()), Condvar::new()));
 
     let exiter = Arc::new(Condvar::new());
+
     let handle = {
         let tpair = pair.clone();
+
         thread::spawn(move || {
+            let dev = dev.clone();
             loop {
                 let waiting = tpair.0.lock().unwrap();
                 if !exiter.wait_timeout(waiting, delay).unwrap().1.timed_out() {
@@ -250,7 +254,7 @@ pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<RwLock<DevStats<D>>>, delay: 
                     return;
                 }
 
-                let mut dev = dev.write().unwrap();
+                let mut dev = dev.lock().unwrap();
                 dev.stats.print();
             }
         })

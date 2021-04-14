@@ -1,5 +1,5 @@
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use std::fmt;
 use std::time::{Instant, SystemTime, Duration};
 use std::sync::mpsc;
@@ -11,22 +11,63 @@ use crate::proto::{ChanId, ChanVal, Val, Msg};
 use crate::runner::Runner;
 use crate::task::TaskMsg;
 
+#[derive(Debug, PartialOrd, PartialEq)]
+struct Frame {
+    vals: Vec<f32>
+}
+
+impl Frame {
+    fn new(num_chans: usize) -> Self {
+        Frame {
+            vals: vec![0.0; num_chans]
+        }
+    }
+
+    fn from_msg(msg: &Msg) -> Self {
+        let mut vals = Vec::with_capacity(msg.vals.len());
+        // TODO: should actually use cid
+        for ChanVal(ChanId(_cid), val) in msg.vals.iter() {
+            match val {
+                Val::F32(val) => {
+                    vals.push(*val);
+                }
+                Val::U16(_) => {
+                    unimplemented!();
+                }
+            }
+        }
+
+        Frame { vals }
+    }
+
+    fn num_chans(&self) -> usize {
+        self.vals.len()
+    }
+
+    fn to_msg(&self, msg: &mut Msg) {
+        for (i, v) in self.vals.iter().enumerate() {
+            msg.vals[i].1 = Val::F32(*v)
+        }
+    }
+
+}
+
 #[derive(Debug)]
-pub struct MovingAverage<T: MsgHandler + Sync> {
+pub struct MovingAverage {
     frame_period: Duration,
     transition_period: Duration,
-    frames: VecDeque<Vec<f32>>,
-    output: Arc<RwLock<T>>,
+    frames: VecDeque<Frame>,
+    output: Arc<Mutex<dyn MsgHandler>>,
     current_msg: Msg,
     target_msg: Msg,
     last_msg_recv_time: Instant,
     last_msg_target_time: Instant,
 }
 
-impl<D: MsgHandler> fmt::Display for MovingAverage<D> {
+impl fmt::Display for MovingAverage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = self.output.clone();
-        let output = output.read().unwrap();
+        let output = output.lock().unwrap();
 
         write!(f, "MA period: {}, buffer_len: {}, output to: {}",
                self.transition_period.as_secs_f32(),
@@ -35,10 +76,11 @@ impl<D: MsgHandler> fmt::Display for MovingAverage<D> {
     }
 }
 
-impl<D: MsgHandler + Sync> Dev for MovingAverage<D> {
+impl Dev for MovingAverage {
     fn num_chans(&self) -> u16 {
-        let dev = self.output.read().unwrap();
-        dev.num_chans()
+        let dev = self.output.lock().unwrap();
+        // dev.num_chans()
+        dev.chans().len() as u16
     }
 
     fn set_f32(&mut self, _chan: u16, _val: f32) -> Result<(), String> {
@@ -64,33 +106,22 @@ impl<D: MsgHandler + Sync> Dev for MovingAverage<D> {
     }
 }
 
-fn msg_to_frame(msg: &Msg) -> Vec<f32> {
-    let mut out = Vec::with_capacity(msg.vals.len());
-    // TODO: should actually use cid
-    for ChanVal(ChanId(_cid), val) in msg.vals.iter() {
-        match val {
-            Val::F32(val) => {
-                out.push(*val);
-            }
-            Val::U16(_) => {
-                unimplemented!();
-            }
-        }
-    }
-    out
-}
+// fn frame_to_msg(frame: Vec<f32>, msg: &mut Msg) {
+//     for (i, v) in frame.iter().enumerate() {
+//         msg.vals[i].1 = Val::F32(*v)
+//     }
+// }
 
-fn frame_to_msg(frame: Vec<f32>, msg: &mut Msg) {
-    for (i, v) in frame.iter().enumerate() {
-        msg.vals[i].1 = Val::F32(*v)
-    }
-}
-
-impl<D: MsgHandler> MovingAverage<D> {
+impl MovingAverage {
     fn advance_frame(&mut self) {
-        let frame = msg_to_frame(&self.target_msg);
+        // let frame = msg_to_frame(&self.target_msg);
+        let frame = Frame::from_msg(&self.target_msg);
         self.frames.push_back(frame);
         self.frames.pop_front();
+    }
+
+    fn num_chans(&self) -> usize {
+        self.frames[0].num_chans()
     }
 
     // fn chan_avg(&self, cid: usize) -> f32 {
@@ -101,37 +132,45 @@ impl<D: MsgHandler> MovingAverage<D> {
     //     sum / self.frames.len() as f32
     // }
 
-    fn avg_frame(&self) -> Vec<f32> {
-        let num_chans = self.frames[0].len();
-        let mut result = vec![0.0; num_chans];// Vec::with_capacity(self.frames[0].len());
+    fn avg_frame(&self) -> Frame {
+        let num_chans = self.num_chans();
+        let mut result = Frame::new(num_chans);// Vec::with_capacity(self.frames[0].len());
 
         for frame in self.frames.iter() {
-            for (i, v) in frame.iter().enumerate() {
-                result[i] += v;
+            for (i, v) in frame.vals.iter().enumerate() {
+                result.vals[i] += v;
             }
         }
 
         let num_frames = self.frames.len();
-        for item in result.iter_mut().take(num_chans) {
+        for item in result.vals.iter_mut().take(num_chans) {
             *item /= num_frames as f32;
         }
         result
     }
+
+    fn current_frame(&self) -> Frame {
+        Frame::from_msg(&self.current_msg)
+    }
+
+    fn has_reached_target(&self) -> bool {
+        self.current_frame() == self.target_frame()
+    }
 }
 
-impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
-    fn run(self_lock: Arc<RwLock<MovingAverage<D>>>,
+impl Runner for MovingAverage {
+    fn run(self_lock: Arc<Mutex<MovingAverage>>,
            stop: mpsc::Receiver<TaskMsg>)
            -> Result<(), String> {
         let frame_period = {
             let self_lock = self_lock.clone();
-            let self_lock = self_lock.read().unwrap();
+            let self_lock = self_lock.lock().unwrap();
             self_lock.frame_period
         };
         loop {
             {
                 let mov_avg = self_lock.clone();
-                let mut mov_avg = mov_avg.write().unwrap();
+                let mut mov_avg = mov_avg.lock().unwrap();
                 mov_avg.advance_frame();
 
                 // should I use target_msg's timestamp instead?
@@ -173,13 +212,16 @@ impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
                 // if anything_changed {
 
                 let avg_frame = mov_avg.avg_frame();
-                frame_to_msg(avg_frame, &mut mov_avg.current_msg);
 
-                    let mut output = mov_avg.output.write().unwrap();
-                match output.handle_msg(&mov_avg.current_msg) {
-                    Ok(_) => {},
-                    Err(e) => {
-                        eprintln!("moving_average output.handle_msg err: {:?}", e);
+                if avg_frame != mov_avg.target_frame() {
+                    avg_frame.to_msg(&mut mov_avg.current_msg);
+
+                    let mut output = mov_avg.output.lock().unwrap();
+                    match output.handle_msg(&mov_avg.current_msg) {
+                        Ok(_) => {},
+                        Err(e) => {
+                            eprintln!("moving_average output.handle_msg err: {:?}", e);
+                        }
                     }
                 }
                 // }
@@ -187,7 +229,6 @@ impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
 
             match stop.recv_timeout(frame_period) {
                 Ok(msg) => {
-                    println!("received task msg: {:?}", msg);
                     match msg {
                         TaskMsg::Stop => return Ok(()),
                         TaskMsg::Ping => {},
@@ -207,7 +248,7 @@ impl<D: MsgHandler + Sync> Runner for MovingAverage<D> {
     }
 }
 
-impl<D: MsgHandler + Sync> MsgHandler for MovingAverage<D> {
+impl MsgHandler for MovingAverage {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         println!("moving_average got msg");
         self.target_msg = msg.clone();
@@ -218,34 +259,35 @@ impl<D: MsgHandler + Sync> MsgHandler for MovingAverage<D> {
 
     fn chans(&self) -> Vec<(ChanId, String)> {
         let output = self.output.clone();
-        let output = output.read().unwrap();
+        let output = output.lock().unwrap();
         output.chans()
     }
 
     fn chan_descriptions(&self) -> Vec<ChanDescription> {
         let output = self.output.clone();
-        let output = output.read().unwrap();
+        let output = output.lock().unwrap();
         output.chan_descriptions()
     }
 }
 
-impl<D: MsgHandler + Sync> MovingAverage<D> {
+impl MovingAverage {
     #[allow(dead_code)]
-    pub fn new(output: Arc<RwLock<D>>,
+    pub fn new(output: Arc<Mutex<dyn MsgHandler>>,
                frame_period: Duration,
                transition_period: Duration) -> Self {
         let num_chans: usize = {
-            let dev = output.read().unwrap();
-            dev.num_chans() as usize
+            let dev = output.lock().unwrap();
+            dev.chans().len()
+            // dev.num_chans() as usize
         };
 
         let frames_num: usize =
             transition_period.div_duration_f32(frame_period).ceil()
             as usize;
 
-        let mut frames: VecDeque<Vec<f32>> = VecDeque::with_capacity(frames_num);
+        let mut frames: VecDeque<Frame> = VecDeque::with_capacity(frames_num);
         for _ in 0..frames_num {
-            frames.push_back(vec![0.0; num_chans]);
+            frames.push_back(Frame::new(num_chans));
         }
 
         //   I'm not sure if I actually need frames
@@ -271,5 +313,9 @@ impl<D: MsgHandler + Sync> MovingAverage<D> {
             last_msg_recv_time: Instant::now(),
             last_msg_target_time: Instant::now(),
         }
+    }
+
+    fn target_frame(&self) -> Frame {
+        Frame::from_msg(&self.target_msg)
     }
 }

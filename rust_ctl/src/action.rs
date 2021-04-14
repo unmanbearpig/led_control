@@ -12,7 +12,7 @@ use crate::chan_spec::{ChanSpec};
 // use crate::filters::moving_average::MovingAverage;
 // use crate::task::{TaskMsg, Task};
 // use crate::runner::Runner;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 // use std::sync::mpsc;
 // use std::thread;
 use std::time;
@@ -107,10 +107,10 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn perform<D: 'static + MsgHandler>(&self,
-                                            srv: Arc<RwLock<D>>,
-                                            config: &config::Config)
-                                            -> Result<(), String> {
+    pub fn perform(&self,
+                   srv: Arc<Mutex<dyn MsgHandler>>,
+                   config: &config::Config)
+                   -> Result<(), String> {
         match self {
             Action::PrintConfig => {
                 println!("{}", serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e) )?);
@@ -118,7 +118,7 @@ impl Action {
             }
             Action::ListChans => {
                 println!("chans:");
-                let srv = srv.read().map_err(|e| format!("{:?}", e))?;
+                let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
                 for (id, name) in srv.chans() {
                     println!("chan {} {}", id, name);
                 }
@@ -139,7 +139,7 @@ impl Action {
                 })
             }
             Action::Set(spec) => {
-                let mut srv = srv.write().map_err(|e| format!("{:?}", e))?;
+                let mut srv = srv.lock().map_err(|e| format!("{:?}", e))?;
 
                 match spec {
                     ChanSpec::F32(spec) => {
@@ -185,7 +185,7 @@ impl Action {
                 loop {
                     match udp.recv() {
                         Ok(msg) => {
-                            let mut srv = srv.write().map_err(|e| format!("write lock: {:?}", e))?;
+                            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
                             match srv.handle_msg(&msg) {
                                 Ok(_) => continue,
                                 Err(e) => eprintln!("Error handling msg: {}", e),

@@ -3,7 +3,7 @@ use crate::msg_handler::MsgHandler;
 use std::time;
 use std::thread::sleep;
 use rand::{self, Rng};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
 struct DemoChan {
     freq: f64,
@@ -12,12 +12,12 @@ struct DemoChan {
     phi: f64,
 }
 
-pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
+pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
     println!("running glitch demo...");
 
     let mut msg: Msg = {
         let srv = srv.clone();
-        let srv = srv.read().map_err(|e| format!("{:?}", e))?;
+        let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
 
         Msg {
             seq_num: 0,
@@ -66,7 +66,7 @@ pub fn run<D: MsgHandler>(srv: Arc<RwLock<D>>) -> Result<(), String> {
         // println!("");
 
         {
-            let mut srv = srv.write().map_err(|e| format!("{:?}", e))?;
+            let mut srv = srv.lock().map_err(|e| format!("{:?}", e))?;
             srv.handle_msg(&msg).expect("demo: handle_msg error");
         }
         sleep(delay);
