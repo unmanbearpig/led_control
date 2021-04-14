@@ -45,9 +45,35 @@ struct WebState<T: MsgHandler> {
     output: Arc<RwLock<T>>,
     output_config: config::Config,
     http: tiny_http::Server,
+    task: Option<Task>,
 }
 
 impl<T: 'static + MsgHandler> WebState<T> {
+    fn running_task(&mut self) -> Option<Task> {
+        if self.task.is_none() {
+            return None
+        }
+
+        let task = self.task.take().unwrap();
+        if !task.is_running() {
+            return None
+        }
+
+        Some(task)
+    }
+
+    fn stop_task(&mut self) {
+        // let state = self.state.clone();
+        // let mut state = state.lock().unwrap();
+        let mut task: Option<Task> = self.running_task();
+        if task.is_some() {
+            let task: Option<Task> = task.take();
+            let task: Task = task.unwrap();
+            task.stop();
+            self.task = None;
+        }
+    }
+
     pub fn run(&mut self) {
         loop {
             println!("recving...");
@@ -80,7 +106,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
     }
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        // todo: stop_task
+        self.stop_task();
         let action = Action::Set(
             ChanSpec::F32(
                 ChanSpecGeneric::<f32>::SomeWithDefault(1.0, vec![])
@@ -95,7 +121,7 @@ impl<T: 'static + MsgHandler> WebState<T> {
     }
 
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        // todo: stop task
+        self.stop_task();
         let action = Action::Set(
             ChanSpec::F32(
                 ChanSpecGeneric::<f32>::SomeWithDefault(0.0, vec![])
@@ -110,35 +136,26 @@ impl<T: 'static + MsgHandler> WebState<T> {
     }
 
     fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        // self.stop_task();
-        // let state = self.state.clone();
-        // let mut state = state.lock().unwrap();
+        self.stop_task();
 
-        // let mut state = self;
+        let (tx, rx) = mpsc::channel::<TaskMsg>();
 
-        // let (tx, rx) = mpsc::channel::<TaskMsg>();
+        let join_handle = {
+            let output = self.output.clone();
+            thread::spawn(move || {
+                demo::hello::run_with_channel(output, rx)
+            })
+        };
 
-        // let join_handle = {
-        //     let output = self.output.clone();
-        //     thread::spawn(move || {
-        //         demo::hello::run_with_channel(output, rx)
-        //     })
-        // };
-
-        // state.task = Some(Task {
-        //     name: "Hello task from web test".to_string(),
-        //     chan: tx,
-        //     join_handle: join_handle,
-        // });
-
-        // self.home_with(HomeTemplate {
-        //     msg: Some(FlashMsg::Ok("Wooooo111!!!"))
-        // })
+        self.task = Some(Task {
+            name: "Hello task from web test".to_string(),
+            chan: tx,
+            join_handle: join_handle,
+        });
 
         self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Err("Sorry, not implemented yet :("))
+            msg: Some(FlashMsg::Ok("Wooooo111!!!"))
         })
-
     }
 
     fn home_with(&mut self, template: HomeTemplate) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -274,6 +291,7 @@ impl Web {
             output: srv,
             output_config: config,
             http: http,
+            task: None,
         };
 
         server.run();
@@ -285,4 +303,4 @@ impl Web {
 
         Ok(())
     }
- }
+}
