@@ -94,17 +94,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
         self.base_url.join(url)
     }
 
-    fn req_relative_url(&self, req: tiny_http::Request) -> Result<Url, String> {
-        let url = req.url();
-        let url = match self.parse_relative_url(url) {
-            Ok(url) => url,
-            Err(err) => {
-                return Err(format!("url parse error: {:?}", err));
-            }
-        };
-        unimplemented!();
-    }
-
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
         let action = Action::Set(
