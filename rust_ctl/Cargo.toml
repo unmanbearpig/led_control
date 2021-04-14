@@ -18,7 +18,5 @@ serde_yaml = "0.8"
 tiny_http = "0.8.0"
 url = "2.2.1"
 
-mime = "0.2"
-
 rust-embed = "5.8.0"
 askama = "0.10"
