@@ -51,7 +51,7 @@ impl<'a> FlashMsg<'a> {
                     result, ok_msg
                 )
             }
-            FlashMsg::Err(e) => {
+            FlashMsg::Err(_) => {
                 self
             }
         }

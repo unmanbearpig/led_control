@@ -1,4 +1,4 @@
-#![feature(test, slice_fill, div_duration)]
+#![feature(test, div_duration)]
 
 mod proto;
 mod usb;

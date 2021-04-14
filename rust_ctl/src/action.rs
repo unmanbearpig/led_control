@@ -5,7 +5,6 @@ use crate::proto;
 use crate::config;
 use crate::demo;
 use crate::udp_srv;
-use crate::web;
 use crate::web_tiny;
 use crate::msg_handler::{MsgHandler, ChanDescription};
 use crate::coord::{Coord};
