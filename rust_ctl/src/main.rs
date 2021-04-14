@@ -85,23 +85,6 @@ fn init_devs(dev_configs: &[config::DevChanConfig]) ->
         Ok(devs)
     }
 
-
-/// test code starts here
-// use crate::test_dev::TestDev;
-// use std::marker::PhantomData;
-
-// struct NoneIter<T>(PhantomData<T>);
-// impl<T> Iterator for NoneIter<T> {
-//     type Item = T;
-//     fn next(&mut self) -> std::option::Option<<Self as Iterator>::Item> {
-//         None
-//     }
-// }
-
-// impl<T> ExactSizeIterator for NoneIter<T> {}
-/// test code ends here
-
-
 fn main() -> Result<(), String> {
 
     // // working originally
@@ -119,41 +102,6 @@ fn main() -> Result<(), String> {
         let sync_dev = sync_dev.clone();
         dev_stats::start_mon(sync_dev, Duration::from_millis(500));
     }
-
-
-    // test code starts here
-    // let config = config::Config::from_args(env::args())?;
-    // let mut srv = srv::Srv::new();
-    // let dev = TestDev::new();
-    // srv.add_dev::<NoneIter<ChanConfig>>(Box::new(dev), None);
-    // let sync_dev = Arc::new(Mutex::new(srv));
-    // test code ends here
-
-    //// Moving average thingy
-    // let filter = MovingAverage::new(
-    //     sync_dev.clone(),
-    //     Duration::from_millis(10),
-    //     Duration::from_millis(3000));
-
-    // let (_tx, _rx) = mpsc::channel::<TaskMsg>();
-
-    // let filter =
-    //     Arc::new(RwLock::new(filter));
-
-    // let join_handle = {
-    //     let filter = filter.clone();
-    //     // let srv = sync_dev.clone();
-    //     thread::spawn(move || {
-    //         let res = Runner::run(filter, rx);
-    //         res
-    //     })
-    // };
-
-    // let task = Some(Task {
-    //     name: "Hello task from web test".to_string(),
-    //     chan: tx,
-    //     join_handle: join_handle,
-    // });
 
     config.action.perform(sync_dev, &config)?;
 
