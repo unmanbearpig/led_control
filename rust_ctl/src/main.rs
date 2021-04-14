@@ -34,10 +34,11 @@ use std::time::Duration;
 
 use crate::chan::ChanConfig;
 
-fn init_devs(dev_configs: &[config::DevChanConfig]) ->
-    Result<Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)>, String> {
+type DevConfList = Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)>;
 
-        let mut devs: Vec<(Box<dyn dev::Dev>, Option<Vec<ChanConfig>>)> = Vec::new();
+fn init_devs(dev_configs: &[config::DevChanConfig]) ->
+    Result<DevConfList, String> {
+        let mut devs: DevConfList = Vec::new();
 
         for devchanconfig in dev_configs.iter() {
             let devcfg = devchanconfig.dev;
@@ -93,7 +94,7 @@ fn main() -> Result<(), String> {
     }
 
     let sync_srv = Arc::new(RwLock::new(srv));
-    let dev_stats = dev_stats::DevStats::new(sync_srv.clone());
+    let dev_stats = dev_stats::DevStats::new(sync_srv);
     let sync_dev = Arc::new(RwLock::new(dev_stats));
     {
         let sync_dev = sync_dev.clone();
@@ -125,7 +126,7 @@ fn main() -> Result<(), String> {
     //     join_handle: join_handle,
     // });
 
-    config.action.perform(sync_dev.clone(), &config)?;
+    config.action.perform(sync_dev, &config)?;
 
     Ok(())
 }
