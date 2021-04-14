@@ -32,6 +32,32 @@ enum FlashMsg<'a> {
     Err(&'a str),
 }
 
+impl<'a> FlashMsg<'a> {
+    fn from_result<O>(result: &'a Result<O, String>, ok_msg: &'a str) -> Self {
+        match result {
+            Ok(_) => {
+                FlashMsg::Ok(ok_msg)
+            }
+            Err(err_msg) => {
+                FlashMsg::Err(err_msg.as_ref())
+            }
+        }
+    }
+
+    fn and_result<O>(self, result: &'a Result<O, String>) -> FlashMsg {
+        match self {
+            FlashMsg::Ok(ok_msg) => {
+                FlashMsg::from_result(
+                    result, ok_msg
+                )
+            }
+            FlashMsg::Err(e) => {
+                self
+            }
+        }
+    }
+}
+
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomeTemplate<'a> {
@@ -104,8 +130,12 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let srv = self.output.clone();
         let result = action.perform(srv, &self.output_config);
 
+        let flash_msg = FlashMsg::Ok(
+            "Is everything on?<br> <small>Kick Vanya if it's not!</small>")
+            .and_result(&result);
+
         self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Ok("Is everything on?<br> <small>Kick Vanya if it's not!</small>"))
+            msg: Some(flash_msg)
         })
     }
 
@@ -119,8 +149,12 @@ impl<T: 'static + MsgHandler> WebState<T> {
         let srv = self.output.clone();
         let result = action.perform(srv, &self.output_config);
 
+        let flash_msg = FlashMsg::Ok(
+            "Is everything off? <br> <small>Kick Vanya if it's not!</small>")
+            .and_result(&result);
+
         self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Ok("Is everything off? <br> <small>Kick Vanya if it's not!</small>"))
+            msg: Some(flash_msg)
         })
     }
 
