@@ -89,8 +89,6 @@ impl<T: 'static + MsgHandler> WebState<T> {
     }
 
     fn stop_task(&mut self) {
-        // let state = self.state.clone();
-        // let mut state = state.lock().unwrap();
         let mut task: Option<Task> = self.running_task();
         if task.is_some() {
             let task: Option<Task> = task.take();
@@ -318,11 +316,6 @@ impl Web {
         };
 
         server.run();
-
-        // outdated
-        // loop {
-        //     let res = http.recv();
-        // }
 
         Ok(())
     }
