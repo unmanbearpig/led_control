@@ -37,11 +37,9 @@ impl UdpSrv {
         })
     }
 
-    pub fn recv(&mut self) -> Result<proto::Msg, String> {
+    fn recv(&mut self) -> Result<proto::Msg, String> {
         let (len, _addr) = self.socket.recv_from(&mut self.buf).unwrap();
-        // eprintln!("read {} bytes from {}", len, addr);
         let msg = proto::Msg::deserialize(&self.buf[0..len]).unwrap();
-        // eprintln!("parsed msg: {:?}", msg);
         Ok(msg)
     }
 
@@ -49,9 +47,7 @@ impl UdpSrv {
         loop {
             match self.recv() {
                 Ok(msg) => {
-                    let output = self.output.clone();
-                    // let mut srv = output.lock().map_err(|e| format!("write lock: {:?}", e))?;
-                    let mut output = match output.lock() {
+                    let mut output = match self.output.lock() {
                         Ok(output) => output,
                         Err(err) => {
                             eprintln!("UdpSrv mutex lock error: {}", err);
