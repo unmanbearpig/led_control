@@ -128,7 +128,10 @@ impl Stats {
             let last_stat = self.f32_vals_last.get(i);
 
             let (bar_str, last_val_str) = match last_stat {
-                Some(last_stat) => (format!("{}", bar.val(last_stat.avg as f32)), format!("{}", last_stat)),
+                Some(last_stat) => (
+                    format!("{}", bar.val(last_stat.avg as f32)),
+                    format!("{}", last_stat),
+                ),
                 None => ("".to_string(), "None".to_string()),
             };
 
