@@ -180,22 +180,9 @@ impl Action {
                 demo::whoosh::run(srv)
             }
             Action::Srv { listen_ip: ip, listen_port: port } => {
-                let mut udp = udp_srv::UdpSrv::new(*ip, *port)?;
-
-                loop {
-                    match udp.recv() {
-                        Ok(msg) => {
-                            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
-                            match srv.handle_msg(&msg) {
-                                Ok(_) => continue,
-                                Err(e) => eprintln!("Error handling msg: {}", e),
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("udp msg error: {}", e);
-                        }
-                    }
-                }
+                let mut udp = udp_srv::UdpSrv::new(*ip, *port, srv)?;
+                udp.run();
+                Ok(())
             }
             action => {
                 eprintln!("action {:?} not implemented", action);
