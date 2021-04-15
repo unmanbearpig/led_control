@@ -1,5 +1,6 @@
 use crate::msg_handler::{ChanDescription, MsgHandler};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
+use crate::term_bar;
 
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
@@ -120,14 +121,18 @@ impl Stats {
             }
         };
 
+        let bar = term_bar::config().len(100);
+
         let mut val_str = String::new();
         for (i, overall_stat) in self.f32_vals_overall.iter().enumerate() {
             let last_stat = self.f32_vals_last.get(i);
-            let last_val_str = match last_stat {
-                Some(last_stat) => format!("{}", last_stat),
-                None => "None".to_string(),
+
+            let (bar_str, last_val_str) = match last_stat {
+                Some(last_stat) => (format!("{}", bar.val(last_stat.avg as f32)), format!("{}", last_stat)),
+                None => ("".to_string(), "None".to_string()),
             };
-            val_str += format!("{}  {}\n", overall_stat, last_val_str).as_str();
+
+            val_str += format!("{}  {}\n{}\n", overall_stat, last_val_str, bar_str).as_str();
         }
 
         self.f32_vals_last.resize_with(0, Default::default);

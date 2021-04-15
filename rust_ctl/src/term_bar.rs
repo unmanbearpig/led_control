@@ -13,44 +13,44 @@ pub struct TermBarConfig {
     bounds: Option<BarBounds>,
 }
 
-struct TermBar<'a> {
+pub struct TermBar<'a> {
     config: &'a TermBarConfig,
     val: f32,
 }
 
 impl TermBarConfig {
-    fn tick_char(mut self, tick_char: char) -> Self {
+    pub fn tick_char(mut self, tick_char: char) -> Self {
         self.tick_char = tick_char;
         self
     }
 
-    fn empty_char(mut self, empty_char: char) -> Self {
+    pub fn empty_char(mut self, empty_char: char) -> Self {
         self.empty_char = empty_char;
         self
     }
 
-    fn range(mut self, min: f32, max: f32) -> Self {
+    pub fn range(mut self, min: f32, max: f32) -> Self {
         self.min = min;
         self.max = max;
         self
     }
 
-    fn bounds(mut self, start: char, end: char) -> Self {
+    pub fn bounds(mut self, start: char, end: char) -> Self {
         self.bounds = Some(BarBounds { start, end });
         self
     }
 
-    fn no_bounds(mut self) -> Self {
+    pub fn no_bounds(mut self) -> Self {
         self.bounds = None;
         self
     }
 
-    fn len(mut self, len: usize) -> Self {
+    pub fn len(mut self, len: usize) -> Self {
         self.bar_len = len;
         self
     }
 
-    fn val(&self, val: f32) -> TermBar {
+    pub fn val(&self, val: f32) -> TermBar {
         TermBar {
             config: self,
             val,
@@ -58,7 +58,7 @@ impl TermBarConfig {
     }
 
     /// returns bar length including bounds chars if they're present
-    fn whole_len(&self) -> usize {
+    pub fn whole_len(&self) -> usize {
         let mut len = self.bar_len;
         if self.bounds.is_some() {
             len += 2;
@@ -90,7 +90,6 @@ impl TermBar<'_> {
     }
 
     fn bar_ticks(&self) -> usize {
-        println!("amount = {}", self.amount());
         (self.amount() * self.config.bar_len as f32) as usize
     }
 }
@@ -107,8 +106,6 @@ impl fmt::Display for TermBar<'_> {
 
         let tick_char = self.config.tick_char;
         let ticks = self.bar_ticks();
-
-        println!("ticks = {}", ticks);
 
         for _ in 0..ticks {
             buf.push(tick_char)
