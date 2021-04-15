@@ -56,17 +56,6 @@ impl ChanVal {
         }
     }
 
-    // dead code, remove later
-    // pub fn serialize_to_buf(&self, buf: &mut [u8]) -> usize {
-    //     assert!(buf.len() >= mem::size_of::<ChanValSer>());
-
-    //     let ser: &mut ChanValSer = unsafe {
-    //         mem::transmute(buf.as_ptr())
-    //     };
-    //     self.serialize_to_struct(ser);
-    //     8
-    // }
-
     pub fn deserialize_from_struct(ser: &ChanValSer) -> Result<Self, SerErr> {
         Ok(ChanVal(
             ChanId(ser.chan_id),
@@ -80,16 +69,6 @@ impl ChanVal {
             }
         ))
     }
-
-    // dead code, remove later
-    // pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-    //     assert!(buf.len() >= mem::size_of::<ChanValSer>());
-    //     let ser: &mut ChanValSer = unsafe {
-    //         mem::transmute(buf.as_ptr())
-    //     };
-
-    //     ChanVal::deserialize_from_struct(ser)
-    // }
 }
 
 #[repr(C)]
@@ -120,7 +99,6 @@ impl Msg {
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 
-        // let ser: &mut  MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
         let ser: &mut  MsgHeaderSer = unsafe {
             &mut *(buf.as_ptr() as *mut MsgHeaderSer)
         };
@@ -154,7 +132,6 @@ impl Msg {
     }
 
     pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-        // let header: &MsgHeaderSer = unsafe { mem::transmute(buf.as_ptr()) };
         let header: &MsgHeaderSer = unsafe {
             &*(buf.as_ptr() as *const MsgHeaderSer)
         };
@@ -163,7 +140,6 @@ impl Msg {
         }
         let expected_size =
             MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
-        // dbg!(header.num_vals);
 
         if buf.len() < expected_size {
             return Err(SerErr::InvalidSize {
@@ -236,32 +212,6 @@ mod tests {
         assert_eq!(mem::size_of::<ChanValSer>(), 8 as usize);
     }
 
-    // #[test]
-    // fn test_chan_val_serialize() {
-    //     let cv = ChanVal(ChanId(42), Val::U16(12345));
-    //     let buf = &mut [0u8; 8];
-
-    //     const EXPECTED_BYTES: [u8; 8] = [
-    //         0x2a, 0x00,  // chan
-    //         0x00, 0x00,  // flags
-    //         0x39, 0x30,  // value
-    //         0x00, 0x00,  // not used
-    //     ];
-
-    //     assert_eq!(cv.serialize_to_buf(buf), 8);
-    //     assert_eq!(buf, &EXPECTED_BYTES);
-    // }
-
-    // #[test]
-    // fn test_chan_val_roundtrip() {
-    //     let cv = ChanVal(ChanId(42), Val::U16(12345));
-    //     let buf = &mut [0u8; 8];
-    //     cv.serialize_to_buf(buf);
-    //     let newcv = ChanVal::deserialize(buf).unwrap();
-
-    //     assert_eq!(cv, newcv);
-    // }
-
     #[test]
     fn test_max_msg_size() {
         assert_eq!(512, MSG_MAX_SIZE);
@@ -284,15 +234,6 @@ mod tests {
             "msg serialize returns the number of used bytes");
         assert_eq!(msg, Msg::deserialize(&buf[0..len]).unwrap());
     }
-
-    // #[test]
-    // fn test_msg_deserialization() {
-    //     let buf = &mut [0u8; MSG_MAX_SIZE];
-    //     assert_eq!(SerErr::InvalidMagic,
-    //                Msg::deserialize(&buf[..]).unwrap_err());
-    //     buf[0] = 0x1c;
-    //     assert!(Msg::deserialize(&buf[..]).unwrap_err().is_invalid_size());
-    // }
 
     #[bench]
     #[allow(unused_must_use)]
