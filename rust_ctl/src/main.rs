@@ -17,6 +17,7 @@ mod proto;
 mod runner;
 mod srv;
 mod task;
+mod term_bar;
 mod test_dev;
 mod udp_srv;
 mod udpv1_dev;
