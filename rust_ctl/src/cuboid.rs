@@ -1,6 +1,6 @@
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-use crate::coord::{Coord};
+use crate::coord::Coord;
 
 #[derive(Clone, Debug, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Cuboid {
@@ -19,21 +19,54 @@ impl Cuboid {
         let minz = self.start.z.min(self.end.z);
         let maxz = self.start.z.max(self.end.z);
 
-        result.push(Coord { x: minx, y: miny, z: minz });
-        result.push(Coord { x: minx, y: miny, z: maxz });
-        result.push(Coord { x: minx, y: maxy, z: minz });
-        result.push(Coord { x: minx, y: maxy, z: maxz });
-        result.push(Coord { x: maxx, y: miny, z: minz });
-        result.push(Coord { x: maxx, y: miny, z: maxz });
-        result.push(Coord { x: maxx, y: maxy, z: minz });
-        result.push(Coord { x: maxx, y: maxy, z: maxz });
+        result.push(Coord {
+            x: minx,
+            y: miny,
+            z: minz,
+        });
+        result.push(Coord {
+            x: minx,
+            y: miny,
+            z: maxz,
+        });
+        result.push(Coord {
+            x: minx,
+            y: maxy,
+            z: minz,
+        });
+        result.push(Coord {
+            x: minx,
+            y: maxy,
+            z: maxz,
+        });
+        result.push(Coord {
+            x: maxx,
+            y: miny,
+            z: minz,
+        });
+        result.push(Coord {
+            x: maxx,
+            y: miny,
+            z: maxz,
+        });
+        result.push(Coord {
+            x: maxx,
+            y: maxy,
+            z: minz,
+        });
+        result.push(Coord {
+            x: maxx,
+            y: maxy,
+            z: maxz,
+        });
 
         result
     }
 
     pub fn avg_dist_to_point(&self, center: Coord) -> f32 {
         let corners = self.corners();
-        let dists: Vec<f32> = corners.into_iter()
+        let dists: Vec<f32> = corners
+            .into_iter()
             .map(|corn| center.dist_to(&corn))
             .collect();
 

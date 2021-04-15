@@ -1,10 +1,10 @@
-use std::time;
-use std::thread::sleep;
-use std::sync::{Arc, Mutex};
-use crate::proto::{Msg, ChanVal, Val};
+use crate::coord::Coord;
 use crate::msg_handler::MsgHandler;
-use crate::coord::{Coord};
+use crate::proto::{ChanVal, Msg, Val};
 use crate::wacom;
+use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Config {
@@ -14,7 +14,6 @@ pub struct Config {
 }
 
 pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>, conf: Config) -> Result<(), String> {
-
     let mut msg: Msg = {
         let srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
 
@@ -22,7 +21,8 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>, conf: Config) -> Result<(
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: chans.iter()
+            vals: chans
+                .iter()
                 .map(|(id, _)| (ChanVal(*id, Val::F32(0.0))))
                 .collect(),
         }
@@ -55,18 +55,23 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>, conf: Config) -> Result<(
 
         {
             let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
-            for (i, cuboid) in srv.chan_descriptions()
-                .iter().enumerate()
-                .filter_map(|(i, cfg)| cfg.cuboid.map(|c| (i, c))) {
-                    // let intersection = cuboid.sphere_intersection(loc, conf.radius);
-                    // let result = (intersection * conf.brightness).min(1.0);
+            for (i, cuboid) in srv
+                .chan_descriptions()
+                .iter()
+                .enumerate()
+                .filter_map(|(i, cfg)| cfg.cuboid.map(|c| (i, c)))
+            {
+                // let intersection = cuboid.sphere_intersection(loc, conf.radius);
+                // let result = (intersection * conf.brightness).min(1.0);
 
-                    let avg_dist = cuboid.avg_dist_to_point(loc);
-                    let result = ((conf.radius - avg_dist) * conf.brightness).min(1.0).max(0.0);
+                let avg_dist = cuboid.avg_dist_to_point(loc);
+                let result = ((conf.radius - avg_dist) * conf.brightness)
+                    .min(1.0)
+                    .max(0.0);
 
-                    // println!("led {} = {}; dist = {}", i, result, dist);
-                    msg.vals[i].1 = Val::F32(result);
-                }
+                // println!("led {} = {}; dist = {}", i, result, dist);
+                msg.vals[i].1 = Val::F32(result);
+            }
 
             msg.timestamp = time::SystemTime::now();
             msg.seq_num += 1;

@@ -1,9 +1,8 @@
-
-use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use std::time::{self, Duration};
-use std::thread::sleep;
+use crate::proto::{ChanVal, Msg, Val};
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time::{self, Duration};
 
 #[derive(Debug)]
 struct DemoChan {
@@ -21,12 +20,13 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: srv.chans().into_iter()
+            vals: srv
+                .chans()
+                .into_iter()
                 .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
                 .collect(),
         }
     };
-
 
     let num_chans = msg.vals.len();
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(num_chans);
@@ -35,7 +35,7 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
         dchans.push(DemoChan {
             min: 0.01,
             max: 1.0,
-            position: 0.1 + (0.8 * (i as f64 / num_chans as f64))
+            position: 0.1 + (0.8 * (i as f64 / num_chans as f64)),
         });
     }
 
@@ -44,7 +44,7 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
     let radius = 0.5;
     let period = Duration::from_millis(1000);
     let start = -radius;
-    let finish = 1.0+radius;
+    let finish = 1.0 + radius;
     let mut loc = start;
 
     loop {

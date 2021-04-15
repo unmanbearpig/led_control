@@ -1,10 +1,10 @@
-use crate::proto::{ChanId, ChanVal, Val, Msg};
-use crate::msg_handler::{MsgHandler, ChanDescription};
+use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::proto::{ChanId, ChanVal, Msg, Val};
 
+use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
-use std::fmt;
 
 #[derive(Clone, Debug)]
 struct ValStats {
@@ -17,7 +17,10 @@ struct ValStats {
 impl Default for ValStats {
     fn default() -> Self {
         ValStats {
-            cnt: 0, min: 0.0, max: 0.0, avg: 0.0
+            cnt: 0,
+            min: 0.0,
+            max: 0.0,
+            avg: 0.0,
         }
     }
 }
@@ -66,14 +69,17 @@ impl ValStats {
 
 impl fmt::Display for ValStats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cnt: {:7} min: {:3.3}  avg: {:3.3}  max: {:3.3}",
-               self.cnt, self.min, self.avg, self.max
+        write!(
+            f,
+            "cnt: {:7} min: {:3.3}  avg: {:3.3}  max: {:3.3}",
+            self.cnt, self.min, self.avg, self.max
         )
     }
 }
 
 #[derive(Default, Debug)]
 struct Stats {
+    chan_descriptions: Vec<String>,
     last_update: Option<Instant>,
     msg_cnt: u64,
     prev_msg_cnt: u64,
@@ -102,8 +108,7 @@ impl Stats {
         let prev_msg_cnt = self.prev_msg_cnt;
         self.prev_msg_cnt = self.msg_cnt;
 
-        let msg_cnt_since_last_update =
-            self.msg_cnt - prev_msg_cnt;
+        let msg_cnt_since_last_update = self.msg_cnt - prev_msg_cnt;
 
         let msgs_per_sec: f32 = {
             match prev_update {
@@ -111,7 +116,7 @@ impl Stats {
                     let duration = self.last_update.unwrap() - t;
                     msg_cnt_since_last_update as f32 / duration.as_secs_f32()
                 }
-                None => 0.0
+                None => 0.0,
             }
         };
 
@@ -120,7 +125,7 @@ impl Stats {
             let last_stat = self.f32_vals_last.get(i);
             let last_val_str = match last_stat {
                 Some(last_stat) => format!("{}", last_stat),
-                None => "None".to_string()
+                None => "None".to_string(),
             };
             val_str += format!("{}  {}\n", overall_stat, last_val_str).as_str();
         }
@@ -164,28 +169,6 @@ impl<D: MsgHandler> fmt::Display for DevStats<D> {
     }
 }
 
-// impl<D: MsgHandler + Sync> Dev for DevStats<D> {
-//     fn num_chans(&self) -> u16 {
-//         let dev = self.dev.read().unwrap();
-//         dev.num_chans()
-//     }
-
-//     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-//         let mut dev = self.dev.write().unwrap();
-//         dev.set_f32(chan, val)
-//     }
-
-//     fn get_f32(&self, chan: u16) -> Result<f32, String> {
-//         let dev = self.dev.read().unwrap();
-//         dev.get_f32(chan)
-//     }
-
-//     fn sync(&mut self) -> Result<(), String> {
-//         let mut dev = self.dev.write().unwrap();
-//         dev.sync()
-//     }
-// }
-
 impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         self.stats.msg_cnt += 1;
@@ -203,17 +186,22 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
         let latency = msg.timestamp.elapsed();
         match latency {
             Ok(latency) => {
-                self.stats.msg_recv_latency_ms.add(latency.as_secs_f64() / 1000.0);
+                self.stats
+                    .msg_recv_latency_ms
+                    .add(latency.as_secs_f64() / 1000.0);
             }
             Err(e) => {
-                println!("msg created time is {} ms in the future", e.duration().as_secs_f64() / 1000.0);
+                println!(
+                    "msg created time is {} ms in the future",
+                    e.duration().as_secs_f64() / 1000.0
+                );
             }
         }
 
-
         self.stats.f32_vals_last.resize_with(
             self.stats.f32_vals_last.len().max(msg.vals.len()),
-            Default::default);
+            Default::default,
+        );
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             if let Val::F32(v) = val {
                 self.stats.f32_vals_last[*cid as usize].add(*v as f64)
@@ -235,9 +223,10 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     }
 }
 
-
-pub fn start_mon<D: 'static + MsgHandler>(dev: Arc<Mutex<DevStats<D>>>, delay: Duration)
-                                          -> (JoinHandle<()>, Arc<(Mutex<()>, Condvar)>) {
+pub fn start_mon<D: 'static + MsgHandler>(
+    dev: Arc<Mutex<DevStats<D>>>,
+    delay: Duration,
+) -> (JoinHandle<()>, Arc<(Mutex<()>, Condvar)>) {
     let pair = Arc::new((Mutex::new(()), Condvar::new()));
 
     let exiter = Arc::new(Condvar::new());

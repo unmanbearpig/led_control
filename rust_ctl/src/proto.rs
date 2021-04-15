@@ -1,7 +1,7 @@
-use std::mem;
-use std::time::{Duration, SystemTime};
-use std::slice;
 use std::fmt;
+use std::mem;
+use std::slice;
+use std::time::{Duration, SystemTime};
 
 // protocol for sending data via UDP / (or Unix sockets?)
 // not intended for SPI or USB communication with the PWM controller
@@ -16,7 +16,7 @@ pub const MSG_MAGIC: u8 = 0x1c;
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChanId(pub u16);
 
-impl fmt::Display for ChanId{
+impl fmt::Display for ChanId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[chan {}]", self.0)
     }
@@ -31,8 +31,15 @@ pub enum Val {
 #[derive(Debug, PartialEq)]
 pub enum SerErr {
     InvalidMagic,
-    InvalidSize { num_vals: usize, expected_size: usize, actual_size: usize },
-    InvalidTimestamp { s: u64, ns: u32 }
+    InvalidSize {
+        num_vals: usize,
+        expected_size: usize,
+        actual_size: usize,
+    },
+    InvalidTimestamp {
+        s: u64,
+        ns: u32,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -40,7 +47,7 @@ pub struct ChanVal(pub ChanId, pub Val);
 
 impl ChanVal {
     pub fn serialize_to_struct(&self, out: &mut ChanValSer) {
-        out.chan_id = self.0.0;
+        out.chan_id = self.0 .0;
 
         match self.1 {
             Val::U16(val) => {
@@ -63,10 +70,10 @@ impl ChanVal {
                 0 => {
                     let bytes = [ser.val[0], ser.val[1]];
                     Val::U16(u16::from_le_bytes(bytes))
-                },
+                }
                 1 => Val::F32(unsafe { mem::transmute(ser.val) }),
-                _ => panic!("invalid ChanVal tag {}", ser.tag)
-            }
+                _ => panic!("invalid ChanVal tag {}", ser.tag),
+            },
         ))
     }
 }
@@ -83,7 +90,7 @@ impl Default for ChanValSer {
         ChanValSer {
             chan_id: 0,
             tag: 0,
-            val: [0, 0, 0, 0]
+            val: [0, 0, 0, 0],
         }
     }
 }
@@ -99,16 +106,15 @@ impl Msg {
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 
-        let ser: &mut  MsgHeaderSer = unsafe {
-            &mut *(buf.as_ptr() as *mut MsgHeaderSer)
-        };
+        let ser: &mut MsgHeaderSer = unsafe { &mut *(buf.as_ptr() as *mut MsgHeaderSer) };
 
         ser.magic = MSG_MAGIC;
         ser.flags = 0;
         ser._reserved = 0;
         ser.seq_num = self.seq_num;
 
-        let dur = self.timestamp
+        let dur = self
+            .timestamp
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap();
         ser.timestamp_s = dur.as_secs();
@@ -119,8 +125,7 @@ impl Msg {
 
         let data: &mut [ChanValSer] = unsafe {
             let data_ptr: *mut ChanValSer =
-                buf.as_mut_ptr().add(MSG_HEADER_SIZE)
-                as *mut ChanValSer;
+                buf.as_mut_ptr().add(MSG_HEADER_SIZE) as *mut ChanValSer;
             slice::from_raw_parts_mut(data_ptr, self.vals.len())
         };
 
@@ -132,26 +137,23 @@ impl Msg {
     }
 
     pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-        let header: &MsgHeaderSer = unsafe {
-            &*(buf.as_ptr() as *const MsgHeaderSer)
-        };
+        let header: &MsgHeaderSer = unsafe { &*(buf.as_ptr() as *const MsgHeaderSer) };
         if header.magic != MSG_MAGIC {
             return Err(SerErr::InvalidMagic);
         }
-        let expected_size =
-            MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
+        let expected_size = MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
 
         if buf.len() < expected_size {
             return Err(SerErr::InvalidSize {
                 num_vals: header.num_vals as usize,
                 expected_size,
                 actual_size: buf.len(),
-            })
+            });
         }
         // ignoring flags and _reserved
 
         let vals: &[ChanValSer] = unsafe {
-            let ptr = buf.as_ptr().add(MSG_HEADER_SIZE) as * const ChanValSer;
+            let ptr = buf.as_ptr().add(MSG_HEADER_SIZE) as *const ChanValSer;
             slice::from_raw_parts(ptr, header.num_vals as usize)
         };
 
@@ -162,13 +164,13 @@ impl Msg {
             return Err(SerErr::InvalidTimestamp {
                 s: header.timestamp_s,
                 ns: header.timestamp_ns,
-            })
+            });
         }
         let timestamp = timestamp.unwrap();
 
-        let out_vals: Vec<ChanVal> =
-            vals.iter()
-            .map( |v| ChanVal::deserialize_from_struct(v).into_iter() )
+        let out_vals: Vec<ChanVal> = vals
+            .iter()
+            .map(|v| ChanVal::deserialize_from_struct(v).into_iter())
             .flatten()
             .collect();
 
@@ -222,7 +224,7 @@ mod tests {
         let msg = Msg {
             seq_num: 12345,
             timestamp: SystemTime::now(),
-            vals: vec!(ChanVal(ChanId(32), Val::U16(54))),
+            vals: vec![ChanVal(ChanId(32), Val::U16(54))],
         };
 
         assert_eq!(512, MSG_MAX_SIZE);
@@ -230,8 +232,10 @@ mod tests {
         assert_eq!(buf.len(), 512);
         let len = msg.serialize(buf);
         assert_eq!(
-            MSG_HEADER_SIZE + MSG_VAL_SIZE, len,
-            "msg serialize returns the number of used bytes");
+            MSG_HEADER_SIZE + MSG_VAL_SIZE,
+            len,
+            "msg serialize returns the number of used bytes"
+        );
         assert_eq!(msg, Msg::deserialize(&buf[0..len]).unwrap());
     }
 
@@ -242,7 +246,7 @@ mod tests {
             let msg = Msg {
                 seq_num: 12345,
                 timestamp: SystemTime::now(),
-                vals: vec!(ChanVal(ChanId(32), Val::U16(54))),
+                vals: vec![ChanVal(ChanId(32), Val::U16(54))],
             };
             let buf = &mut [0u8; MSG_MAX_SIZE];
             let len = msg.serialize(buf);

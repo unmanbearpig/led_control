@@ -1,28 +1,28 @@
 #![feature(test, div_duration)]
 
-mod proto;
-mod usb;
-mod srv;
-mod dev;
+mod action;
 mod chan;
-mod old_proto;
+mod chan_spec;
 mod config;
+mod controller;
+mod coord;
+mod cuboid;
+mod demo;
+mod dev;
+mod dev_stats;
+mod filters;
+mod msg_handler;
+mod old_proto;
+mod proto;
+mod runner;
+mod srv;
+mod task;
+mod test_dev;
 mod udp_srv;
 mod udpv1_dev;
 mod udpv2_dev;
-mod test_dev;
-mod demo;
-mod action;
-mod dev_stats;
-mod msg_handler;
-mod coord;
-mod cuboid;
-mod chan_spec;
+mod usb;
 mod wacom;
-mod task;
-mod controller;
-mod filters;
-mod runner;
 mod web_tiny;
 
 #[macro_use]
@@ -36,57 +36,41 @@ use crate::chan::ChanConfig;
 
 type DevConfList = Vec<(Arc<Mutex<dyn dev::Dev>>, Option<Vec<ChanConfig>>)>;
 
-fn init_devs(dev_configs: &[config::DevChanConfig]) ->
-    Result<DevConfList, String> {
-        let mut devs: DevConfList = Vec::new();
+fn init_devs(dev_configs: &[config::DevChanConfig]) -> Result<DevConfList, String> {
+    let mut devs: DevConfList = Vec::new();
 
-        for devchanconfig in dev_configs.iter() {
-            let devcfg = devchanconfig.dev;
-            let chancfg: Option<Vec<ChanConfig>> = devchanconfig.chans.clone();
+    for devchanconfig in dev_configs.iter() {
+        let devcfg = devchanconfig.dev;
+        let chancfg: Option<Vec<ChanConfig>> = devchanconfig.chans.clone();
 
-            match devcfg {
-                config::DevConfig::TestDev => {
-                    devs.push(
-                        (
-                            Arc::new(Mutex::new(test_dev::TestDev::new())),
-                            chancfg,
-                        )
-                    );
-                }
-                config::DevConfig::Usb => {
-                    for usbdev in usb::UsbDev::find_devs()? {
-                        devs.push(
-                            (
-                                Arc::new(Mutex::new(usbdev)),
-                                chancfg.clone(),
-                            )
-                        );
-                    }
-                }
-                config::DevConfig::UdpV1(ip, port) => {
-                    devs.push(
-                        (
-                            Arc::new(Mutex::new(udpv1_dev::UdpV1Dev::new(ip, port)?)),
-                            chancfg,
-                        )
-                    );
-                }
-                config::DevConfig::UdpV2 { ip, port, chans } => {
-                    devs.push(
-                        (
-                            Arc::new(Mutex::new(udpv2_dev::UdpV2Dev::new(ip, Some(port), chans)?)),
-                            chancfg,
-                        )
-                    );
+        match devcfg {
+            config::DevConfig::TestDev => {
+                devs.push((Arc::new(Mutex::new(test_dev::TestDev::new())), chancfg));
+            }
+            config::DevConfig::Usb => {
+                for usbdev in usb::UsbDev::find_devs()? {
+                    devs.push((Arc::new(Mutex::new(usbdev)), chancfg.clone()));
                 }
             }
+            config::DevConfig::UdpV1(ip, port) => {
+                devs.push((
+                    Arc::new(Mutex::new(udpv1_dev::UdpV1Dev::new(ip, port)?)),
+                    chancfg,
+                ));
+            }
+            config::DevConfig::UdpV2 { ip, port, chans } => {
+                devs.push((
+                    Arc::new(Mutex::new(udpv2_dev::UdpV2Dev::new(ip, Some(port), chans)?)),
+                    chancfg,
+                ));
+            }
         }
-
-        Ok(devs)
     }
 
-fn main() -> Result<(), String> {
+    Ok(devs)
+}
 
+fn main() -> Result<(), String> {
     // // working originally
     let config = config::Config::from_args(env::args())?;
     let devs = init_devs(&config.devs[..])?; // dyn

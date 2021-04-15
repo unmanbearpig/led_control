@@ -1,5 +1,5 @@
-use serde_derive::{Serialize, Deserialize};
-use crate::cuboid::{Cuboid};
+use crate::cuboid::Cuboid;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ChanConfig {
@@ -8,7 +8,7 @@ pub struct ChanConfig {
     pub max: f64,
     pub exp: f64,
     pub tags: Vec<String>,
-    pub cuboid: Option<Cuboid>
+    pub cuboid: Option<Cuboid>,
 }
 
 impl Default for ChanConfig {

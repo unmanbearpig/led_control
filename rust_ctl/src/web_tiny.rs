@@ -1,21 +1,20 @@
-
 extern crate tiny_http;
-use url::{Url};
+use url::Url;
 
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 
 use std::io::Cursor;
 
-use crate::msg_handler::MsgHandler;
 use crate::action::Action;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
+use crate::msg_handler::MsgHandler;
 use askama::Template;
 
-use std::thread;
 use crate::demo;
 use crate::task::{Task, TaskMsg};
+use std::thread;
 
 use crate::filters::moving_average::MovingAverage;
 use std::time::Duration;
@@ -40,25 +39,15 @@ enum FlashMsg<'a> {
 impl<'a> FlashMsg<'a> {
     fn from_result<O>(result: &'a Result<O, String>, ok_msg: &'a str) -> Self {
         match result {
-            Ok(_) => {
-                FlashMsg::Ok(ok_msg)
-            }
-            Err(err_msg) => {
-                FlashMsg::Err(err_msg.as_ref())
-            }
+            Ok(_) => FlashMsg::Ok(ok_msg),
+            Err(err_msg) => FlashMsg::Err(err_msg.as_ref()),
         }
     }
 
     fn and_result<O>(self, result: &'a Result<O, String>) -> FlashMsg {
         match self {
-            FlashMsg::Ok(ok_msg) => {
-                FlashMsg::from_result(
-                    result, ok_msg
-                )
-            }
-            FlashMsg::Err(_) => {
-                self
-            }
+            FlashMsg::Ok(ok_msg) => FlashMsg::from_result(result, ok_msg),
+            FlashMsg::Err(_) => self,
         }
     }
 }
@@ -86,7 +75,7 @@ impl WebState {
 
         let task = self.task.take().unwrap();
         if !task.is_running() {
-            return None
+            return None;
         }
 
         Some(task)
@@ -123,39 +112,37 @@ impl WebState {
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-        let action = Action::Set(
-            ChanSpec::F32(
-                ChanSpecGeneric::<f32>::SomeWithDefault(1.0, vec![])
-            )
-        );
+        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+            1.0,
+            vec![],
+        )));
         let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
-        let flash_msg = FlashMsg::Ok(
-            "Is everything on?<br> <small>Kick Vanya if it's not!</small>")
-            .and_result(&result);
+        let flash_msg =
+            FlashMsg::Ok("Is everything on?<br> <small>Kick Vanya if it's not!</small>")
+                .and_result(&result);
 
         self.home_with(HomeTemplate {
-            msg: Some(flash_msg)
+            msg: Some(flash_msg),
         })
     }
 
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-        let action = Action::Set(
-            ChanSpec::F32(
-                ChanSpecGeneric::<f32>::SomeWithDefault(0.0, vec![])
-            )
-        );
+        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+            0.0,
+            vec![],
+        )));
         let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
-        let flash_msg = FlashMsg::Ok(
-            "Is everything off? <br> <small>Kick Vanya if it's not!</small>")
-            .and_result(&result);
+        let flash_msg =
+            FlashMsg::Ok("Is everything off? <br> <small>Kick Vanya if it's not!</small>")
+                .and_result(&result);
 
         self.home_with(HomeTemplate {
-            msg: Some(flash_msg)
+            msg: Some(flash_msg),
         })
     }
 
@@ -167,9 +154,7 @@ impl WebState {
         let join_handle = {
             let output = self.output.clone();
 
-            thread::spawn(move || {
-                demo::hello::run_with_channel(output.clone(), rx)
-            })
+            thread::spawn(move || demo::hello::run_with_channel(output.clone(), rx))
         };
 
         self.task = Some(Task {
@@ -179,7 +164,7 @@ impl WebState {
         });
 
         self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Ok("Wooooo111!!!"))
+            msg: Some(FlashMsg::Ok("Wooooo111!!!")),
         })
     }
 
@@ -189,61 +174,44 @@ impl WebState {
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
-        tiny_http::Response::new(
-            tiny_http::StatusCode(200),
-            Vec::new(),
-            cur,
-            Some(len),
-            None
-        )
+        tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(), cur, Some(len), None)
     }
 
     fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let template = HomeTemplate {
-            msg: None,
-        };
+        let template = HomeTemplate { msg: None };
 
         self.home_with(template)
     }
 
-    fn err404(&mut self, method: &tiny_http::Method, path: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn err404(
+        &mut self,
+        method: &tiny_http::Method,
+        path: &str,
+    ) -> tiny_http::Response<Cursor<Vec<u8>>> {
         let resp_str = format!("404: Not found {} {}\n", method, path);
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
 
-        tiny_http::Response::new(
-            tiny_http::StatusCode(404),
-            Vec::new(),
-            cur,
-            Some(len),
-            None
-        )
+        tiny_http::Response::new(tiny_http::StatusCode(404), Vec::new(), cur, Some(len), None)
     }
 
     /// path_segments exclude the first segment ("/assets")
-    fn handle_static_asset(&mut self, path_segments: Vec<&str>) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn handle_static_asset(
+        &mut self,
+        path_segments: Vec<&str>,
+    ) -> tiny_http::Response<Cursor<Vec<u8>>> {
         let path: String = path_segments.join("/");
         let asset = StaticAsset::get(path.as_ref());
 
         let data: Vec<u8> = match asset {
-            Some(content) => {
-                content.to_vec()
-            }
-            None => {
-                return self.err404(&tiny_http::Method::Get, path.as_ref())
-            }
+            Some(content) => content.to_vec(),
+            None => return self.err404(&tiny_http::Method::Get, path.as_ref()),
         };
 
         let len = data.len();
         let cur = Cursor::new(data);
-        tiny_http::Response::new(
-            tiny_http::StatusCode(200),
-            Vec::new(),
-            cur,
-            Some(len),
-            None
-        )
+        tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(), cur, Some(len), None)
     }
 
     /// All static files should start with /assets/
@@ -253,7 +221,7 @@ impl WebState {
             Ok(url) => url,
             Err(err) => {
                 println!("url parse error: {:?}", err);
-                return
+                return;
             }
         };
 
@@ -261,26 +229,16 @@ impl WebState {
 
         let first_segment = path_segments.next();
         let resp = match (req.method(), first_segment) {
-            (tiny_http::Method::Post, Some("on")) => {
-                self.on()
-            }
-            (tiny_http::Method::Post, Some("off")) => {
-                self.off()
-            }
-            (tiny_http::Method::Post, Some("disco")) => {
-                self.disco()
-            }
-            (tiny_http::Method::Get, Some("")) => {
-                self.home()
-            }
+            (tiny_http::Method::Post, Some("on")) => self.on(),
+            (tiny_http::Method::Post, Some("off")) => self.off(),
+            (tiny_http::Method::Post, Some("disco")) => self.disco(),
+            (tiny_http::Method::Get, Some("")) => self.home(),
             (tiny_http::Method::Get, Some("assets")) => {
                 // TODO: check it's a GET request
                 // TODO: HEAD request
                 self.handle_static_asset(path_segments.collect())
             }
-            (m, Some(_)) => {
-                self.err404(m, url.to_string().as_ref())
-            }
+            (m, Some(_)) => self.err404(m, url.to_string().as_ref()),
             (_, None) => {
                 // root?
                 self.home()
@@ -293,21 +251,18 @@ impl WebState {
 
 impl Web {
     pub fn new(listen_addr: Option<String>) -> Result<Self, String> {
-        let listen_addr = listen_addr
-            .unwrap_or_else(|| DEFAULT_LISTEN_ADDR.to_string());
+        let listen_addr = listen_addr.unwrap_or_else(|| DEFAULT_LISTEN_ADDR.to_string());
 
-        Ok(Web {
-            listen_addr,
-        })
+        Ok(Web { listen_addr })
     }
 
-    pub fn run(&mut self, srv: Arc<Mutex<dyn MsgHandler>>, config: config::Config)
-               -> Result<(), String> {
-
+    pub fn run(
+        &mut self,
+        srv: Arc<Mutex<dyn MsgHandler>>,
+        config: config::Config,
+    ) -> Result<(), String> {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
-            .map_err(|e| {
-                format!("server err: {:?}", e)
-            })?;
+            .map_err(|e| format!("server err: {:?}", e))?;
 
         let ma = MovingAverage::new(
             srv.clone(),
@@ -317,15 +272,12 @@ impl Web {
 
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
-        let ma =
-            Arc::new(Mutex::new(ma));
+        let ma = Arc::new(Mutex::new(ma));
 
         let join_handle = {
             let ma = ma.clone();
             // let srv = sync_dev.clone();
-            thread::spawn(move || {
-                Runner::run(ma, rx)
-            })
+            thread::spawn(move || Runner::run(ma, rx))
         };
 
         let _task = Some(Task {
@@ -335,8 +287,7 @@ impl Web {
         });
 
         let mut server = WebState {
-            base_url: Url::parse(
-                format!("http://{}", self.listen_addr).as_ref()).unwrap(),
+            base_url: Url::parse(format!("http://{}", self.listen_addr).as_ref()).unwrap(),
             output: srv,
             output_config: config,
             http,

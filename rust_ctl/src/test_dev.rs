@@ -1,4 +1,3 @@
-
 use std::fmt;
 
 use crate::dev::Dev;
@@ -10,9 +9,7 @@ pub struct TestDev {
 
 impl TestDev {
     pub fn new() -> Self {
-        TestDev {
-            vals: vec![0.0; 3],
-        }
+        TestDev { vals: vec![0.0; 3] }
     }
 }
 
@@ -37,8 +34,8 @@ impl Dev for TestDev {
             return Err(format!(
                 "chan {} out of bounds (0-{})",
                 chan,
-                self.vals.len() -1,
-            ))
+                self.vals.len() - 1,
+            ));
         }
 
         Ok(self.vals[chan as usize])

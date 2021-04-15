@@ -1,10 +1,10 @@
 use crate::dev::Dev;
-use crate::proto::{self, Msg, Val, ChanId, ChanVal};
+use crate::proto::{self, ChanId, ChanVal, Msg, Val};
 
 use std::fmt;
-use std::time;
 use std::net::IpAddr;
 use std::net::UdpSocket;
+use std::time;
 
 pub struct UdpV2Dev {
     ip: IpAddr,
@@ -29,7 +29,8 @@ impl Dev for UdpV2Dev {
         if chan >= self.num_chans() {
             return Err(format!(
                 "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
-                chan))
+                chan
+            ));
         }
 
         self.msg.vals[chan as usize] = ChanVal(ChanId(chan), Val::F32(val));
@@ -39,16 +40,16 @@ impl Dev for UdpV2Dev {
 
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
         if chan as usize >= self.msg.vals.len() {
-            return Err(
-                format!("chan {} out of bounds (0-{})",
-                        chan, self.msg.vals.len() -1))
+            return Err(format!(
+                "chan {} out of bounds (0-{})",
+                chan,
+                self.msg.vals.len() - 1
+            ));
         }
 
         match self.msg.vals[chan as usize].1 {
             Val::F32(v) => Ok(v),
-            Val::U16(_) => Err(format!(
-                "no f32 value for chan {}", chan
-            ))
+            Val::U16(_) => Err(format!("no f32 value for chan {}", chan)),
         }
     }
 
@@ -58,8 +59,7 @@ impl Dev for UdpV2Dev {
         let mut bytes = [0u8; 1500];
         self.msg.serialize(&mut bytes);
         self.socket.send(&bytes).map_err(|e| e.to_string())?;
-        self.msg.seq_num =
-            self.msg.seq_num.wrapping_add(1);
+        self.msg.seq_num = self.msg.seq_num.wrapping_add(1);
         Ok(())
     }
 }
@@ -70,12 +70,13 @@ impl UdpV2Dev {
     pub fn new(ip: IpAddr, port: Option<u16>, num_chans: u16) -> Result<Self, String> {
         let local_addr = "0.0.0.0:0";
         let port = port.unwrap_or(DEFAULT_PORT);
-        let socket = UdpSocket::bind(local_addr)
-            .map_err(|e| format!("{}", e))?;
+        let socket = UdpSocket::bind(local_addr).map_err(|e| format!("{}", e))?;
         socket.connect((ip, port)).expect("connect failed");
 
         Ok(UdpV2Dev {
-            ip, port, socket,
+            ip,
+            port,
+            socket,
             msg: Msg {
                 seq_num: 0,
                 timestamp: time::SystemTime::now(),

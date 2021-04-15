@@ -1,8 +1,8 @@
-use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use std::time;
-use std::thread::sleep;
+use crate::proto::{ChanVal, Msg, Val};
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time;
 
 pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
     println!("running test_seq...");
@@ -14,7 +14,8 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: chans.iter()
+            vals: chans
+                .iter()
                 .map(|(id, _)| (ChanVal(*id, Val::F32(0.0))))
                 .collect(),
         }
@@ -24,8 +25,8 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
         for i in 0..msg.vals.len() {
             eprintln!("demo test_seq: chan {}", i);
             let mut fval: f32 = 0.0;
-            let min: f32  = 0.0;
-            let max: f32  = 1.0;
+            let min: f32 = 0.0;
+            let max: f32 = 1.0;
             let step: f32 = 0.01;
             // lower delay doesn't work for local udp usb server
             // why?

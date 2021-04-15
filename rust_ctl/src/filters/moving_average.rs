@@ -1,25 +1,24 @@
-
-use std::sync::{Arc, Mutex};
-use std::fmt;
-use std::time::{Instant, SystemTime, Duration};
-use std::sync::mpsc;
 use std::collections::VecDeque;
+use std::fmt;
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
 
-use crate::msg_handler::{MsgHandler, ChanDescription};
 use crate::dev::Dev;
-use crate::proto::{ChanId, ChanVal, Val, Msg};
+use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::proto::{ChanId, ChanVal, Msg, Val};
 use crate::runner::Runner;
 use crate::task::TaskMsg;
 
 #[derive(Debug, PartialOrd, PartialEq)]
 struct Frame {
-    vals: Vec<f32>
+    vals: Vec<f32>,
 }
 
 impl Frame {
     fn new(num_chans: usize) -> Self {
         Frame {
-            vals: vec![0.0; num_chans]
+            vals: vec![0.0; num_chans],
         }
     }
 
@@ -49,7 +48,6 @@ impl Frame {
             msg.vals[i].1 = Val::F32(*v)
         }
     }
-
 }
 
 #[derive(Debug)]
@@ -69,10 +67,13 @@ impl fmt::Display for MovingAverage {
         let output = self.output.clone();
         let output = output.lock().unwrap();
 
-        write!(f, "MA period: {}, buffer_len: {}, output to: {}",
-               self.transition_period.as_secs_f32(),
-               self.frames.len(),
-               output)
+        write!(
+            f,
+            "MA period: {}, buffer_len: {}, output to: {}",
+            self.transition_period.as_secs_f32(),
+            self.frames.len(),
+            output
+        )
     }
 }
 
@@ -102,7 +103,6 @@ impl Dev for MovingAverage {
         // dev.handle_msg(&self.current_msg)
         // dev.sync()
         // unimplemented!()
-
     }
 }
 
@@ -134,7 +134,7 @@ impl MovingAverage {
 
     fn avg_frame(&self) -> Frame {
         let num_chans = self.num_chans();
-        let mut result = Frame::new(num_chans);// Vec::with_capacity(self.frames[0].len());
+        let mut result = Frame::new(num_chans); // Vec::with_capacity(self.frames[0].len());
 
         for frame in self.frames.iter() {
             for (i, v) in frame.vals.iter().enumerate() {
@@ -159,9 +159,10 @@ impl MovingAverage {
 }
 
 impl Runner for MovingAverage {
-    fn run(self_lock: Arc<Mutex<MovingAverage>>,
-           stop: mpsc::Receiver<TaskMsg>)
-           -> Result<(), String> {
+    fn run(
+        self_lock: Arc<Mutex<MovingAverage>>,
+        stop: mpsc::Receiver<TaskMsg>,
+    ) -> Result<(), String> {
         let frame_period = {
             let self_lock = self_lock.clone();
             let self_lock = self_lock.lock().unwrap();
@@ -218,7 +219,7 @@ impl Runner for MovingAverage {
 
                     let mut output = mov_avg.output.lock().unwrap();
                     match output.handle_msg(&mov_avg.current_msg) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(e) => {
                             eprintln!("moving_average output.handle_msg err: {:?}", e);
                         }
@@ -228,20 +229,16 @@ impl Runner for MovingAverage {
             }
 
             match stop.recv_timeout(frame_period) {
-                Ok(msg) => {
-                    match msg {
-                        TaskMsg::Stop => return Ok(()),
-                        TaskMsg::Ping => {},
+                Ok(msg) => match msg {
+                    TaskMsg::Stop => return Ok(()),
+                    TaskMsg::Ping => {}
+                },
+                Err(e) => match e {
+                    mpsc::RecvTimeoutError::Timeout => {}
+                    mpsc::RecvTimeoutError::Disconnected => {
+                        return Ok(());
                     }
                 },
-                Err(e) => {
-                    match e {
-                        mpsc::RecvTimeoutError::Timeout => {},
-                        mpsc::RecvTimeoutError::Disconnected => {
-                            return Ok(());
-                        },
-                    }
-                }
             }
             // thread::sleep(frame_period);
         }
@@ -272,18 +269,18 @@ impl MsgHandler for MovingAverage {
 
 impl MovingAverage {
     #[allow(dead_code)]
-    pub fn new(output: Arc<Mutex<dyn MsgHandler>>,
-               frame_period: Duration,
-               transition_period: Duration) -> Self {
+    pub fn new(
+        output: Arc<Mutex<dyn MsgHandler>>,
+        frame_period: Duration,
+        transition_period: Duration,
+    ) -> Self {
         let num_chans: usize = {
             let dev = output.lock().unwrap();
             dev.chans().len()
             // dev.num_chans() as usize
         };
 
-        let frames_num: usize =
-            transition_period.div_duration_f32(frame_period).ceil()
-            as usize;
+        let frames_num: usize = transition_period.div_duration_f32(frame_period).ceil() as usize;
 
         let mut frames: VecDeque<Frame> = VecDeque::with_capacity(frames_num);
         for _ in 0..frames_num {
@@ -307,7 +304,10 @@ impl MovingAverage {
         };
 
         MovingAverage {
-            frame_period, transition_period, frames, output,
+            frame_period,
+            transition_period,
+            frames,
+            output,
             current_msg: msg.clone(),
             target_msg: msg,
             last_msg_recv_time: Instant::now(),

@@ -1,11 +1,10 @@
-
-use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use crate::task::{TaskMsg};
-use std::time;
+use crate::proto::{ChanVal, Msg, Val};
+use crate::task::TaskMsg;
 use rand::{self, Rng};
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::time;
 
 struct DemoChan {
     freq: f64,
@@ -21,11 +20,10 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
     run_with_channel(srv, receiver)
 }
 
-pub fn run_with_channel<T: MsgHandler + ?Sized> (
+pub fn run_with_channel<T: MsgHandler + ?Sized>(
     srv: Arc<Mutex<T>>,
-    stop: mpsc::Receiver<TaskMsg>)
-    -> Result<(), String> {
-
+    stop: mpsc::Receiver<TaskMsg>,
+) -> Result<(), String> {
     println!("running hello demo...");
 
     let mut msg: Msg = {
@@ -33,7 +31,9 @@ pub fn run_with_channel<T: MsgHandler + ?Sized> (
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: srv.chans().into_iter()
+            vals: srv
+                .chans()
+                .into_iter()
                 .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
                 .collect(),
         }
@@ -61,7 +61,7 @@ pub fn run_with_channel<T: MsgHandler + ?Sized> (
         for (i, d) in dchans.iter_mut().enumerate() {
             let amp = d.max - d.min;
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
-            let new_sin = ( ((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
+            let new_sin = (((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
             d.phi += delta;
             msg.vals[i].1 = Val::F32(new_sin as f32);
         }
@@ -72,7 +72,7 @@ pub fn run_with_channel<T: MsgHandler + ?Sized> (
         {
             let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
             match srv.handle_msg(&msg) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     println!("demo: handle_msg error: {:?}", e);
                     continue;
@@ -85,17 +85,15 @@ pub fn run_with_channel<T: MsgHandler + ?Sized> (
                 println!("received task msg: {:?}", msg);
                 match msg {
                     TaskMsg::Stop => return Ok(()),
-                    TaskMsg::Ping => {},
-                }
-            },
-            Err(e) => {
-                match e {
-                    mpsc::RecvTimeoutError::Timeout => {},
-                    mpsc::RecvTimeoutError::Disconnected => {
-                        return Ok(());
-                    },
+                    TaskMsg::Ping => {}
                 }
             }
+            Err(e) => match e {
+                mpsc::RecvTimeoutError::Timeout => {}
+                mpsc::RecvTimeoutError::Disconnected => {
+                    return Ok(());
+                }
+            },
         }
         // sleep(delay);
     }

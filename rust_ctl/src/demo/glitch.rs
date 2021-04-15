@@ -1,9 +1,9 @@
-use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use std::time;
-use std::thread::sleep;
+use crate::proto::{ChanVal, Msg, Val};
 use rand::{self, Rng};
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time;
 
 struct DemoChan {
     freq: f64,
@@ -22,12 +22,13 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: srv.chans().into_iter()
+            vals: srv
+                .chans()
+                .into_iter()
                 .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
                 .collect(),
         }
     };
-
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
 

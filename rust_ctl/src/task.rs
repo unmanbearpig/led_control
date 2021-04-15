@@ -1,4 +1,3 @@
-
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -24,7 +23,7 @@ impl Task {
     pub fn ask_to_stop(&mut self) {
         println!("asking task to stop...");
         match self.chan.send(TaskMsg::Stop) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 println!("got err while sending msg: {:?}", e);
             }

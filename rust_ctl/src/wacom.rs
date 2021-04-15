@@ -1,6 +1,5 @@
-
-use std::fs::{File};
-use std::io::{Read};
+use std::fs::File;
+use std::io::Read;
 
 // packet format
 // 1b ??
@@ -45,24 +44,22 @@ impl<'a> Wacom<'a> {
     pub fn new(filename: &'a str) -> Result<Self, String> {
         let file = match File::open(filename) {
             Ok(f) => f,
-            Err(e) => return Err(format!("{:?}", e))
+            Err(e) => return Err(format!("{:?}", e)),
         };
 
-        Ok(Wacom { filename, file, })
+        Ok(Wacom { filename, file })
     }
 
     pub fn read(&mut self, out: &mut WacomPacket) -> Result<(), String> {
-        let buf: &mut [u8] = unsafe {
-            std::slice::from_raw_parts_mut(
-                std::mem::transmute(out), 10)
-        };
+        let buf: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(std::mem::transmute(out), 10) };
         let len = match self.file.read(buf) {
             Ok(l) => l,
-            Err(e) => return Err(format!("{:?}", e))
+            Err(e) => return Err(format!("{:?}", e)),
         };
 
         if len != 10 {
-            return Err(format!("invalid length {} instead of 10", len))
+            return Err(format!("invalid length {} instead of 10", len));
         }
 
         Ok(())

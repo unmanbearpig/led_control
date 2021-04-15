@@ -1,4 +1,3 @@
-
 const LED_MSG_MAGIC: u16 = 0x1324;
 const PAD_MSG16_LEN: usize = 13;
 const PAD_MSGF32_LEN: usize = 6;
@@ -46,11 +45,11 @@ impl<'a> LedMsgF32 {
         unsafe {
             std::slice::from_raw_parts_mut(
                 self as *mut LedMsgF32 as *mut u8,
-                std::mem::size_of::<Self>())
+                std::mem::size_of::<Self>(),
+            )
         }
     }
 }
-
 
 impl<'a> LedMsg16 {
     #[allow(dead_code)]
@@ -58,7 +57,8 @@ impl<'a> LedMsg16 {
         unsafe {
             std::slice::from_raw_parts_mut(
                 self as *mut LedMsg16 as *mut u8,
-                std::mem::size_of::<Self>())
+                std::mem::size_of::<Self>(),
+            )
         }
     }
 }
@@ -68,7 +68,7 @@ impl Default for LedMsg16 {
         LedMsg16 {
             magic: LED_MSG_MAGIC,
             msgtype: 2, // #define LED_WRITE 2
-            flags: 0, // 1 means the values are float
+            flags: 0,   // 1 means the values are float
             pad: [11, 22, 33],
             values: [0x3333, 0xffff, 0x9999, 0xffff],
             reserved: [0; PAD_MSG16_LEN],

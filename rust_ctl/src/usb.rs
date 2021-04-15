@@ -1,7 +1,6 @@
-
 use crate::dev::{self, Dev};
-use std::time::Duration;
 use std::fmt;
+use std::time::Duration;
 
 pub struct UsbDev {
     devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
@@ -28,13 +27,15 @@ impl dev::Dev for UsbDev {
             return Err(format!(
                 "UsbDev set_f32: value {} for chan {} is larger than 1.0",
                 val, chan
-            ))
+            ));
         }
 
         if chan >= self.num_chans() {
             return Err(format!(
                 "UsbDev set_f32: Invalid chan {}, only {} are available",
-                chan, self.num_chans()))
+                chan,
+                self.num_chans()
+            ));
         }
 
         self.f32_vals[chan as usize] = val;
@@ -57,9 +58,7 @@ impl dev::Dev for UsbDev {
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
         // let data = self.raw_msg.into_slice();
-        let data: &[u8; 6] = unsafe {
-            &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6])
-        };
+        let data: &[u8; 6] = unsafe { &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6]) };
 
         // print_bytes(data);
 
@@ -71,22 +70,23 @@ impl dev::Dev for UsbDev {
                 }
                 Ok(())
             }
-            Err(e) => {
-                Err(format!("USB sync error: {}", e))
-            }
+            Err(e) => Err(format!("USB sync error: {}", e)),
         }
     }
-
-
-
 }
 
 impl UsbDev {
-    pub fn new(devhandle: rusb::DeviceHandle<rusb::GlobalContext>, bus_number: u8, dev_addr: u8) -> Self {
+    pub fn new(
+        devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
+        bus_number: u8,
+        dev_addr: u8,
+    ) -> Self {
         UsbDev {
-            devhandle, bus_number, dev_addr,
+            devhandle,
+            bus_number,
+            dev_addr,
             raw_vals: [0u16; 3],
-            f32_vals: [0.0;  3],
+            f32_vals: [0.0; 3],
         }
     }
 
@@ -108,9 +108,10 @@ impl UsbDev {
         if chan >= self.num_chans() {
             return Err(format!(
                 "UsbDev set_raw: Invalid chan {}, only {} are available",
-                chan, self.num_chans()))
+                chan,
+                self.num_chans()
+            ));
         }
-
 
         self.raw_vals[chan as usize] = val;
         Ok(())
@@ -120,10 +121,8 @@ impl UsbDev {
         let devs = rusb::devices();
 
         let devs = match devs {
-            Err(e) => {
-                return Err(format!("USB device enumeration: {}", e))
-            }
-            Ok(d) => d
+            Err(e) => return Err(format!("USB device enumeration: {}", e)),
+            Ok(d) => d,
         };
 
         let devs = devs.iter().filter(|dev| {
@@ -135,8 +134,8 @@ impl UsbDev {
         for dev in devs {
             let handle = dev.open();
             match handle {
-                Ok(h)  => led_devs.push(UsbDev::new(h, dev.bus_number(), dev.address())),
-                Err(e) => return Err(format!("could not open dev {:?}: {}", dev, e))
+                Ok(h) => led_devs.push(UsbDev::new(h, dev.bus_number(), dev.address())),
+                Err(e) => return Err(format!("could not open dev {:?}: {}", dev, e)),
             }
         }
 

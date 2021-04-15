@@ -1,7 +1,6 @@
 use crate::dev::Dev;
 use crate::old_proto;
 
-
 use std::fmt;
 use std::net::IpAddr;
 use std::net::UdpSocket;
@@ -29,7 +28,8 @@ impl Dev for UdpV1Dev {
         if chan >= self.num_chans() {
             return Err(format!(
                 "UDPv1 set_f32: invalid chan {}, only 0-3 are allowed",
-                chan))
+                chan
+            ));
         }
 
         self.msg.values[chan as usize] = val;
@@ -60,12 +60,13 @@ impl UdpV1Dev {
     pub fn new(ip: IpAddr, port: Option<u16>) -> Result<Self, String> {
         let local_addr = "0.0.0.0:0";
         let port = port.unwrap_or(DEFAULT_PORT);
-        let socket = UdpSocket::bind(local_addr)
-            .map_err(|e| format!("{}", e))?;
+        let socket = UdpSocket::bind(local_addr).map_err(|e| format!("{}", e))?;
         socket.connect((ip, port)).expect("connect failed");
 
         Ok(UdpV1Dev {
-            ip, port, socket,
+            ip,
+            port,
+            socket,
             msg: old_proto::LedMsgF32::default(),
         })
     }

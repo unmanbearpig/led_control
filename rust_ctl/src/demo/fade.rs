@@ -1,10 +1,9 @@
-
-use crate::proto::{Msg, ChanVal, Val};
 use crate::msg_handler::MsgHandler;
-use std::time;
-use std::thread::sleep;
+use crate::proto::{ChanVal, Msg, Val};
 use std::process;
 use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time;
 
 struct DemoChan {
     start: f64,
@@ -21,7 +20,9 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
         Msg {
             seq_num: 0,
             timestamp: time::SystemTime::now(),
-            vals: srv.chans().into_iter()
+            vals: srv
+                .chans()
+                .into_iter()
                 .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
                 .collect(),
         }
@@ -47,7 +48,7 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
 
             for (i, d) in dchans.iter_mut().enumerate() {
                 // msg.vals[i].1 = Val::F32( ( d.start + (progress.powf(d.exp) * (d.end - d.start)) ) as f32 )
-                msg.vals[i].1 = Val::F32( ( d.start + (progress * (d.end - d.start)) ) as f32 )
+                msg.vals[i].1 = Val::F32((d.start + (progress * (d.end - d.start))) as f32)
             }
 
             {
@@ -60,7 +61,7 @@ pub fn run<D: MsgHandler + ?Sized>(srv: Arc<Mutex<D>>) -> Result<(), String> {
         }
 
         for (i, d) in dchans.iter_mut().enumerate() {
-            msg.vals[i].1 = Val::F32( ( d.start + (progress * (d.end - d.start)) ) as f32 )
+            msg.vals[i].1 = Val::F32((d.start + (progress * (d.end - d.start))) as f32)
         }
 
         {

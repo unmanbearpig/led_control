@@ -1,4 +1,4 @@
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Coord {
@@ -9,10 +9,7 @@ pub struct Coord {
 
 impl Coord {
     pub fn dist_to(&self, other: &Coord) -> f32 {
-        (
-            (self.x - other.x).powi(2) +
-                (self.y - other.y).powi(2) +
-                (self.z - other.z).powi(2)
-        ).sqrt()
+        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2) + (self.z - other.z).powi(2))
+            .sqrt()
     }
 }

@@ -1,7 +1,7 @@
-use crate::dev::{self, Dev};
 use crate::chan::ChanConfig;
-use crate::proto::{ChanId, ChanVal, Val, Msg};
-use crate::msg_handler::{MsgHandler, ChanDescription};
+use crate::dev::{self, Dev};
+use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::proto::{ChanId, ChanVal, Msg, Val};
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
 
@@ -48,7 +48,8 @@ impl<'a> Srv {
     }
 
     pub fn add_dev<T>(&mut self, dev: Arc<Mutex<dyn dev::Dev>>, chancfg: Option<T>) -> DevId
-    where T: ExactSizeIterator<Item = ChanConfig>
+    where
+        T: ExactSizeIterator<Item = ChanConfig>,
     {
         let dev_id = DevId(self.devs.len() as u16);
         let num_chans = {
@@ -59,8 +60,11 @@ impl<'a> Srv {
         match chancfg {
             Some(chancfgs) => {
                 if chancfgs.len() as u16 != num_chans {
-                    panic!("invalid number of chans specified in chancfg: {} instead of {}",
-                           chancfgs.len(), num_chans);
+                    panic!(
+                        "invalid number of chans specified in chancfg: {} instead of {}",
+                        chancfgs.len(),
+                        num_chans
+                    );
                 }
 
                 for chan in chancfgs {
@@ -71,19 +75,16 @@ impl<'a> Srv {
                 }
             }
             None => {
-
                 for i in 0..num_chans {
                     let cc = ChanConfig {
                         index: i,
                         ..Default::default()
                     };
 
-                    self.chans.push(
-                        SrvChan {
-                            devid: dev_id,
-                            cfg: cc,
-                        }
-                    );
+                    self.chans.push(SrvChan {
+                        devid: dev_id,
+                        cfg: cc,
+                    });
                 }
             }
         };
@@ -105,7 +106,7 @@ impl MsgHandler for Srv {
             match val {
                 Val::F32(fval) => {
                     self.set_f32(*cid, *fval)?;
-                },
+                }
                 _ => unimplemented!(),
             }
         }
@@ -114,26 +115,35 @@ impl MsgHandler for Srv {
     }
 
     fn chans(&self) -> Vec<(ChanId, String)> {
-        self.chans.as_slice()
-            .iter().enumerate()
+        self.chans
+            .as_slice()
+            .iter()
+            .enumerate()
             .map(|(chan_id, SrvChan { devid, .. })| {
                 let dev = self.get_dev(&devid);
                 let dev = dev.lock().unwrap();
-                (ChanId(chan_id as u16),
-                 format!("Chan {} {} \"{}\"", chan_id, devid, dev))
-            }).collect()
+                (
+                    ChanId(chan_id as u16),
+                    format!("Chan {} {} \"{}\"", chan_id, devid, dev),
+                )
+            })
+            .collect()
     }
 
     fn chan_descriptions(&self) -> Vec<ChanDescription> {
-        self.chans.iter().enumerate().map(|(cid, chan)| {
-            ChanDescription {
+        self.chans
+            .iter()
+            .enumerate()
+            .map(|(cid, chan)| ChanDescription {
                 chan_id: cid as u16,
-                name: format!("[cid: {}, dev {}, chan {}]",
-                              cid, chan.devid.0, chan.cfg.index),
+                name: format!(
+                    "[cid: {}, dev {}, chan {}]",
+                    cid, chan.devid.0, chan.cfg.index
+                ),
                 tags: chan.cfg.tags.clone(),
                 cuboid: chan.cfg.cuboid,
-            }
-        }).collect()
+            })
+            .collect()
     }
 }
 
@@ -150,7 +160,7 @@ impl Display for Srv {
 }
 
 fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
-    (chan_cfg.min +  (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
+    (chan_cfg.min + (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
 }
 
 impl Dev for Srv {
@@ -180,12 +190,10 @@ impl Dev for Srv {
     fn sync(&mut self) -> Result<(), String> {
         // minimize the number of syncs to devices by skipping
         // the ones without dirty bit set,
-        let devs = self.devs.iter_mut()
-            .filter(|d| d.dirty)
-            .map(|d| {
-                d.dirty = false;
-                &mut d.dev
-            });
+        let devs = self.devs.iter_mut().filter(|d| d.dirty).map(|d| {
+            d.dirty = false;
+            &mut d.dev
+        });
 
         for dev in devs {
             let mut dev = dev.lock().unwrap();
