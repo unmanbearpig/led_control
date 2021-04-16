@@ -1,5 +1,5 @@
 use crate::chan::ChanConfig;
-use crate::dev::{self, Dev};
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{ChanDescription, MsgHandler};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
 use std::fmt::{self, Display, Formatter};
@@ -47,7 +47,7 @@ impl<'a> Srv {
         }
     }
 
-    pub fn add_dev<T>(&mut self, dev: Arc<Mutex<dyn dev::Dev>>, chancfg: Option<T>) -> DevId
+    pub fn add_dev<T>(&mut self, dev: Arc<Mutex<dyn Dev>>, chancfg: Option<T>) -> DevId
     where
         T: ExactSizeIterator<Item = ChanConfig>,
     {
@@ -94,7 +94,7 @@ impl<'a> Srv {
         dev_id
     }
 
-    fn get_dev(&self, id: &DevId) -> Arc<Mutex<dyn dev::Dev>> {
+    fn get_dev(&self, id: &DevId) -> Arc<Mutex<dyn Dev>> {
         let DevId(idx) = id;
         self.devs[*idx as usize].dev.clone()
     }
@@ -163,11 +163,13 @@ fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
     (chan_cfg.min + (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
 }
 
-impl Dev for Srv {
+impl DevNumChans for Srv {
     fn num_chans(&self) -> u16 {
         self.chans.len() as u16
     }
+}
 
+impl DevWrite for Srv {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         let chan: &mut SrvChan = &mut self.chans[chan as usize];
         let val = adjust_chan_val(&chan.cfg, val);
@@ -177,14 +179,6 @@ impl Dev for Srv {
         dev.set_f32(chan.cfg.index, val)?;
 
         Ok(())
-    }
-
-    fn get_f32(&self, chan: u16) -> Result<f32, String> {
-        let chan: &SrvChan = &self.chans[chan as usize];
-        let dev = &self.devs[chan.devid.0 as usize];
-
-        let dev = dev.dev.lock().unwrap();
-        dev.get_f32(chan.cfg.index)
     }
 
     fn sync(&mut self) -> Result<(), String> {
@@ -200,5 +194,15 @@ impl Dev for Srv {
             dev.sync()?;
         }
         Ok(())
+    }
+}
+
+impl DevRead for Srv {
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        let chan: &SrvChan = &self.chans[chan as usize];
+        let dev = &self.devs[chan.devid.0 as usize];
+
+        let dev = dev.dev.lock().unwrap();
+        dev.get_f32(chan.cfg.index)
     }
 }

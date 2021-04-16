@@ -1,4 +1,4 @@
-use crate::dev::Dev;
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::old_proto;
 
 use std::fmt;
@@ -18,11 +18,23 @@ impl fmt::Display for UdpV1Dev {
     }
 }
 
-impl Dev for UdpV1Dev {
+impl DevNumChans for UdpV1Dev {
     fn num_chans(&self) -> u16 {
         4
     }
+}
 
+impl DevRead for UdpV1Dev {
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        if chan > 3 {
+            return Err(format!("chan {} out of bounds (0-3)", chan));
+        }
+
+        Ok(self.msg.values[chan as usize])
+    }
+}
+
+impl DevWrite for UdpV1Dev {
     /// sets the internal state of the LED to the float value
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         if chan >= self.num_chans() {
@@ -37,14 +49,6 @@ impl Dev for UdpV1Dev {
         Ok(())
     }
 
-    fn get_f32(&self, chan: u16) -> Result<f32, String> {
-        if chan > 3 {
-            return Err(format!("chan {} out of bounds (0-3)", chan));
-        }
-
-        Ok(self.msg.values[chan as usize])
-    }
-
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
         // eprintln!("UDPv1: sending msg {:?}...", self.msg);
@@ -53,6 +57,8 @@ impl Dev for UdpV1Dev {
         Ok(())
     }
 }
+
+impl Dev for UdpV1Dev {}
 
 const DEFAULT_PORT: u16 = 8932;
 

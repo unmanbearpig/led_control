@@ -1,4 +1,4 @@
-use crate::dev::Dev;
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::proto::{self, ChanId, ChanVal, Msg, Val};
 
 use std::fmt;
@@ -19,25 +19,13 @@ impl fmt::Display for UdpV2Dev {
     }
 }
 
-impl Dev for UdpV2Dev {
+impl DevNumChans for UdpV2Dev {
     fn num_chans(&self) -> u16 {
         self.msg.vals.len() as u16
     }
+}
 
-    /// sets the internal state of the LED to the float value
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        if chan >= self.num_chans() {
-            return Err(format!(
-                "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
-                chan
-            ));
-        }
-
-        self.msg.vals[chan as usize] = ChanVal(ChanId(chan), Val::F32(val));
-
-        Ok(())
-    }
-
+impl DevRead for UdpV2Dev {
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
         if chan as usize >= self.msg.vals.len() {
             return Err(format!(
@@ -52,6 +40,22 @@ impl Dev for UdpV2Dev {
             Val::U16(_) => Err(format!("no f32 value for chan {}", chan)),
         }
     }
+}
+
+impl DevWrite for UdpV2Dev {
+    /// sets the internal state of the LED to the float value
+    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        if chan >= self.num_chans() {
+            return Err(format!(
+                "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
+                chan
+            ));
+        }
+
+        self.msg.vals[chan as usize] = ChanVal(ChanId(chan), Val::F32(val));
+
+        Ok(())
+    }
 
     /// sends the set LED values to the device
     fn sync(&mut self) -> Result<(), String> {
@@ -63,6 +67,8 @@ impl Dev for UdpV2Dev {
         Ok(())
     }
 }
+
+impl Dev for UdpV2Dev {}
 
 const DEFAULT_PORT: u16 = 8932;
 

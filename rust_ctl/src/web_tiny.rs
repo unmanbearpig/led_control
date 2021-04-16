@@ -233,7 +233,7 @@ impl WebState {
 
         let first_segment = path_segments.next();
         let resp = match (req.method(), first_segment) {
-            (tiny_http::Method::Get,  Some("chans")) => self.chans(),
+            (tiny_http::Method::Get, Some("chans")) => self.chans(),
             (tiny_http::Method::Post, Some("on")) => self.on(),
             (tiny_http::Method::Post, Some("off")) => self.off(),
             (tiny_http::Method::Post, Some("disco")) => self.disco(),

@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};
 
-use crate::dev::Dev;
+use crate::dev::{DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{ChanDescription, MsgHandler};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
 use crate::runner::Runner;
@@ -77,24 +77,18 @@ impl fmt::Display for MovingAverage {
     }
 }
 
-impl Dev for MovingAverage {
+impl DevNumChans for MovingAverage {
     fn num_chans(&self) -> u16 {
         let dev = self.output.lock().unwrap();
         // dev.num_chans()
         dev.chans().len() as u16
     }
-
+}
+impl DevWrite for MovingAverage {
     fn set_f32(&mut self, _chan: u16, _val: f32) -> Result<(), String> {
         // let mut dev = self.output.write().unwrap();
         // dev.set_f32(chan, val)
         Ok(())
-    }
-
-    fn get_f32(&self, _chan: u16) -> Result<f32, String> {
-        // let dev = self.output.read().unwrap();
-        // TODO get from msg?
-        // dev.get_f32(chan)
-        unimplemented!()
     }
 
     fn sync(&mut self) -> Result<(), String> {
@@ -103,6 +97,14 @@ impl Dev for MovingAverage {
         // dev.handle_msg(&self.current_msg)
         // dev.sync()
         // unimplemented!()
+    }
+}
+impl DevRead for MovingAverage {
+    fn get_f32(&self, _chan: u16) -> Result<f32, String> {
+        // let dev = self.output.read().unwrap();
+        // TODO get from msg?
+        // dev.get_f32(chan)
+        unimplemented!()
     }
 }
 

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::dev::Dev;
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 
 #[derive(Debug)]
 pub struct TestDev {
@@ -19,16 +19,13 @@ impl fmt::Display for TestDev {
     }
 }
 
-impl Dev for TestDev {
+impl DevNumChans for TestDev {
     fn num_chans(&self) -> u16 {
         self.vals.len() as u16
     }
+}
 
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        self.vals[chan as usize] = val;
-        Ok(())
-    }
-
+impl DevRead for TestDev {
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
         if chan as usize >= self.vals.len() {
             return Err(format!(
@@ -40,6 +37,13 @@ impl Dev for TestDev {
 
         Ok(self.vals[chan as usize])
     }
+}
+
+impl DevWrite for TestDev {
+    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        self.vals[chan as usize] = val;
+        Ok(())
+    }
 
     fn sync(&mut self) -> Result<(), String> {
         print!("test_dev sync:  ");
@@ -50,3 +54,5 @@ impl Dev for TestDev {
         Ok(())
     }
 }
+
+impl Dev for TestDev {}

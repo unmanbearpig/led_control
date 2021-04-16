@@ -1,4 +1,4 @@
-use crate::dev::{self, Dev};
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use std::fmt;
 use std::time::Duration;
 
@@ -16,11 +16,23 @@ impl fmt::Display for UsbDev {
     }
 }
 
-impl dev::Dev for UsbDev {
+impl DevNumChans for UsbDev {
     fn num_chans(&self) -> u16 {
         3
     }
+}
 
+impl DevRead for UsbDev {
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        if chan > 2 {
+            return Err(format!("chan {} out of bounds (0-2)", chan));
+        }
+
+        Ok(self.f32_vals[chan as usize])
+    }
+}
+
+impl DevWrite for UsbDev {
     /// sets the internal state of the LED to the float value
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         if val > 1.0 {
@@ -42,14 +54,6 @@ impl dev::Dev for UsbDev {
 
         let raw_val = (val * self.max_int() as f32).round() as u16;
         self.set_raw(chan, raw_val)
-    }
-
-    fn get_f32(&self, chan: u16) -> Result<f32, String> {
-        if chan > 2 {
-            return Err(format!("chan {} out of bounds (0-2)", chan));
-        }
-
-        Ok(self.f32_vals[chan as usize])
     }
 
     /// sends the set LED values to the device
@@ -74,6 +78,8 @@ impl dev::Dev for UsbDev {
         }
     }
 }
+
+impl Dev for UsbDev {}
 
 impl UsbDev {
     pub fn new(
