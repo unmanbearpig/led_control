@@ -6,7 +6,7 @@
       LED Control
     </title>
 
-    <link rel="stylesheet" href="assets/main.css">
+    <link rel="stylesheet" href="/assets/main.css">
   </head>
 
   <body>
@@ -52,6 +52,14 @@
           </button>
         </form>
       </div>
+    </div>
+
+    <div>
+      {% for chan in chans %}
+      <div>
+        {{ chan|safe }}
+      </div>
+      {% endfor %}
     </div>
   </body>
 </html>

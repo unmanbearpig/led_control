@@ -9,7 +9,7 @@ use std::io::Cursor;
 use crate::action::Action;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
-use crate::msg_handler::MsgHandler;
+use crate::msg_handler::{ChanDescription, MsgHandler};
 use askama::Template;
 
 use crate::demo;
@@ -53,9 +53,22 @@ impl<'a> FlashMsg<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "chan.html", escape = "none")]
+struct ChanTemplate {
+    chan: ChanDescription,
+}
+
+impl ChanTemplate {
+    fn path(&self) -> String {
+        format!("/chans/{}", self.chan.chan_id)
+    }
+}
+
+#[derive(Template)]
 #[template(path = "home.html")]
 struct HomeTemplate<'a> {
     msg: Option<FlashMsg<'a>>,
+    chans: Vec<ChanTemplate>,
 }
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:7373";
@@ -112,6 +125,7 @@ impl WebState {
 
     fn fade_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
+        let chans = self.chans();
         let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
@@ -119,26 +133,35 @@ impl WebState {
         let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
-        let flash_msg =
-            FlashMsg::Ok(ok_msg)
-            .and_result(&result);
+        if let Err(e) = &result {
+            eprintln!("fade_to: action.perform error: {:?}", e);
+        }
+
+        let flash_msg = FlashMsg::Ok(ok_msg).and_result(&result);
 
         self.home_with(HomeTemplate {
             msg: Some(flash_msg),
+            chans,
         })
     }
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.fade_to(1.0, "Is everything on?<br> <small>Kick Vanya if it's not!</small>")
+        self.fade_to(
+            1.0,
+            "Is everything on?<br> <small>Kick Vanya if it's not!</small>",
+        )
     }
 
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.fade_to(0.0, "Is everything off? <br> <small>Kick Vanya if it's not!</small>")
+        self.fade_to(
+            0.0,
+            "Is everything off? <br> <small>Kick Vanya if it's not!</small>",
+        )
     }
 
     fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-
+        let chans = self.chans();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let join_handle = {
@@ -155,11 +178,17 @@ impl WebState {
 
         self.home_with(HomeTemplate {
             msg: Some(FlashMsg::Ok("Wooooo111!!!")),
+            chans,
         })
     }
 
-    fn chans(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        unimplemented!()
+    fn chans(&mut self) -> Vec<ChanTemplate> {
+        let output = self.output.lock().unwrap();
+        output
+            .chan_descriptions()
+            .into_iter()
+            .map(|chan| ChanTemplate { chan })
+            .collect()
     }
 
     fn home_with(&mut self, template: HomeTemplate) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -172,7 +201,10 @@ impl WebState {
     }
 
     fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let template = HomeTemplate { msg: None };
+        let template = HomeTemplate {
+            msg: None,
+            chans: self.chans(),
+        };
 
         self.home_with(template)
     }
@@ -208,6 +240,53 @@ impl WebState {
         tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(), cur, Some(len), None)
     }
 
+    fn handle_chans(
+        &mut self,
+        url: Url,
+        req: &tiny_http::Request,
+    ) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        match req.method() {
+            tiny_http::Method::Post => {}
+            m => return self.err404(m, url.to_string().as_ref()),
+        }
+
+        let mut path_segments = url.path_segments().unwrap();
+        path_segments.next();
+        // get chan_id
+        let chan_id_str = match path_segments.next() {
+            Some(chan_id_str) => chan_id_str,
+            None => return self.err404(req.method(), url.to_string().as_ref()),
+        };
+
+        let val = match path_segments.next() {
+            Some("on") => 1.0,
+            Some("off") => 0.0,
+            Some(_) => return self.err404(req.method(), url.to_string().as_ref()),
+            None => return self.err404(req.method(), url.to_string().as_ref()),
+        };
+        // get action
+
+        self.stop_task();
+        let chans = self.chans();
+
+        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
+            chan_id_str.to_string(),
+            val,
+        )])));
+
+        let srv = self.smoother.clone();
+        let result = action.perform(srv, &self.output_config);
+
+        let ok_msg = format!("chan {} set to {}", chan_id_str, val);
+
+        let flash_msg = FlashMsg::Ok(ok_msg.as_ref()).and_result(&result);
+
+        self.home_with(HomeTemplate {
+            msg: Some(flash_msg),
+            chans,
+        })
+    }
+
     /// All static files should start with /assets/
     fn handle_request(&mut self, req: tiny_http::Request) {
         let url = req.url();
@@ -223,7 +302,7 @@ impl WebState {
 
         let first_segment = path_segments.next();
         let resp = match (req.method(), first_segment) {
-            (tiny_http::Method::Get, Some("chans")) => self.chans(),
+            (_, Some("chans")) => self.handle_chans(url, &req),
             (tiny_http::Method::Post, Some("on")) => self.on(),
             (tiny_http::Method::Post, Some("off")) => self.off(),
             (tiny_http::Method::Post, Some("disco")) => self.disco(),

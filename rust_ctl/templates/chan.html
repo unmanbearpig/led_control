@@ -1,0 +1,19 @@
+chan
+{{ chan.name }}
+
+tags:
+{% for tag in chan.tags %}
+{{ tag }}
+{% endfor %}
+
+<form action="{{ self.path() }}/on" method="POST">
+  <button>
+    ON!
+  </button>
+</form>
+
+<form action="{{ self.path() }}/off" method="POST">
+  <button>
+    OFF!
+  </button>
+</form>
