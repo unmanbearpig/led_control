@@ -110,40 +110,30 @@ impl WebState {
         self.base_url.join(url)
     }
 
-    fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn fade_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
         let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
-            1.0,
+            val,
             vec![],
         )));
         let srv = self.smoother.clone();
         let result = action.perform(srv, &self.output_config);
 
         let flash_msg =
-            FlashMsg::Ok("Is everything on?<br> <small>Kick Vanya if it's not!</small>")
-                .and_result(&result);
+            FlashMsg::Ok(ok_msg)
+            .and_result(&result);
 
         self.home_with(HomeTemplate {
             msg: Some(flash_msg),
         })
     }
 
+    fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.fade_to(1.0, "Is everything on?<br> <small>Kick Vanya if it's not!</small>")
+    }
+
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.stop_task();
-        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
-            0.0,
-            vec![],
-        )));
-        let srv = self.smoother.clone();
-        let result = action.perform(srv, &self.output_config);
-
-        let flash_msg =
-            FlashMsg::Ok("Is everything off? <br> <small>Kick Vanya if it's not!</small>")
-                .and_result(&result);
-
-        self.home_with(HomeTemplate {
-            msg: Some(flash_msg),
-        })
+        self.fade_to(0.0, "Is everything off? <br> <small>Kick Vanya if it's not!</small>")
     }
 
     fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
