@@ -134,14 +134,16 @@ impl MsgHandler for Srv {
         self.chans
             .iter()
             .enumerate()
-            .map(|(cid, chan)| ChanDescription {
-                chan_id: cid as u16,
-                name: format!(
-                    "[cid: {}, dev {}, chan {}]",
-                    cid, chan.devid.0, chan.cfg.index
-                ),
-                tags: chan.cfg.tags.clone(),
-                cuboid: chan.cfg.cuboid,
+            .map(|(cid, chan)| {
+                ChanDescription::new(
+                    cid as u16,
+                    format!(
+                        "[cid: {}, dev {}, chan {}]",
+                        cid, chan.devid.0, chan.cfg.index
+                    ),
+                    chan.cfg.tags.clone(), // actually need clone?
+                    chan.cfg.cuboid,
+                )
             })
             .collect()
     }

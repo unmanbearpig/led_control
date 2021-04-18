@@ -92,6 +92,17 @@ struct Stats {
 }
 
 impl Stats {
+    fn new(chan_descriptions: Vec<ChanDescription>) -> Self {
+        let str_descriptions = chan_descriptions
+            .iter()
+            .map(|cd| cd.human_description.clone())
+            .collect();
+        Stats {
+            chan_descriptions: str_descriptions,
+            ..Default::default()
+        }
+    }
+
     fn merge(into: &mut Vec<ValStats>, from: &[ValStats]) {
         into.resize_with(into.len().max(from.len()), Default::default);
 
@@ -135,7 +146,16 @@ impl Stats {
                 None => ("".to_string(), "None".to_string()),
             };
 
-            val_str += format!("{}  {}\n{}\n", overall_stat, last_val_str, bar_str).as_str();
+            let chan_name = self
+                .chan_descriptions
+                .get(i)
+                .map(|s| s.as_ref())
+                .unwrap_or("unnamed channel");
+            val_str += format!(
+                "\n{}\n{}  {}\n{}\n",
+                chan_name, overall_stat, last_val_str, bar_str
+            )
+            .as_str();
         }
 
         self.f32_vals_last.resize_with(0, Default::default);
@@ -162,9 +182,13 @@ pub struct DevStats<D: MsgHandler> {
 
 impl<D: 'static + MsgHandler + Sync> DevStats<D> {
     pub fn new(dev: Arc<Mutex<D>>) -> DevStats<D> {
+        let chan_descriptions = {
+            let dev = dev.lock().unwrap();
+            dev.chan_descriptions()
+        };
         DevStats {
             dev,
-            stats: Stats::default(),
+            stats: Stats::new(chan_descriptions),
             last_msg_seq_num: 0,
         }
     }
@@ -207,7 +231,7 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
         }
 
         self.stats.f32_vals_last.resize_with(
-            self.stats.f32_vals_last.len().max(msg.vals.len()),
+            self.chan_descriptions().len().max(msg.vals.len()),
             Default::default,
         );
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {

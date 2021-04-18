@@ -9,21 +9,28 @@ pub struct ChanDescription {
     pub name: String,
     pub tags: Vec<String>,
     pub cuboid: Option<Cuboid>,
+    pub human_description: String,
+}
+
+fn tags_to_str(tags: &[String]) -> String {
+    let mut out = String::new();
+    for t in tags.iter().rev() {
+        out += format!("{} ", t).as_ref();
+    }
+    out
 }
 
 impl ChanDescription {
-    #[allow(dead_code)]
-    pub fn tags_str(&self) -> String {
-        let mut out = String::new();
-        for t in self.tags.iter() {
-            out += format!("{} ", t).as_ref();
+    pub fn new(chan_id: u16, name: String, tags: Vec<String>, cuboid: Option<Cuboid>) -> Self {
+        let tags_str = tags_to_str(&tags);
+        let human_description = format!("{} [ {}]: {}", chan_id, tags_str, name);
+        ChanDescription {
+            chan_id,
+            name,
+            tags,
+            cuboid,
+            human_description,
         }
-        out
-    }
-
-    #[allow(dead_code)]
-    pub fn humanize(&self) -> String {
-        self.tags_str()
     }
 }
 
