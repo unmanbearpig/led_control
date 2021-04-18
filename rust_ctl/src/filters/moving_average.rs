@@ -223,7 +223,6 @@ impl MsgHandler for MovingAverage {
 }
 
 impl MovingAverage {
-    #[allow(dead_code)]
     pub fn new(
         output: Arc<Mutex<dyn MsgHandler>>,
         frame_period: Duration,
