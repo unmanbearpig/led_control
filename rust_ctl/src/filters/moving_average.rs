@@ -176,44 +176,6 @@ impl Runner for MovingAverage {
                 let mut mov_avg = mov_avg.lock().unwrap();
                 mov_avg.advance_frame();
 
-                // should I use target_msg's timestamp instead?
-                // let now = Instant::now();
-                // let progress = (now.saturating_duration_since(mov_avg.last_msg_target_time))
-                //     .div_duration_f32(mov_avg.transition_period)
-                //     .min(1.0).max(0.0);
-                // println!("progress = {}", progress);
-
-                // TODO: order is not guaranteed, have to actually find the value with correct ChanId
-                //   I'm just being lazy here
-                // let vals = mov_avg.target_msg.vals.clone();
-                // let mut anything_changed = false;
-                // for ChanVal(ChanId(cid), target_val) in vals.iter() {
-                //     match target_val {
-                //         Val::F32(target_val) => {
-                //             let prev_val = mov_avg.current_msg.vals[*cid as usize].1
-                //                 .get_f32().unwrap();
-
-                //             // let new_val = (prev_val * (1.0 - progress) + target_val * progress);
-                //             let new_val = mov_avg.chan_avg()
-                //             if new_val != prev_val {
-                //                 println!("{} -> {}", prev_val, new_val);
-                //                 anything_changed = true;
-                //             }
-
-                //             let new_val =
-                //                 ChanVal(ChanId(*cid),
-                //                         Val::F32(new_val));
-
-                //             mov_avg.current_msg.vals[*cid as usize] = new_val;
-                //         }
-                //         Val::U16(_) => {
-                //             unimplemented!()
-                //         }
-                //     }
-                // }
-
-                // if anything_changed {
-
                 let avg_frame = mov_avg.avg_frame();
 
                 if !mov_avg.has_reached_target() {
@@ -227,7 +189,6 @@ impl Runner for MovingAverage {
                         }
                     }
                 }
-                // }
             }
 
             match stop.recv_timeout(frame_period) {
@@ -242,7 +203,6 @@ impl Runner for MovingAverage {
                     }
                 },
             }
-            // thread::sleep(frame_period);
         }
     }
 }
