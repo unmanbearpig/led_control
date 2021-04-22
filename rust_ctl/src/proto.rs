@@ -103,6 +103,14 @@ pub struct Msg {
 }
 
 impl Msg {
+    pub fn new(seq_num: u16, vals: Vec<ChanVal>) -> Self {
+        Msg {
+            seq_num,
+            timestamp: SystemTime::now(),
+            vals,
+        }
+    }
+
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 

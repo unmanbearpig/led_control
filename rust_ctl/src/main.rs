@@ -25,6 +25,7 @@ mod udpv2_dev;
 mod usb;
 mod wacom;
 mod web_tiny;
+mod actions;
 
 #[macro_use]
 extern crate rust_embed;

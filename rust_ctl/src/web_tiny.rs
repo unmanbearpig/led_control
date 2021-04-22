@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use std::io::Cursor;
 
-use crate::action::Action;
+use crate::actions;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
 use crate::msg_handler::{ChanDescription, MsgHandler};
@@ -134,12 +134,14 @@ impl WebState {
     fn fade_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
         let chans = self.chans();
-        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+        let srv = self.smoother.clone();
+        let result = actions::set::run(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
-        )));
-        let srv = self.smoother.clone();
-        let result = action.perform(srv, &self.output_config);
+        )), srv);
+        // let action = Action::Set();
+        // let srv = self.smoother.clone();
+        // let result = action.perform(srv, &self.output_config);
 
         if let Err(e) = &result {
             eprintln!("fade_to: action.perform error: {:?}", e);
@@ -277,13 +279,16 @@ impl WebState {
         self.stop_task();
         let chans = self.chans();
 
-        let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
-            chan_id_str.to_string(),
-            val,
-        )])));
+        // let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
+        //     chan_id_str.to_string(),
+        //     val,
+        // )])));
 
         let srv = self.smoother.clone();
-        let result = action.perform(srv, &self.output_config);
+        let result = actions::set::run(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
+            chan_id_str.to_string(),
+            val,
+        )])), srv);
 
         let ok_msg = format!("chan {} set to {}", chan_id_str, val);
 

@@ -1,23 +1,15 @@
 use std::net::IpAddr;
 
+use crate::actions;
 use crate::chan_spec::ChanSpec;
 use crate::config;
 use crate::coord::Coord;
 use crate::demo;
-use crate::msg_handler::{ChanDescription, MsgHandler};
-use crate::proto;
+use crate::msg_handler::{MsgHandler};
 use crate::udp_srv;
 use crate::web_tiny;
 use serde_derive::{Deserialize, Serialize};
-// use crate::filters::moving_average::MovingAverage;
-// use crate::task::{TaskMsg, Task};
-// use crate::runner::Runner;
 use std::sync::{Arc, Mutex};
-// use std::sync::mpsc;
-// use std::thread;
-use std::time;
-
-// use crate::srv::Srv;
 
 #[cfg(test)]
 mod chan_spec_parse_test {
@@ -140,30 +132,7 @@ impl Action {
                 )
             }
             Action::Set(spec) => {
-                let mut srv = srv.lock().map_err(|e| format!("{:?}", e))?;
-
-                match spec {
-                    ChanSpec::F32(spec) => {
-                        // need some ChanSpec(Generic?) method
-                        // that will give us the values for each specified chan
-                        let chan_descriptions: Vec<ChanDescription> = srv.chan_descriptions();
-                        let chanvals = spec.resolve_for_chans(chan_descriptions.as_slice())?;
-
-                        let chanvals = chanvals
-                            .into_iter()
-                            .map(|(cid, v)| proto::ChanVal(proto::ChanId(cid), proto::Val::F32(v)))
-                            .collect();
-
-                        let msg = proto::Msg {
-                            seq_num: 0,
-                            timestamp: time::SystemTime::now(),
-                            vals: chanvals,
-                        };
-
-                        srv.handle_msg(&msg)
-                    }
-                    ChanSpec::U16(_) => unimplemented!(),
-                }
+                actions::set::run(spec, srv)
             }
             Action::DemoTestSeq => demo::test_seq::run(srv),
             Action::DemoGlitch => demo::glitch::run(srv),
