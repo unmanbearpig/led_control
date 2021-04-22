@@ -1,19 +1,22 @@
-chan
-{{ chan.name }}
+<div class="flex chan space-between">
 
-tags:
-{% for tag in chan.tags %}
-{{ tag }}
-{% endfor %}
+  <div>
+    {{ chan.chan_id }}
+  </div>
 
-<form action="{{ self.path() }}/on" method="POST">
-  <button>
-    ON!
-  </button>
-</form>
+  {{ self.short_description() }}
 
-<form action="{{ self.path() }}/off" method="POST">
-  <button>
-    OFF!
-  </button>
-</form>
+  <div class="flex space-between">
+    <form action="{{ self.path() }}/on" method="POST">
+      <button>
+        ON!
+      </button>
+    </form>
+
+    <form action="{{ self.path() }}/off" method="POST">
+      <button>
+        OFF!
+      </button>
+    </form>
+  </div>
+</div>

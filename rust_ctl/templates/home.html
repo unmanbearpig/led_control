@@ -42,24 +42,26 @@
           </button>
         </form>
       </div>
-
-      <br/>
-
-      <div>
-        <form action="/disco" method="POST">
-          <button class="btn-disco">
-            Disco!
-          </button>
-        </form>
-      </div>
     </div>
 
-    <div>
+    <br/>
+
+    <div class="smaller-font">
       {% for chan in chans %}
       <div>
         {{ chan|safe }}
       </div>
       {% endfor %}
+    </div>
+
+    <br/>
+
+    <div>
+      <form action="/disco" method="POST">
+        <button class="btn-disco">
+          Disco!
+        </button>
+      </form>
     </div>
   </body>
 </html>

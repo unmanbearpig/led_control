@@ -62,6 +62,14 @@ impl ChanTemplate {
     fn path(&self) -> String {
         format!("/chans/{}", self.chan.chan_id)
     }
+
+    fn short_description(&self) -> String {
+        let mut out = String::new();
+        for tag in self.chan.tags.iter().rev() {
+            out += format!("{} ", tag).as_ref();
+        }
+        out
+    }
 }
 
 #[derive(Template)]
