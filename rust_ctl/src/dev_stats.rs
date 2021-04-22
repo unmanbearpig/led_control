@@ -1,6 +1,8 @@
 use crate::msg_handler::{ChanDescription, MsgHandler};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
 use crate::term_bar;
+use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
+use crate::frame::Frame;
 
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
@@ -79,7 +81,7 @@ impl fmt::Display for ValStats {
 }
 
 #[derive(Default, Debug)]
-struct Stats {
+struct MsgStats {
     chan_descriptions: Vec<String>,
     last_update: Option<Instant>,
     msg_cnt: u64,
@@ -91,13 +93,13 @@ struct Stats {
     msg_miss: u64,
 }
 
-impl Stats {
+impl MsgStats {
     fn new(chan_descriptions: Vec<ChanDescription>) -> Self {
         let str_descriptions = chan_descriptions
             .iter()
             .map(|cd| cd.human_description.clone())
             .collect();
-        Stats {
+        MsgStats {
             chan_descriptions: str_descriptions,
             ..Default::default()
         }
@@ -154,8 +156,7 @@ impl Stats {
             val_str += format!(
                 "\n{}\n{}  {}\n{}\n",
                 chan_name, overall_stat, last_val_str, bar_str
-            )
-            .as_str();
+            ).as_str();
         }
 
         self.f32_vals_last.resize_with(0, Default::default);
@@ -173,43 +174,88 @@ impl Stats {
 }
 
 #[derive(Debug)]
-pub struct DevStats<D: MsgHandler> {
+pub struct DevWriteStats {
+    incomplete_frame: Frame<f32>,
+    stats: Vec<ValStats>,
+}
+
+impl DevWriteStats {
+    fn new() -> Self {
+        DevWriteStats {
+            incomplete_frame: Frame::new(1),
+            stats: Vec::new(),
+        }
+    }
+
+    fn frame_complete(&mut self) {
+        if self.stats.len() < self.incomplete_frame.vals.len() {
+            self.stats.resize_with(self.incomplete_frame.vals.len(),
+                                   Default::default);
+        }
+
+        for (i, val) in self.incomplete_frame.vals.iter().enumerate() {
+            if let Some(val) = val {
+                self.stats[i].add(*val as f64);
+            }
+        }
+
+        self.stats.clear();
+    }
+
+    fn print(&mut self) {
+        for (i, chan) in self.stats.iter().enumerate() {
+            println!("Chan {}: {}", i, chan);
+        }
+    }
+
+    fn has_any_data(&self) -> bool {
+        for chan in self.stats.iter() {
+            if chan.cnt > 0 {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+#[derive(Debug)]
+pub struct DevStats<D> {
+    name: String,
     dev: Arc<Mutex<D>>,
     // add chan tags or something
-    stats: Stats,
+    msg_stats: MsgStats,
+    dev_write_stats: DevWriteStats,
     last_msg_seq_num: u16,
 }
 
 impl<D: 'static + MsgHandler + Sync> DevStats<D> {
     pub fn new(dev: Arc<Mutex<D>>) -> DevStats<D> {
-        let chan_descriptions = {
+        let (chan_descriptions, name) = {
             let dev = dev.lock().unwrap();
-            dev.chan_descriptions()
+            let chan_descriptions = dev.chan_descriptions();
+            let name = format!("Stats for {}", dev);
+            (chan_descriptions, name)
         };
+
         DevStats {
+            name,
             dev,
-            stats: Stats::new(chan_descriptions),
+            msg_stats: MsgStats::new(chan_descriptions),
+            dev_write_stats: DevWriteStats::new(),
             last_msg_seq_num: 0,
         }
     }
 }
 
-impl<D: MsgHandler> fmt::Display for DevStats<D> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let dev = self.dev.lock().unwrap();
-        write!(f, "Stats for {}", dev)
-    }
-}
-
 impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
-        self.stats.msg_cnt += 1;
+        self.msg_stats.msg_cnt += 1;
 
         if msg.seq_num != self.last_msg_seq_num.overflowing_add(1).0 {
             if msg.seq_num <= self.last_msg_seq_num {
-                self.stats.msg_dups += 1;
+                self.msg_stats.msg_dups += 1;
             } else {
-                self.stats.msg_miss += 1;
+                self.msg_stats.msg_miss += 1;
             }
         }
 
@@ -218,7 +264,7 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
         let latency = msg.timestamp.elapsed();
         match latency {
             Ok(latency) => {
-                self.stats
+                self.msg_stats
                     .msg_recv_latency_ms
                     .add(latency.as_secs_f64() / 1000.0);
             }
@@ -230,13 +276,13 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
             }
         }
 
-        self.stats.f32_vals_last.resize_with(
+        self.msg_stats.f32_vals_last.resize_with(
             self.chan_descriptions().len().max(msg.vals.len()),
             Default::default,
         );
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             if let Val::F32(v) = val {
-                self.stats.f32_vals_last[*cid as usize].add(*v as f64)
+                self.msg_stats.f32_vals_last[*cid as usize].add(*v as f64)
             }
         }
 
@@ -255,7 +301,45 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     }
 }
 
-pub fn start_mon<D: 'static + MsgHandler>(
+impl<D> fmt::Display for DevStats<D> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+impl<D: DevNumChans> DevNumChans for DevStats<D> {
+    fn num_chans(&self) -> u16 {
+        let dev = self.dev.lock().unwrap();
+        dev.num_chans()
+    }
+}
+
+impl<D: DevRead> DevRead for DevStats<D> {
+    fn get_f32(&self, chan: u16) -> Result<f32, String> {
+        let dev = self.dev.lock().unwrap();
+        dev.get_f32(chan)
+    }
+}
+
+impl<D: DevWrite> DevWrite for DevStats<D> {
+    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        let mut dev = self.dev.lock().unwrap();
+        self.dev_write_stats.incomplete_frame
+            .set(chan, val);
+        dev.set_f32(chan, val)
+    }
+
+    fn sync(&mut self) -> Result<(), String> {
+        let mut dev = self.dev.lock().unwrap();
+        self.dev_write_stats.frame_complete();
+        dev.sync()
+    }
+}
+
+impl<D: Dev> Dev for DevStats<D> {
+}
+
+pub fn start_mon<D: 'static + Send>(
     dev: Arc<Mutex<DevStats<D>>>,
     delay: Duration,
 ) -> (JoinHandle<()>, Arc<(Mutex<()>, Condvar)>) {
@@ -267,7 +351,6 @@ pub fn start_mon<D: 'static + MsgHandler>(
         let tpair = pair.clone();
 
         thread::spawn(move || {
-            let dev = dev.clone();
             loop {
                 let waiting = tpair.0.lock().unwrap();
                 if !exiter.wait_timeout(waiting, delay).unwrap().1.timed_out() {
@@ -276,7 +359,10 @@ pub fn start_mon<D: 'static + MsgHandler>(
                 }
 
                 let mut dev = dev.lock().unwrap();
-                dev.stats.print();
+                dev.msg_stats.print();
+                if dev.dev_write_stats.has_any_data() {
+                    dev.dev_write_stats.print();
+                }
             }
         })
     };

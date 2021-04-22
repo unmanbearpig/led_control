@@ -27,6 +27,7 @@ mod wacom;
 mod web_tiny;
 mod actions;
 mod init_devs;
+mod frame;
 
 #[macro_use]
 extern crate rust_embed;

@@ -3,7 +3,7 @@ use crate::proto;
 use std::sync::{Arc, Mutex};
 use crate::msg_handler::{ChanDescription, MsgHandler};
 
-pub fn run(chan_spec: &ChanSpec, srv: Arc<Mutex<dyn MsgHandler>>) -> Result<(), String> {
+pub fn run<T: MsgHandler>(chan_spec: &ChanSpec, srv: Arc<Mutex<T>>) -> Result<(), String> {
     let mut srv = srv.lock().map_err(|e| format!("{:?}", e))?;
 
     match chan_spec {

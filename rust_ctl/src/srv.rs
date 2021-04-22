@@ -208,3 +208,5 @@ impl DevRead for Srv {
         dev.get_f32(chan.cfg.index)
     }
 }
+
+impl Dev for Srv {}

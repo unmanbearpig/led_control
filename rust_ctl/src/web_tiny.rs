@@ -10,6 +10,7 @@ use crate::actions;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
 use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::dev::Dev;
 use askama::Template;
 
 use crate::demo;
@@ -81,16 +82,19 @@ struct HomeTemplate<'a> {
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:7373";
 
-struct WebState {
+struct WebState<T> {
     base_url: Url,
-    output: Arc<Mutex<dyn MsgHandler>>,
+    output: Arc<Mutex<T>>,
+
+    #[allow(dead_code)]
     output_config: config::Config,
+
     http: tiny_http::Server,
     task: Option<Task>,
     smoother: Arc<Mutex<MovingAverage>>,
 }
 
-impl WebState {
+impl<T: 'static + MsgHandler + Dev> WebState<T> {
     fn running_task(&mut self) -> Option<Task> {
         self.task.as_ref()?;
 
@@ -343,9 +347,9 @@ impl Web {
         Ok(Web { listen_addr })
     }
 
-    pub fn run(
+    pub fn run<T: 'static + MsgHandler + Dev>(
         &mut self,
-        srv: Arc<Mutex<dyn MsgHandler>>,
+        srv: Arc<Mutex<T>>,
         config: config::Config,
     ) -> Result<(), String> {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
