@@ -46,11 +46,11 @@ impl DevWrite for TestDev {
     }
 
     fn sync(&mut self) -> Result<(), String> {
-        print!("test_dev sync:  ");
-        for v in self.vals.iter() {
-            print!("{:1.08}  ", v);
-        }
-        println!();
+        // print!("test_dev sync:  ");
+        // for v in self.vals.iter() {
+        //     print!("{:1.08}  ", v);
+        // }
+        // println!();
         Ok(())
     }
 }
