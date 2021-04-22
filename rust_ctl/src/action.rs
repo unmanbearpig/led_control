@@ -8,8 +8,12 @@ use crate::demo;
 use crate::msg_handler::{MsgHandler};
 use crate::udp_srv;
 use crate::web_tiny;
+use crate::init_devs;
+use crate::dev_stats;
+use crate::srv;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[cfg(test)]
 mod chan_spec_parse_test {
@@ -93,9 +97,25 @@ pub enum Action {
 impl Action {
     pub fn perform(
         &self,
-        srv: Arc<Mutex<dyn MsgHandler>>,
         config: &config::Config,
     ) -> Result<(), String> {
+        let init_srv = || -> Result<Arc<Mutex<dev_stats::DevStats<srv::Srv>>>, String> {
+            let devs = init_devs::init_devs(&config.devs[..])?; // dyn
+            let mut srv = srv::Srv::new();
+            for (dev, chancfg) in devs.into_iter() {
+                srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
+            }
+
+            let sync_srv = Arc::new(Mutex::new(srv));
+            let dev_stats = dev_stats::DevStats::new(sync_srv);
+            let sync_dev = Arc::new(Mutex::new(dev_stats));
+            {
+                let sync_dev = sync_dev.clone();
+                dev_stats::start_mon(sync_dev, Duration::from_millis(200));
+            }
+            Ok(sync_dev)
+        };
+
         match self {
             Action::PrintConfig => {
                 println!(
@@ -106,6 +126,7 @@ impl Action {
             }
             Action::ListChans => {
                 println!("chans:");
+                let srv = init_srv()?;
                 let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
                 for (id, name) in srv.chans() {
                     println!("chan {} {}", id, name);
@@ -117,11 +138,13 @@ impl Action {
                 let config = config.clone();
                 let mut web = web_tiny::Web::new(listen_addr)?;
 
+                let srv = init_srv()?;
                 web.run(srv, config)
             }
             Action::Space(loc, radius, brightness) => {
                 println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
 
+                let srv = init_srv()?;
                 demo::space::run(
                     srv,
                     demo::space::Config {
@@ -132,17 +155,18 @@ impl Action {
                 )
             }
             Action::Set(spec) => {
-                actions::set::run(spec, srv)
+                actions::set::run(spec, init_srv()?)
             }
-            Action::DemoTestSeq => demo::test_seq::run(srv),
-            Action::DemoGlitch => demo::glitch::run(srv),
-            Action::DemoHello => demo::hello::run(srv),
-            Action::DemoFade => demo::fade::run(srv),
-            Action::DemoWhoosh => demo::whoosh::run(srv),
+            Action::DemoTestSeq => demo::test_seq::run(init_srv()?),
+            Action::DemoGlitch => demo::glitch::run(init_srv()?),
+            Action::DemoHello => demo::hello::run(init_srv()?),
+            Action::DemoFade => demo::fade::run(init_srv()?),
+            Action::DemoWhoosh => demo::whoosh::run(init_srv()?),
             Action::Srv {
                 listen_ip: ip,
                 listen_port: port,
             } => {
+                let srv = init_srv()?;
                 let mut udp = udp_srv::UdpSrv::new(*ip, *port, srv)?;
                 udp.run();
                 Ok(())
