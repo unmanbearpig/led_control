@@ -3,6 +3,7 @@ use url::Url;
 
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+use std::fmt;
 
 use std::io::Cursor;
 
@@ -83,7 +84,7 @@ struct HomeTemplate<'a> {
 
 const DEFAULT_LISTEN_ADDR: &str = "127.0.0.1:7373";
 
-struct WebState<T> {
+struct WebState<T: fmt::Debug> {
     base_url: Url,
     output: Arc<Mutex<T>>,
 
@@ -92,10 +93,10 @@ struct WebState<T> {
 
     http: tiny_http::Server,
     task: Option<Task>,
-    smoother: Arc<Mutex<MovingAverage>>,
+    smoother: Arc<Mutex<MovingAverage<T>>>,
 }
 
-impl<T: 'static + Dev + HasChanDescriptions> WebState<T> {
+impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     fn running_task(&mut self) -> Option<Task> {
         self.task.as_ref()?;
 
@@ -136,36 +137,54 @@ impl<T: 'static + Dev + HasChanDescriptions> WebState<T> {
         self.base_url.join(url)
     }
 
-    fn fade_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.stop_task();
-        let chans = self.chans();
-        let srv = self.smoother.clone();
-        let result = actions::set::run_dev(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+    fn fade_all_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
-        )), srv);
+        )), ok_msg)
+    }
+
+    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.stop_task();
+        let chans = self.chans();
+        let (tx, rx) = mpsc::channel::<TaskMsg>();
+
+        let join_handle = {
+            let output = self.output.clone();
+            let smoother = self.smoother.clone();
+
+            thread::spawn(move || {
+                Runner::run(smoother, rx)
+            })
+        };
+
+        let result = actions::set::run_dev(chan_spec, self.smoother.clone());
 
         if let Err(e) = &result {
-            eprintln!("fade_to: action.perform error: {:?}", e);
+            eprintln!("fade_all_to: action.perform error: {:?}", e);
         }
 
-        let flash_msg = FlashMsg::Ok(ok_msg).and_result(&result);
+        self.task = Some(Task {
+            name: "Smooth set val".to_string(),
+            chan: tx,
+            join_handle,
+        });
 
         self.home_with(HomeTemplate {
-            msg: Some(flash_msg),
+            msg: Some(FlashMsg::Ok(ok_msg)),
             chans,
         })
     }
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.fade_to(
+        self.fade_all_to(
             1.0,
             "Is everything on?<br> <small>Kick Vanya if it's not!</small>",
         )
     }
 
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        self.fade_to(
+        self.fade_all_to(
             0.0,
             "Is everything off? <br> <small>Kick Vanya if it's not!</small>",
         )
@@ -264,7 +283,6 @@ impl<T: 'static + Dev + HasChanDescriptions> WebState<T> {
 
         let mut path_segments = url.path_segments().unwrap();
         path_segments.next();
-        // get chan_id
         let chan_id_str = match path_segments.next() {
             Some(chan_id_str) => chan_id_str,
             None => return self.err404(req.method(), url.to_string().as_ref()),
@@ -276,30 +294,13 @@ impl<T: 'static + Dev + HasChanDescriptions> WebState<T> {
             Some(_) => return self.err404(req.method(), url.to_string().as_ref()),
             None => return self.err404(req.method(), url.to_string().as_ref()),
         };
-        // get action
-
-        self.stop_task();
-        let chans = self.chans();
-
-        // let action = Action::Set(ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
-        //     chan_id_str.to_string(),
-        //     val,
-        // )])));
-
-        let srv = self.smoother.clone();
-        let result = actions::set::run_msg(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
-            chan_id_str.to_string(),
-            val,
-        )])), srv);
 
         let ok_msg = format!("chan {} set to {}", chan_id_str, val);
 
-        let flash_msg = FlashMsg::Ok(ok_msg.as_ref()).and_result(&result);
-
-        self.home_with(HomeTemplate {
-            msg: Some(flash_msg),
-            chans,
-        })
+        self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
+            chan_id_str.to_string(),
+            val,
+        )])), ok_msg.as_ref())
     }
 
     /// All static files should start with /assets/
@@ -362,18 +363,6 @@ impl Web {
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let ma = Arc::new(Mutex::new(ma));
-
-        let join_handle = {
-            let ma = ma.clone();
-            // let srv = sync_dev.clone();
-            thread::spawn(move || Runner::run(ma, rx))
-        };
-
-        let _task = Some(Task {
-            name: "Hello task from web test".to_string(),
-            chan: tx,
-            join_handle,
-        });
 
         let mut server = WebState {
             base_url: Url::parse(format!("http://{}", self.listen_addr).as_ref()).unwrap(),

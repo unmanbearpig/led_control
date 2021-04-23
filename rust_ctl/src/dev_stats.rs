@@ -16,6 +16,7 @@ struct ValStats {
     min: f64,
     max: f64,
     avg: f64,
+    last: f64,
 }
 
 impl Default for ValStats {
@@ -25,12 +26,14 @@ impl Default for ValStats {
             min: 0.0,
             max: 0.0,
             avg: 0.0,
+            last: 0.0,
         }
     }
 }
 
 impl ValStats {
     fn add(&mut self, val: f64) {
+        self.last = val;
         if self.cnt == 0 {
             self.min = val;
             self.max = val;
@@ -75,8 +78,8 @@ impl fmt::Display for ValStats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "cnt: {:7} min: {:3.3}  avg: {:3.3}  max: {:3.3}",
-            self.cnt, self.min, self.avg, self.max
+            "cnt: {:7} min: {:3.3}  avg: {:3.3}  last: {:3.3}  max: {:3.3}",
+            self.cnt, self.min, self.avg, self.last, self.max
         )
     }
 }
@@ -189,21 +192,22 @@ impl DevWriteStats {
     }
 
     fn frame_complete(&mut self) {
+        // println!("DevWriteStats frame_complete {:?}, \n{:?}", self.incomplete_frame, self.stats);
+
         if self.stats.len() < self.incomplete_frame.vals.len() {
             self.stats.resize_with(self.incomplete_frame.vals.len(),
                                    Default::default);
         }
 
-        for (i, val) in self.incomplete_frame.vals.iter().enumerate() {
-            if let Some(val) = val {
-                self.stats[i].add(*val as f64);
-            }
+        for (cid, val) in self.incomplete_frame.iter_with_chans() {
+            self.stats[cid as usize].add(*val as f64);
         }
 
-        self.stats.clear();
+        self.incomplete_frame.clear();
     }
 
     fn print(&mut self) {
+        println!("Dev stats: ({})", self.stats.len());
         for (i, chan) in self.stats.iter().enumerate() {
             println!("Chan {}: {}", i, chan);
         }
@@ -250,7 +254,6 @@ impl<D: 'static + MsgHandler + Sync> DevStats<D> {
 
 impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
-        println!("dev_stats handle_msg");
         self.msg_stats.msg_cnt += 1;
 
         if msg.seq_num != self.last_msg_seq_num.overflowing_add(1).0 {
@@ -330,7 +333,6 @@ impl<D: DevWrite> DevWrite for DevStats<D> {
         self.dev_write_stats.incomplete_frame
             .set(chan, val);
 
-        println!("dev_stats f32 {} {}", chan, val);
         let mut dev = self.dev.lock().unwrap();
         dev.set_f32(chan, val)
     }
@@ -338,7 +340,6 @@ impl<D: DevWrite> DevWrite for DevStats<D> {
     fn sync(&mut self) -> Result<(), String> {
         let mut dev = self.dev.lock().unwrap();
         self.dev_write_stats.frame_complete();
-        println!("dev_stats sync");
         dev.sync()
     }
 }
@@ -366,7 +367,10 @@ pub fn start_mon<D: 'static + Send>(
                 }
 
                 let mut dev = dev.lock().unwrap();
+
                 dev.msg_stats.print();
+                dev.dev_write_stats.print();
+
                 if dev.dev_write_stats.has_any_data() {
                     dev.dev_write_stats.print();
                 }

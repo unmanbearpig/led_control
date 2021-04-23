@@ -13,11 +13,11 @@ use crate::task::TaskMsg;
 use crate::frame::Frame;
 
 #[derive(Debug)]
-pub struct MovingAverage {
+pub struct MovingAverage<T> {
     frame_period: Duration,
     transition_period: Duration,
     frames: VecDeque<Frame<f32>>,
-    output: Arc<Mutex<dyn MsgHandler>>,
+    output: Arc<Mutex<T>>,
     current_frame: Frame<f32>,
     target_frame: Frame<f32>,
     incomplete_target_frame: Frame<f32>,
@@ -26,7 +26,7 @@ pub struct MovingAverage {
     msg_buf: Msg,
 }
 
-impl fmt::Display for MovingAverage {
+impl<T: Send + fmt::Display> fmt::Display for MovingAverage<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let output = self.output.clone();
         let output = output.lock().unwrap();
@@ -41,33 +41,48 @@ impl fmt::Display for MovingAverage {
     }
 }
 
-impl DevNumChans for MovingAverage {
+impl<T: HasChanDescriptions> DevNumChans for MovingAverage<T> {
     fn num_chans(&self) -> u16 {
         let dev = self.output.lock().unwrap();
         dev.chans().len() as u16
     }
 }
-impl DevWrite for MovingAverage {
+impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         self.incomplete_target_frame.set(chan, val);
         Ok(())
     }
 
     fn sync(&mut self) -> Result<(), String> {
-        println!("MA sync");
+        self.fetch_vals()?;
         self.target_frame = self.incomplete_target_frame.clone();
-        self.incomplete_target_frame.clear();
         Ok(())
     }
 }
-impl DevRead for MovingAverage {
+
+impl<T: DevRead> MovingAverage<T> {
+    fn fetch_vals(&mut self) -> Result<(), String> {
+        self.clear_frames();
+        {
+            let output = self.output.lock().unwrap();
+            output.get_to_frame(&mut self.current_frame)?;
+        }
+
+        for frame in self.frames.iter_mut() {
+            *frame = self.current_frame.clone();
+        }
+        Ok(())
+    }
+}
+
+impl<T: HasChanDescriptions> DevRead for MovingAverage<T> {
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
         // maybe we should get the val from the dev, but not sure
         Ok(self.current_frame.get(chan).unwrap_or(0.0))
     }
 }
 
-impl MovingAverage {
+impl<T> MovingAverage<T> {
     fn advance_frame(&mut self) {
         self.frames.push_back(self.target_frame.clone());
         self.frames.pop_front();
@@ -104,11 +119,17 @@ impl MovingAverage {
     fn has_reached_target(&self) -> bool {
         self.current_frame == self.target_frame
     }
+
+    fn clear_frames(&mut self) {
+        for frame in self.frames.iter_mut() {
+            frame.clear();
+        }
+    }
 }
 
-impl Runner for MovingAverage {
+impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
     fn run(
-        self_lock: Arc<Mutex<MovingAverage>>,
+        self_lock: Arc<Mutex<MovingAverage<T>>>,
         stop: mpsc::Receiver<TaskMsg>,
     ) -> Result<(), String> {
         let frame_period = {
@@ -126,22 +147,22 @@ impl Runner for MovingAverage {
                 let avg_frame = mov_avg.avg_frame();
 
                 if !mov_avg.has_reached_target() {
-                    avg_frame.to_msg(&mut mov_avg.msg_buf);
-                    mov_avg.current_frame = avg_frame;
                     let mut output = mov_avg.output.lock().unwrap();
-                    match output.handle_msg(&mov_avg.msg_buf) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!("moving_average output.handle_msg err: {:?}", e);
-                        }
+                    if let Err(e) = output.set_frame(&avg_frame) {
+                        eprintln!("moving_average output.set_frame err: {:?}", e);
+                    }
+                    if let Err(e) = output.sync() {
+                        eprintln!("moving_average output.sync err: {:?}", e);
                     }
                 }
             }
 
             match stop.recv_timeout(frame_period) {
                 Ok(msg) => match msg {
-                    TaskMsg::Stop => return Ok(()),
-                    TaskMsg::Ping => {}
+                    TaskMsg::Stop => {
+                        return Ok(())
+                    },
+                    TaskMsg::Ping => {  }
                 },
                 Err(e) => match e {
                     mpsc::RecvTimeoutError::Timeout => {}
@@ -154,11 +175,8 @@ impl Runner for MovingAverage {
     }
 }
 
-impl MsgHandler for MovingAverage {
+impl<T: fmt::Debug + Send + fmt::Display + HasChanDescriptions> MsgHandler for MovingAverage<T> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
-        println!("moving_average got msg");
-        // self.target_msg = msg.clone();
-        // self.target_frame = Frame::from_msg(msg);
         self.target_frame.merge_msg(msg);
         self.last_msg_recv_time = Instant::now();
         self.last_msg_target_time = self.last_msg_recv_time + self.transition_period;
@@ -166,7 +184,7 @@ impl MsgHandler for MovingAverage {
     }
 }
 
-impl HasChanDescriptions for MovingAverage {
+impl<T: HasChanDescriptions> HasChanDescriptions for MovingAverage<T> {
     fn chans(&self) -> Vec<(ChanId, String)> {
         let output = self.output.clone();
         let output = output.lock().unwrap();
@@ -180,9 +198,9 @@ impl HasChanDescriptions for MovingAverage {
     }
 }
 
-impl MovingAverage {
+impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
     pub fn new(
-        output: Arc<Mutex<dyn MsgHandler>>,
+        output: Arc<Mutex<T>>,
         frame_period: Duration,
         transition_period: Duration,
     ) -> Self {

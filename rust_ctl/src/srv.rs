@@ -164,10 +164,6 @@ impl Display for Srv {
     }
 }
 
-fn adjust_chan_val(chan_cfg: &ChanConfig, val: f32) -> f32 {
-    (chan_cfg.min + (val as f64).powf(chan_cfg.exp) * (chan_cfg.max - chan_cfg.min)) as f32
-}
-
 impl DevNumChans for Srv {
     fn num_chans(&self) -> u16 {
         self.chans.len() as u16
@@ -177,13 +173,11 @@ impl DevNumChans for Srv {
 impl DevWrite for Srv {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         let chan: &mut SrvChan = &mut self.chans[chan as usize];
-        let val = adjust_chan_val(&chan.cfg, val);
+        let val = chan.cfg.adjust_value(val);
         let dev = &mut self.devs[chan.devid.0 as usize];
         dev.dirty = true;
         let mut dev = dev.dev.lock().unwrap();
         dev.set_f32(chan.cfg.index, val)?;
-
-        println!("srv set_f32 {} {}", chan.cfg.index, val);
 
         Ok(())
     }
@@ -198,7 +192,6 @@ impl DevWrite for Srv {
 
         for dev in devs {
             let mut dev = dev.lock().unwrap();
-            println!("srv sync for {}", dev);
             dev.sync()?;
         }
         Ok(())
@@ -212,6 +205,7 @@ impl DevRead for Srv {
 
         let dev = dev.dev.lock().unwrap();
         dev.get_f32(chan.cfg.index)
+            .map(|val| chan.cfg.unadjust_value(val))
     }
 }
 

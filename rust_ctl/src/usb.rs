@@ -7,7 +7,8 @@ pub struct UsbDev {
     bus_number: u8,
     dev_addr: u8,
     raw_vals: [u16; 3],
-    f32_vals: [f32; 3],
+    last_f32_vals: [f32; 3], // the values actually written to the device
+    f32_vals: [f32; 3], // buffer that is not `sync`ed yet
 }
 
 impl fmt::Display for UsbDev {
@@ -28,7 +29,7 @@ impl DevRead for UsbDev {
             return Err(format!("chan {} out of bounds (0-2)", chan));
         }
 
-        Ok(self.f32_vals[chan as usize])
+        Ok(self.last_f32_vals[chan as usize])
     }
 }
 
@@ -66,6 +67,8 @@ impl DevWrite for UsbDev {
 
         // print_bytes(data);
 
+        self.last_f32_vals = self.f32_vals.clone();
+
         let res = self.devhandle.write_interrupt(endpoint, data, timeout);
         match res {
             Ok(numbytes) => {
@@ -93,6 +96,7 @@ impl UsbDev {
             dev_addr,
             raw_vals: [0u16; 3],
             f32_vals: [0.0; 3],
+            last_f32_vals: [0.0; 3],
         }
     }
 
