@@ -1,6 +1,8 @@
 use crate::proto::{Val, ChanVal, ChanId, Msg};
 
-#[derive(Debug)]
+use std::ops;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Frame<T: Clone> {
     pub vals: Vec<Option<T>>,
 }
@@ -9,7 +11,7 @@ impl Frame<f32> {
     /// Replaces frame values with values from msg
     ///   useful because msg might not contain values for all channels
     /// Keeps old values as is
-    fn merge_msg(&mut self, msg: &Msg) {
+    pub fn merge_msg(&mut self, msg: &Msg) {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             let val = match val {
                 Val::U16(_) => unimplemented!(),
@@ -17,6 +19,13 @@ impl Frame<f32> {
             };
 
             self.vals[*cid as usize] = Some(*val);
+        }
+    }
+
+    /// writes values to provided msg
+    pub fn to_msg(&self, msg: &mut Msg) {
+        for (cid, v) in self.iter_with_chans() {
+            msg.vals[cid as usize].1 = Val::F32(*v)
         }
     }
 }
@@ -34,12 +43,54 @@ impl<T: Clone> Frame<T> {
         }
     }
 
+    pub fn get(&self, chan: u16) -> Option<T>
+        where T: Copy
+    {
+        self.vals.get(chan as usize).copied().flatten()
+    }
+
     pub fn set(&mut self, chan: u16, val: T) {
-        let chan = chan as usize;
-        if chan >= self.vals.len() {
-            self.vals.resize_with(chan +1, Default::default);
+        self.ensure_bounds(chan);
+        self.vals[chan as usize] = Some(val)
+    }
+
+    /// makes sure the vals size is at least `len`
+    fn ensure_bounds(&mut self, len: u16) {
+        if len as usize >= self.vals.len() {
+            self.vals.resize_with(len as usize +1, Default::default);
         }
-        self.vals[chan] = Some(val)
+    }
+
+    pub fn add_to_val(&mut self, chan: u16, val: T)
+        where T: ops::Add<Output = T> + Copy
+    {
+        self.ensure_bounds(chan);
+        let prev_val = self.vals.get_mut(chan as usize).unwrap();
+        *prev_val = Some(match prev_val {
+            Some(prev_val) => {
+                *prev_val + val
+            }
+            None => val,
+        })
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> + '_ {
+        self.vals.iter()
+            .filter(|v| v.is_some())
+            .map(|v| v.as_ref().unwrap())
+    }
+
+    pub fn iter_with_chans(&self) -> impl Iterator<Item = (u16, &T)> + '_ {
+        self.vals.iter().enumerate()
+            .filter(|(_, v)| v.is_some())
+            .map(|(cid, v)| (cid as u16, v.as_ref().unwrap()))
+    }
+
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> + '_ {
+        self.vals.iter_mut()
+            .filter(|v| v.is_some())
+            .map(|v| v.as_mut().unwrap())
     }
 }
 

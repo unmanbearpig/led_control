@@ -9,7 +9,8 @@ use std::io::Cursor;
 use crate::actions;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
 use crate::config;
-use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::msg_handler::{MsgHandler};
+use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use crate::dev::Dev;
 use askama::Template;
 
@@ -94,7 +95,7 @@ struct WebState<T> {
     smoother: Arc<Mutex<MovingAverage>>,
 }
 
-impl<T: 'static + MsgHandler + Dev> WebState<T> {
+impl<T: 'static + Dev + HasChanDescriptions> WebState<T> {
     fn running_task(&mut self) -> Option<Task> {
         self.task.as_ref()?;
 
@@ -139,13 +140,10 @@ impl<T: 'static + MsgHandler + Dev> WebState<T> {
         self.stop_task();
         let chans = self.chans();
         let srv = self.smoother.clone();
-        let result = actions::set::run(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+        let result = actions::set::run_dev(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
         )), srv);
-        // let action = Action::Set();
-        // let srv = self.smoother.clone();
-        // let result = action.perform(srv, &self.output_config);
 
         if let Err(e) = &result {
             eprintln!("fade_to: action.perform error: {:?}", e);
@@ -181,7 +179,7 @@ impl<T: 'static + MsgHandler + Dev> WebState<T> {
         let join_handle = {
             let output = self.output.clone();
 
-            thread::spawn(move || demo::hello::run_with_channel(output.clone(), rx))
+            thread::spawn(move || demo::hello::run_with_channel(output, rx))
         };
 
         self.task = Some(Task {
@@ -289,7 +287,7 @@ impl<T: 'static + MsgHandler + Dev> WebState<T> {
         // )])));
 
         let srv = self.smoother.clone();
-        let result = actions::set::run(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
+        let result = actions::set::run_msg(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
             chan_id_str.to_string(),
             val,
         )])), srv);

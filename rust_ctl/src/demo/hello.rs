@@ -1,5 +1,5 @@
-use crate::msg_handler::MsgHandler;
-use crate::proto::{ChanVal, Msg, Val};
+use crate::frame::Frame;
+use crate::dev::{DevWrite};
 use crate::task::TaskMsg;
 use rand::{self, Rng};
 use std::sync::mpsc;
@@ -13,37 +13,30 @@ struct DemoChan {
     phi: f64,
 }
 
-pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
+pub fn run<T: DevWrite + ?Sized>(dev: Arc<Mutex<T>>) -> Result<(), String> {
     let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
     // runs indefinitely
-    run_with_channel(srv, receiver)
+    run_with_channel(dev, receiver)
 }
 
-pub fn run_with_channel<T: MsgHandler + ?Sized>(
-    srv: Arc<Mutex<T>>,
+pub fn run_with_channel<T: DevWrite + ?Sized>(
+    dev: Arc<Mutex<T>>,
     stop: mpsc::Receiver<TaskMsg>,
 ) -> Result<(), String> {
     println!("running hello demo...");
 
-    let mut msg: Msg = {
-        let srv = srv.lock().map_err(|e| format!("read lock: {:?}", e))?;
-        Msg {
-            seq_num: 0,
-            timestamp: time::SystemTime::now(),
-            vals: srv
-                .chans()
-                .into_iter()
-                .map(|(id, _)| (ChanVal(id, Val::F32(0.0))))
-                .collect(),
-        }
+    let num_chans = {
+        let dev = dev.lock().map_err(|e| format!("read lock: {:?}", e))?;
+        dev.num_chans()
     };
+    let mut frame = Frame::new(num_chans);
 
-    let mut dchans: Vec<DemoChan> = Vec::with_capacity(msg.vals.len());
+    let mut dchans: Vec<DemoChan> = Vec::with_capacity(num_chans as usize);
 
     let freq_dist = rand::distributions::Uniform::new(0.09, 0.5);
     let mut rng = rand::thread_rng();
-    for _ in 0..msg.vals.len() {
+    for _ in 0..num_chans {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
             min: 0.78,
@@ -63,21 +56,13 @@ pub fn run_with_channel<T: MsgHandler + ?Sized>(
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
             let new_sin = (((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
             d.phi += delta;
-            msg.vals[i].1 = Val::F32(new_sin as f32);
+            frame.set(i as u16, new_sin as f32);
         }
 
-        msg.timestamp = time::SystemTime::now();
-        msg.seq_num += 1;
-
         {
-            let mut srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
-            match srv.handle_msg(&msg) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("demo: handle_msg error: {:?}", e);
-                    continue;
-                }
-            }
+            let mut dev = dev.lock().map_err(|e| format!("write lock: {:?}", e))?;
+            dev.set_frame(&frame)?;
+            dev.sync()?;
         }
 
         match stop.recv_timeout(delay) {
@@ -95,6 +80,5 @@ pub fn run_with_channel<T: MsgHandler + ?Sized>(
                 }
             },
         }
-        // sleep(delay);
     }
 }

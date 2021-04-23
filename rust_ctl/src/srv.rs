@@ -1,6 +1,7 @@
 use crate::chan::ChanConfig;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
-use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::msg_handler::{MsgHandler};
+use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
@@ -113,7 +114,9 @@ impl MsgHandler for Srv {
 
         self.sync()
     }
+}
 
+impl HasChanDescriptions for Srv {
     fn chans(&self) -> Vec<(ChanId, String)> {
         self.chans
             .as_slice()
@@ -180,6 +183,8 @@ impl DevWrite for Srv {
         let mut dev = dev.dev.lock().unwrap();
         dev.set_f32(chan.cfg.index, val)?;
 
+        println!("srv set_f32 {} {}", chan.cfg.index, val);
+
         Ok(())
     }
 
@@ -193,6 +198,7 @@ impl DevWrite for Srv {
 
         for dev in devs {
             let mut dev = dev.lock().unwrap();
+            println!("srv sync for {}", dev);
             dev.sync()?;
         }
         Ok(())

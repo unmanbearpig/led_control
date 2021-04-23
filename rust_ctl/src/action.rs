@@ -2,10 +2,10 @@ use std::net::IpAddr;
 
 use crate::actions;
 use crate::chan_spec::ChanSpec;
+use crate::chan_description::HasChanDescriptions;
 use crate::config;
 use crate::coord::Coord;
 use crate::demo;
-use crate::msg_handler::{MsgHandler};
 use crate::udp_srv;
 use crate::web_tiny;
 use crate::init_devs;
@@ -155,7 +155,7 @@ impl Action {
                 )
             }
             Action::Set(spec) => {
-                actions::set::run(spec, init_srv()?)
+                actions::set::run_msg(spec, init_srv()?)
             }
             Action::DemoTestSeq => demo::test_seq::run(init_srv()?),
             Action::DemoGlitch => demo::glitch::run(init_srv()?),

@@ -2,7 +2,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::num::ParseIntError;
 
-use crate::msg_handler::ChanDescription;
+use crate::chan_description::ChanDescription;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChanSpecGeneric<F> {

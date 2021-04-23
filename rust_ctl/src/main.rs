@@ -28,6 +28,7 @@ mod web_tiny;
 mod actions;
 mod init_devs;
 mod frame;
+mod chan_description;
 
 #[macro_use]
 extern crate rust_embed;

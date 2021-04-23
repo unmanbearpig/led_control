@@ -1,4 +1,5 @@
-use crate::msg_handler::{ChanDescription, MsgHandler};
+use crate::msg_handler::{MsgHandler};
+use crate::chan_description::{HasChanDescriptions, ChanDescription};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
 use crate::term_bar;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
@@ -249,6 +250,7 @@ impl<D: 'static + MsgHandler + Sync> DevStats<D> {
 
 impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
+        println!("dev_stats handle_msg");
         self.msg_stats.msg_cnt += 1;
 
         if msg.seq_num != self.last_msg_seq_num.overflowing_add(1).0 {
@@ -289,7 +291,9 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
         let mut dev = self.dev.lock().unwrap();
         dev.handle_msg(msg)
     }
+}
 
+impl<D: HasChanDescriptions> HasChanDescriptions for DevStats<D> {
     fn chans(&self) -> Vec<(ChanId, String)> {
         let dev = self.dev.lock().unwrap();
         dev.chans()
@@ -323,15 +327,18 @@ impl<D: DevRead> DevRead for DevStats<D> {
 
 impl<D: DevWrite> DevWrite for DevStats<D> {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        let mut dev = self.dev.lock().unwrap();
         self.dev_write_stats.incomplete_frame
             .set(chan, val);
+
+        println!("dev_stats f32 {} {}", chan, val);
+        let mut dev = self.dev.lock().unwrap();
         dev.set_f32(chan, val)
     }
 
     fn sync(&mut self) -> Result<(), String> {
         let mut dev = self.dev.lock().unwrap();
         self.dev_write_stats.frame_complete();
+        println!("dev_stats sync");
         dev.sync()
     }
 }
