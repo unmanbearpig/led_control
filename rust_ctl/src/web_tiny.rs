@@ -150,7 +150,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let join_handle = {
-            let output = self.output.clone();
             let smoother = self.smoother.clone();
 
             thread::spawn(move || {
@@ -359,8 +358,6 @@ impl Web {
             Duration::from_millis(4),
             Duration::from_millis(900),
         );
-
-        let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let ma = Arc::new(Mutex::new(ma));
 

@@ -46,7 +46,7 @@ impl ChanConfig {
 
 mod tests {
     extern crate test;
-    use super::*;
+    use super::ChanConfig;
 
     #[test]
     fn test_adjust_chan_val_reverse() {

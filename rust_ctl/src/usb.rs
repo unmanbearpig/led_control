@@ -62,12 +62,9 @@ impl DevWrite for UsbDev {
         // eprintln!("usb write: {:?}", self.raw_vals);
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
-        // let data = self.raw_msg.into_slice();
         let data: &[u8; 6] = unsafe { &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6]) };
 
-        // print_bytes(data);
-
-        self.last_f32_vals = self.f32_vals.clone();
+        self.last_f32_vals = self.f32_vals;
 
         let res = self.devhandle.write_interrupt(endpoint, data, timeout);
         match res {
