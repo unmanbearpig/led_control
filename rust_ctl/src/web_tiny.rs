@@ -115,7 +115,13 @@ struct WebState<T: fmt::Debug> {
 
     http: tiny_http::Server,
     task: Option<Task>,
-    smoother: Arc<Mutex<MovingAverage<T>>>,
+    smoother_slow: Arc<Mutex<MovingAverage<T>>>,
+    smoother_fast: Arc<Mutex<MovingAverage<T>>>,
+}
+
+#[derive(Clone, Copy)]
+enum SmoothingType {
+    Slow, Fast
 }
 
 impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
@@ -163,23 +169,27 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
-        )), ok_msg)
+        )), ok_msg, SmoothingType::Slow)
     }
 
-    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str, smoothing: SmoothingType) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
         let chans = self.chans();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
-        let join_handle = {
-            let smoother = self.smoother.clone();
+        let smoother = match smoothing {
+            SmoothingType::Slow => self.smoother_slow.clone(),
+            SmoothingType::Fast => self.smoother_fast.clone(),
+        };
 
+        let join_handle = {
+            let smoother = smoother.clone();
             thread::spawn(move || {
                 Runner::run(smoother, rx)
             })
         };
 
-        let result = actions::set::run_dev(chan_spec, self.smoother.clone());
+        let result = actions::set::run_dev(chan_spec, smoother.clone());
 
         if let Err(e) = &result {
             eprintln!("fade_all_to: action.perform error: {:?}", e);
@@ -316,22 +326,19 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             Some("on") => 1.0,
             Some("off") => 0.0,
             Some("set") => {
-                println!("!!!!!! got set!!!!!!!!!!!!!");
                 let mut body: Vec<u8> = Vec::new();
                 req.as_reader().read_to_end(&mut body).unwrap();// TODO fix unwrap
 
                 let mut value: Option<f32> = None;
                 for (k, v) in form_urlencoded::parse(body.as_slice()) {
-                    println!("k = {}, v = {}", k, v);
-
                     match k.as_ref() {
                         "value" => {
                             let f32_val: f32 = v.parse().unwrap(); // TODO fix unwrap
                             value = Some(f32_val);
                         }
                         other => {
+                            // log and ignore
                             println!("unexpected form parameter {} with value '{}'", other, v);
-                            unimplemented!();
                         }
                     }
                 }
@@ -354,7 +361,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
             chan_id_str.to_string(),
             val,
-        )])), ok_msg.as_ref())
+        )])), ok_msg.as_ref(), SmoothingType::Fast)
     }
 
     /// All static files should start with /assets/
@@ -408,13 +415,22 @@ impl Web {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
             .map_err(|e| format!("server err: {:?}", e))?;
 
-        let ma = MovingAverage::new(
+        let ma_slow = MovingAverage::new(
             srv.clone(),
             Duration::from_millis(4),
             Duration::from_millis(900),
         );
 
-        let ma = Arc::new(Mutex::new(ma));
+        let ma_slow = Arc::new(Mutex::new(ma_slow));
+
+
+        let ma_fast = MovingAverage::new(
+            srv.clone(),
+            Duration::from_millis(4),
+            Duration::from_millis(100),
+        );
+        let ma_fast = Arc::new(Mutex::new(ma_fast));
+
 
         let mut server = WebState {
             base_url: Url::parse(format!("http://{}", self.listen_addr).as_ref()).unwrap(),
@@ -422,7 +438,8 @@ impl Web {
             output_config: config,
             http,
             task: None,
-            smoother: ma,
+            smoother_slow: ma_slow,
+            smoother_fast: ma_fast,
         };
 
         server.run();
