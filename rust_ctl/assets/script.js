@@ -1,4 +1,5 @@
 // TODO fix mime type when serving it
+// TODO remove console.logs
 
 function sliderchange(event) {
   console.log("sliderchange: ", event);

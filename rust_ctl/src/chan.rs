@@ -46,6 +46,7 @@ impl ChanConfig {
 
 mod tests {
     extern crate test;
+    #[allow(unused_imports)]
     use super::ChanConfig;
 
     #[test]

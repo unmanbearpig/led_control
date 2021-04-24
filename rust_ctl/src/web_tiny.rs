@@ -38,7 +38,7 @@ pub struct Web {
 #[template(path = "flash_msg.html", escape = "none")]
 enum FlashMsg<'a> {
     Ok(&'a str),
-    Err(&'a str),
+    Err(&'a str), // TODO: clippy warning: should probably be used somewhere
 }
 
 impl<'a> FlashMsg<'a> {
