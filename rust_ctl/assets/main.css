@@ -68,8 +68,11 @@ h3 {
 }
 
 .chan {
-    min-height: 4rem;
     font-size: 24px;
+}
+
+.chan-row {
+    margin-top: 0.333rem;
 }
 
 .chan button {
@@ -78,4 +81,9 @@ h3 {
 
 input[type=range] {
     width: 100%;
+    height: 2rem;
+}
+
+.tag {
+    font-size: 30px;
 }

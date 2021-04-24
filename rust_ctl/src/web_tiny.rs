@@ -15,6 +15,7 @@ use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use crate::dev::Dev;
 use askama::Template;
+use crate::tag::Tag;
 
 use crate::demo;
 use crate::task::{Task, TaskMsg};
@@ -61,6 +62,25 @@ impl<'a> FlashMsg<'a> {
 struct ChanTemplate {
     chan: ChanDescription,
     value: f32,
+}
+
+#[derive(Template)]
+#[template(path = "tag.html", escape = "none")]
+struct TagTemplate<'a>(&'a Tag);
+
+impl ChanTemplate {
+    fn tags(&self) -> Vec<TagTemplate> {
+        self.chan.tags.iter()
+            .map(|tag| TagTemplate(tag))
+            .collect()
+    }
+}
+
+fn transform_tag(tag: &str) -> String {
+    match tag {
+        "window" => "".to_string(),
+        other => other.to_string(),
+    }
 }
 
 impl ChanTemplate {

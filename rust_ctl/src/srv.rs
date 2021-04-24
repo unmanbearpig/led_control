@@ -1,3 +1,4 @@
+use crate::tag::Tag;
 use crate::chan::ChanConfig;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{MsgHandler};
@@ -144,7 +145,7 @@ impl HasChanDescriptions for Srv {
                         "[cid: {}, dev {}, chan {}]",
                         cid, chan.devid.0, chan.cfg.index
                     ),
-                    chan.cfg.tags.clone(), // actually need clone?
+                    chan.cfg.tags.iter().map(|t| Tag::new(t)).collect(), // actually need clone?
                     chan.cfg.cuboid,
                 )
             })

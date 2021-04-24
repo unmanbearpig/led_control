@@ -29,6 +29,7 @@ mod actions;
 mod init_devs;
 mod frame;
 mod chan_description;
+mod tag;
 
 #[macro_use]
 extern crate rust_embed;
