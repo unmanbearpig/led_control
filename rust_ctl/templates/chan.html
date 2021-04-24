@@ -1,5 +1,4 @@
 <div class="flex chan space-between">
-
   <div>
     {{ chan.chan_id }}
   </div>
@@ -19,4 +18,20 @@
       </button>
     </form>
   </div>
+</div>
+
+<div class="chan flex space-between">
+  <form action="{{ self.path() }}/set" method="POST">
+    <input
+      name="value"
+      type="range"
+      value="{{ self.value }}"
+      min="0.0"
+      max="1.0"
+      step="0.01"/>
+
+    <button>
+      Set!
+    </button>
+  </form>
 </div>

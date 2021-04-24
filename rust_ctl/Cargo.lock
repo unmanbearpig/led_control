@@ -450,6 +450,7 @@ name = "rust_ctl"
 version = "0.1.0"
 dependencies = [
  "askama",
+ "form_urlencoded",
  "rand",
  "rusb",
  "rust-embed",

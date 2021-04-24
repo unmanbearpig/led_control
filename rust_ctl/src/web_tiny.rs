@@ -1,4 +1,5 @@
 extern crate tiny_http;
+extern crate form_urlencoded;
 use url::Url;
 
 use std::sync::mpsc;
@@ -59,6 +60,7 @@ impl<'a> FlashMsg<'a> {
 #[template(path = "chan.html", escape = "none")]
 struct ChanTemplate {
     chan: ChanDescription,
+    value: f32,
 }
 
 impl ChanTemplate {
@@ -217,7 +219,10 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         output
             .chan_descriptions()
             .into_iter()
-            .map(|chan| ChanTemplate { chan })
+            .map(|chan| {
+                let value = output.get_f32(chan.chan_id).unwrap();
+                ChanTemplate { chan, value }
+            })
             .collect()
     }
 
@@ -273,7 +278,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     fn handle_chans(
         &mut self,
         url: Url,
-        req: &tiny_http::Request,
+        req: &mut tiny_http::Request,
     ) -> tiny_http::Response<Cursor<Vec<u8>>> {
         match req.method() {
             tiny_http::Method::Post => {}
@@ -290,6 +295,36 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let val = match path_segments.next() {
             Some("on") => 1.0,
             Some("off") => 0.0,
+            Some("set") => {
+                println!("!!!!!! got set!!!!!!!!!!!!!");
+                let mut body: Vec<u8> = Vec::new();
+                req.as_reader().read_to_end(&mut body).unwrap();// TODO fix unwrap
+
+                let mut value: Option<f32> = None;
+                for (k, v) in form_urlencoded::parse(body.as_slice()) {
+                    println!("k = {}, v = {}", k, v);
+
+                    match k.as_ref() {
+                        "value" => {
+                            let f32_val: f32 = v.parse().unwrap(); // TODO fix unwrap
+                            value = Some(f32_val);
+                        }
+                        other => {
+                            println!("unexpected form parameter {} with value '{}'", other, v);
+                            unimplemented!();
+                        }
+                    }
+                }
+
+                let value = match value {
+                    Some(v) => v,
+                    None => {
+                        unimplemented!()
+                    }
+                };
+
+                value
+            }
             Some(_) => return self.err404(req.method(), url.to_string().as_ref()),
             None => return self.err404(req.method(), url.to_string().as_ref()),
         };
@@ -303,7 +338,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     }
 
     /// All static files should start with /assets/
-    fn handle_request(&mut self, req: tiny_http::Request) {
+    fn handle_request(&mut self, mut req: tiny_http::Request) {
         let url = req.url();
         let url = match self.parse_relative_url(url) {
             Ok(url) => url,
@@ -317,7 +352,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
         let first_segment = path_segments.next();
         let resp = match (req.method(), first_segment) {
-            (_, Some("chans")) => self.handle_chans(url, &req),
+            (_, Some("chans")) => self.handle_chans(url, &mut req),
             (tiny_http::Method::Post, Some("on")) => self.on(),
             (tiny_http::Method::Post, Some("off")) => self.off(),
             (tiny_http::Method::Post, Some("disco")) => self.disco(),
