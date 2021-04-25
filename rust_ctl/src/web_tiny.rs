@@ -76,24 +76,9 @@ impl ChanTemplate {
     }
 }
 
-fn transform_tag(tag: &str) -> String {
-    match tag {
-        "window" => "".to_string(),
-        other => other.to_string(),
-    }
-}
-
 impl ChanTemplate {
     fn path(&self) -> String {
         format!("/chans/{}", self.chan.chan_id)
-    }
-
-    fn short_description(&self) -> String {
-        let mut out = String::new();
-        for tag in self.chan.tags.iter().rev() {
-            out += format!("{} ", tag).as_ref();
-        }
-        out
     }
 }
 
@@ -189,7 +174,10 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             })
         };
 
-        let result = actions::set::run_dev(chan_spec, smoother.clone());
+        let mut msg = FlashMsg::Ok(ok_msg);
+
+        let result = actions::set::run_dev(chan_spec, smoother);
+        msg = msg.and_result(&result);
 
         if let Err(e) = &result {
             eprintln!("fade_all_to: action.perform error: {:?}", e);
@@ -202,7 +190,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         });
 
         self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Ok(ok_msg)),
+            msg: Some(msg),
             chans,
         })
     }
@@ -304,7 +292,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let cur = Cursor::new(data);
 
         let extension: Option<&str> = path_segments.last()
-            .map(|seg| seg.split(".").last())
+            .map(|seg| seg.split('.').last())
             .flatten();
 
         const DEFAULT_CONTENT_TYPE: &str = "text/plain";
@@ -365,14 +353,12 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
                     }
                 }
 
-                let value = match value {
+                match value {
                     Some(v) => v,
                     None => {
-                        unimplemented!()
+                        todo!()
                     }
-                };
-
-                value
+                }
             }
             Some(_) => return self.err404(req.method(), url.to_string().as_ref()),
             None => return self.err404(req.method(), url.to_string().as_ref()),

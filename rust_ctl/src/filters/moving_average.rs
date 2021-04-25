@@ -109,10 +109,6 @@ impl<T> MovingAverage<T> {
         self.frames.pop_front();
     }
 
-    fn num_chans(&self) -> usize {
-        self.frames[0].vals.len()
-    }
-
     fn avg_frame(&self) -> Frame<f32> {
         Frame::simple_average(&self.frames)
     }
@@ -151,7 +147,9 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
                     return Ok(()) // should be restarted every time
                 }
 
-                mov_avg.set_frame(&avg_frame); // error handling?
+                if let Err(e) = mov_avg.set_frame(&avg_frame) {
+                    eprintln!("MA error: {}", e);
+                }
             }
 
             match stop.recv_timeout(frame_period) {

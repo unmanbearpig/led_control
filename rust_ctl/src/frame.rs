@@ -22,7 +22,7 @@ impl Frame<f32> {
         }
 
         for (cid, v) in result.iter_mut_some() {
-            *v = *v / counts.get(cid).unwrap() as f32;
+            *v /= counts.get(cid).unwrap() as f32;
         }
         result
     }
@@ -40,14 +40,6 @@ impl Frame<f32> {
             self.vals[*cid as usize] = Some(*val);
         }
     }
-
-    /// writes values to provided msg
-    pub fn to_msg(&self, msg: &mut Msg) {
-        for (cid, v) in self.iter_some() {
-            msg.vals[cid as usize].1 = Val::F32(*v)
-        }
-    }
-
 }
 
 impl<T: Clone + PartialEq> Frame<T> {
@@ -109,19 +101,6 @@ impl<T: Clone> Frame<T> {
         })
     }
 
-    // pub fn add_to_val_ref(&mut self, chan: u16, val: &T)
-    // where T: AddAssign
-    // {
-    //     self.ensure_bounds(chan);
-    //     let prev_val: &mut Option<T> = self.vals.get_mut(chan as usize).unwrap();
-    //     if prev_val.is_some() {
-    //         prev_val.iter_mut()
-    //             .map(|prev: &mut T| prev.add_assign(val.clone()));
-    //     } else {
-    //         *prev_val = Some(val.clone());
-    //     }
-    // }
-
     pub fn add_assign(&mut self, other: &Self)
     where T: Add<Output = T> + Copy
     {
@@ -143,15 +122,9 @@ impl<T: Clone> Frame<T> {
 
     pub fn iter_mut_some(&mut self) -> impl Iterator<Item = (u16, &mut T)> + '_ {
         self.iter_mut()
-            .filter(|(cid, v)| v.is_some())
+            .filter(|(_, v)| v.is_some())
             .map(|(cid, v)| (cid, v.iter_mut().next().unwrap()))
     }
-
-    // pub fn iter_mut_some(&mut self) -> impl Iterator<Item = &mut T> + '_ {
-    //     self.vals.iter_mut()
-    //         .filter(|v| v.is_some())
-    //         .map(|v| v.as_mut().unwrap())
-    // }
 }
 
 #[cfg(test)]
