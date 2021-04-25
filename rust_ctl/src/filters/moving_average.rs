@@ -229,6 +229,7 @@ impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
 
         let target_frame = Frame::new(num_chans as u16);
 
+        let now = Instant::now();
         MovingAverage {
             frame_period,
             transition_period,
@@ -238,8 +239,8 @@ impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
             target_frame,
             incomplete_target_frame: Frame::new(num_chans as u16),
             msg_buf,
-            last_msg_recv_time: Instant::now(),
-            last_msg_target_time: Instant::now(),
+            last_msg_recv_time: now,
+            last_msg_target_time: now,
         }
     }
 }
