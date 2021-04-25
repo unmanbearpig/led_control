@@ -159,7 +159,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
     fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str, smoothing: SmoothingType) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-        let chans = self.chans();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let smoother = match smoothing {
@@ -189,10 +188,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             join_handle,
         });
 
-        self.home_with(HomeTemplate {
-            msg: Some(msg),
-            chans,
-        })
+        self.home_with(Some(msg))
     }
 
     fn on(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -211,7 +207,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
     fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-        let chans = self.chans();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let join_handle = {
@@ -226,10 +221,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             join_handle,
         });
 
-        self.home_with(HomeTemplate {
-            msg: Some(FlashMsg::Ok("Wooooo111!!!")),
-            chans,
-        })
+        self.home_with(Some(FlashMsg::Ok("Wooooo111!!!")))
     }
 
     fn chans(&mut self) -> Vec<ChanTemplate> {
@@ -244,7 +236,11 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             .collect()
     }
 
-    fn home_with(&mut self, template: HomeTemplate) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn home_with(&mut self, msg: Option<FlashMsg>) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let template = HomeTemplate {
+            msg,
+            chans: self.chans(),
+        };
         // todo fix unwrap
         let resp_str = template.render().unwrap();
         let data = resp_str.into_bytes();
@@ -254,12 +250,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     }
 
     fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
-        let template = HomeTemplate {
-            msg: None,
-            chans: self.chans(),
-        };
-
-        self.home_with(template)
+        self.home_with(None)
     }
 
     fn err404(
@@ -332,9 +323,9 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             None => return self.err404(req.method(), url.to_string().as_ref()),
         };
 
-        let val = match path_segments.next() {
-            Some("on") => 1.0,
-            Some("off") => 0.0,
+        let (val, smoothing_type) = match path_segments.next() {
+            Some("on") => (1.0, SmoothingType::Slow),
+            Some("off") => (0.0, SmoothingType::Slow),
             Some("set") => {
                 let mut body: Vec<u8> = Vec::new();
                 req.as_reader().read_to_end(&mut body).unwrap();// TODO fix unwrap
@@ -354,7 +345,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
                 }
 
                 match value {
-                    Some(v) => v,
+                    Some(v) => (v, SmoothingType::Fast),
                     None => {
                         todo!()
                     }
@@ -369,7 +360,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
             chan_id_str.to_string(),
             val,
-        )])), ok_msg.as_ref(), SmoothingType::Fast)
+        )])), ok_msg.as_ref(), smoothing_type)
     }
 
     /// All static files should start with /assets/
