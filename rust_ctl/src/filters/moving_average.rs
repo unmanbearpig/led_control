@@ -56,6 +56,7 @@ impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
     fn sync(&mut self) -> Result<(), String> {
         self.fetch_vals()?;
         self.target_frame = self.incomplete_target_frame.clone();
+        self.incomplete_target_frame.clear();
         Ok(())
     }
 }
