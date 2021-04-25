@@ -307,12 +307,12 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             .map(|seg| seg.split(".").last())
             .flatten();
 
-        const default_content_type: &str = "text/plain";
+        const DEFAULT_CONTENT_TYPE: &str = "text/plain";
         let content_type: &str = match extension {
             Some("css") => "text/css",
             Some("js") => "text/javascript",
-            Some(_) => default_content_type,
-            None => default_content_type,
+            Some(_) => DEFAULT_CONTENT_TYPE,
+            None => DEFAULT_CONTENT_TYPE,
         };
 
         let content_type_header = tiny_http::Header::from_bytes(
