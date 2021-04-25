@@ -49,6 +49,7 @@ impl<T: HasChanDescriptions> DevNumChans for MovingAverage<T> {
 }
 impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        println!("MA set_f32 {} {}", chan, val);
         self.incomplete_target_frame.set(chan, val);
         Ok(())
     }
@@ -62,6 +63,7 @@ impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
 
 impl<T: DevRead> MovingAverage<T> {
     fn fetch_vals(&mut self) -> Result<(), String> {
+        println!("-------------- fetch_vals ---------------");
         self.clear_frames();
         {
             let output = self.output.lock().unwrap();
@@ -71,6 +73,9 @@ impl<T: DevRead> MovingAverage<T> {
         for frame in self.frames.iter_mut() {
             *frame = self.current_frame.clone();
         }
+
+        println!("self.current_frame = {:?}", self.current_frame);
+        println!("avg frame = {:?}", self.avg_frame());
         Ok(())
     }
 }
@@ -79,6 +84,26 @@ impl<T: HasChanDescriptions> DevRead for MovingAverage<T> {
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
         // maybe we should get the val from the dev, but not sure
         Ok(self.current_frame.get(chan).unwrap_or(0.0))
+    }
+}
+
+impl<T: DevRead + DevWrite> MovingAverage<T> {
+    fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
+        let mut output = self.output.lock().unwrap();
+
+        if let Err(e) = output.set_frame(&frame) {
+            eprintln!("moving_average output.set_frame err: {:?}", e);
+            return Err(e)
+        }
+
+        if let Err(e) = output.sync() {
+            eprintln!("moving_average output.sync err: {:?}", e);
+            return Err(e)
+        }
+
+        self.current_frame = frame.clone();
+
+        Ok(())
     }
 }
 
@@ -112,7 +137,7 @@ impl<T> MovingAverage<T> {
     }
 
     fn has_reached_target(&self) -> bool {
-        self.current_frame == self.target_frame
+        self.target_frame.is_subset_of(&self.current_frame)
     }
 
     fn clear_frames(&mut self) {
@@ -140,16 +165,18 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
                 mov_avg.advance_frame();
 
                 let avg_frame = mov_avg.avg_frame();
+                println!("MA loop avg frame = {:?}", avg_frame);
 
-                if !mov_avg.has_reached_target() {
-                    let mut output = mov_avg.output.lock().unwrap();
-                    if let Err(e) = output.set_frame(&avg_frame) {
-                        eprintln!("moving_average output.set_frame err: {:?}", e);
-                    }
-                    if let Err(e) = output.sync() {
-                        eprintln!("moving_average output.sync err: {:?}", e);
-                    }
+                if mov_avg.has_reached_target() {
+                    println!("MA done");
+                    return Ok(())
+                } else {
+                    println!("MA not reached target");
+                    println!("MA current_frame = {:?}", mov_avg.current_frame);
+                    println!("MA target_frame  = {:?}", mov_avg.target_frame);
                 }
+
+                mov_avg.set_frame(&avg_frame); // error handling?
             }
 
             match stop.recv_timeout(frame_period) {

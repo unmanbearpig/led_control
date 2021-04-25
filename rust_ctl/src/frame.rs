@@ -30,6 +30,17 @@ impl Frame<f32> {
     }
 }
 
+impl<T: Clone + PartialEq> Frame<T> {
+    pub fn is_subset_of(&self, other: &Frame<T>) -> bool {
+        self.vals.iter().zip(other.iter()).all(|(a, b)| {
+            match a {
+                None => true,
+                Some(a) => a == b,
+            }
+        })
+    }
+}
+
 impl<T: Clone> Frame<T> {
     pub fn new(num_chans: u16) -> Self {
         Frame::<T> {
