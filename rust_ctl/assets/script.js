@@ -1,4 +1,5 @@
 // TODO fix mime type when serving it
+// TODO add js for buttons
 
 function sliderchange(event) {
   var el = event.srcElement;
