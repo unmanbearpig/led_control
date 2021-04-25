@@ -89,7 +89,6 @@ impl<T> MovingAverage<T> {
     }
 
     fn num_chans(&self) -> usize {
-        // self.frames[0].num_chans()
         self.frames[0].vals.len()
     }
 
@@ -100,14 +99,10 @@ impl<T> MovingAverage<T> {
         for frame in self.frames.iter() {
             for (i, v) in frame.iter().enumerate() {
                 result.add_to_val(i as u16, *v);
-                //result.vals[i] += v;
             }
         }
 
         let num_frames = self.frames.len();
-        // for item in result.vals.iter_mut().take(num_chans) {
-        //     *item /= num_frames as f32;
-        // }
 
         for item in result.iter_mut() {
             *item /= num_frames as f32;
