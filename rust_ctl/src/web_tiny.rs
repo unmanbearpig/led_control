@@ -435,7 +435,7 @@ impl Web {
         let ma_fast = MovingAverage::new(
             srv.clone(),
             Duration::from_millis(4),
-            Duration::from_millis(100),
+            Duration::from_millis(50),
         );
         let ma_fast = Arc::new(Mutex::new(ma_fast));
 
