@@ -136,16 +136,30 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
             self_lock.frame_period
         };
 
+        let mut i = 0usize;
         loop {
             {
+                i += 1;
                 let mov_avg = self_lock.clone();
                 let mut mov_avg = mov_avg.lock().unwrap();
                 mov_avg.advance_frame();
 
-                let avg_frame = mov_avg.avg_frame();
+                let mut avg_frame = mov_avg.avg_frame();
 
                 if mov_avg.has_reached_target() {
-                    return Ok(()) // should be restarted every time
+                    return Ok(())
+                }
+
+                // it's likely that we can't exactly reach the target
+                // because of f32 impreciseness
+                if i > mov_avg.frames.len() {
+                    let furthest_frame = mov_avg.frames[mov_avg.frames.len() -1].clone();
+
+                    // average frame is the same as the last frame in the VecDeque
+                    // which means that we've reached the closest values to the target
+                    if avg_frame.almost_same_as(&furthest_frame, 0.000001) {
+                        avg_frame = mov_avg.target_frame.clone();
+                    }
                 }
 
                 if let Err(e) = mov_avg.set_frame(&avg_frame) {

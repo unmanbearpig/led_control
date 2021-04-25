@@ -40,6 +40,34 @@ impl Frame<f32> {
             self.vals[*cid as usize] = Some(*val);
         }
     }
+
+    pub fn almost_same_as(&self, other: &Frame<f32>, margin: f32) -> bool {
+        if self.vals.len() != other.vals.len() {
+            return false
+        }
+
+        for (a, b) in self.vals.iter().zip(other.vals.iter()) {
+            if a == b {
+                continue;
+            }
+
+            if a.is_some() != b.is_some() {
+                return false;
+            }
+
+            if a.is_none() {
+                continue;
+            }
+
+            let a = a.unwrap();
+            let b = b.unwrap();
+
+            if !(a >= b - margin && a <= b + margin) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl<T: Clone + PartialEq> Frame<T> {
@@ -173,5 +201,13 @@ mod frame_test {
         let avg: Frame<f32> = Frame::simple_average(&frames);
 
         assert_eq!(avg, Frame { vals: vec![Some(0.2), None, Some(0.5), None] })
+    }
+
+    #[test]
+    fn test_is_subset_of() {
+        let sup = Frame { vals: vec![Some(0.5), Some(0.1)] };
+        let sub = Frame { vals: vec![None,      Some(0.1)] };
+        assert_eq!(true, sub.is_subset_of(&sup));
+        assert_eq!(false, sup.is_subset_of(&sub));
     }
 }
