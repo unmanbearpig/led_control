@@ -302,7 +302,29 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
         let len = data.len();
         let cur = Cursor::new(data);
-        tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(), cur, Some(len), None)
+
+        let extension: Option<&str> = path_segments.last()
+            .map(|seg| seg.split(".").last())
+            .flatten();
+
+        const default_content_type: &str = "text/plain";
+        let content_type: &str = match extension {
+            Some("css") => "text/css",
+            Some("js") => "text/javascript",
+            Some(_) => default_content_type,
+            None => default_content_type,
+        };
+
+        let content_type_header = tiny_http::Header::from_bytes(
+            &b"Content-Type"[..], content_type)
+            .unwrap();
+
+        tiny_http::Response::new(
+            tiny_http::StatusCode(200),
+            vec![content_type_header],
+            cur,
+            Some(len),
+            None)
     }
 
     fn handle_chans(
