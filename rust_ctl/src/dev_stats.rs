@@ -199,7 +199,7 @@ impl DevWriteStats {
                                    Default::default);
         }
 
-        for (cid, val) in self.incomplete_frame.iter_with_chans() {
+        for (cid, val) in self.incomplete_frame.iter_some() {
             self.stats[cid as usize].add(*val as f64);
         }
 

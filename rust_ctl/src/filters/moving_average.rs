@@ -49,7 +49,6 @@ impl<T: HasChanDescriptions> DevNumChans for MovingAverage<T> {
 }
 impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        println!("MA set_f32 {} {}", chan, val);
         self.incomplete_target_frame.set(chan, val);
         Ok(())
     }
@@ -63,7 +62,6 @@ impl<T: HasChanDescriptions + DevRead> DevWrite for MovingAverage<T> {
 
 impl<T: DevRead> MovingAverage<T> {
     fn fetch_vals(&mut self) -> Result<(), String> {
-        println!("-------------- fetch_vals ---------------");
         self.clear_frames();
         {
             let output = self.output.lock().unwrap();
@@ -74,8 +72,6 @@ impl<T: DevRead> MovingAverage<T> {
             *frame = self.current_frame.clone();
         }
 
-        println!("self.current_frame = {:?}", self.current_frame);
-        println!("avg frame = {:?}", self.avg_frame());
         Ok(())
     }
 }
@@ -118,22 +114,7 @@ impl<T> MovingAverage<T> {
     }
 
     fn avg_frame(&self) -> Frame<f32> {
-        let num_chans = self.num_chans();
-        let mut result: Frame<f32> = Frame::new(num_chans as u16);
-
-        for frame in self.frames.iter() {
-            for (i, v) in frame.iter().enumerate() {
-                result.add_to_val(i as u16, *v);
-            }
-        }
-
-        let num_frames = self.frames.len();
-
-        for item in result.iter_mut() {
-            *item /= num_frames as f32;
-        }
-
-        result
+        Frame::simple_average(&self.frames)
     }
 
     fn has_reached_target(&self) -> bool {
@@ -165,15 +146,9 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
                 mov_avg.advance_frame();
 
                 let avg_frame = mov_avg.avg_frame();
-                println!("MA loop avg frame = {:?}", avg_frame);
 
                 if mov_avg.has_reached_target() {
-                    println!("MA done");
-                    return Ok(())
-                } else {
-                    println!("MA not reached target");
-                    println!("MA current_frame = {:?}", mov_avg.current_frame);
-                    println!("MA target_frame  = {:?}", mov_avg.target_frame);
+                    return Ok(()) // should be restarted every time
                 }
 
                 mov_avg.set_frame(&avg_frame); // error handling?

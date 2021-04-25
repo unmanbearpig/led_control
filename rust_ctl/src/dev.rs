@@ -27,7 +27,7 @@ where
     fn sync(&mut self) -> Result<(), String>;
     fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
         let mut errors: Vec<String> = Vec::new();
-        for (chan, val) in frame.iter_with_chans() {
+        for (chan, val) in frame.iter_some() {
             if let Err(err) = self.set_f32(chan, *val) {
                 errors.push(format!("chan {} set to {} error: {}", chan, val, err));
             }
