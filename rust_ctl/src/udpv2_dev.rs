@@ -61,6 +61,8 @@ impl DevWrite for UdpV2Dev {
     fn sync(&mut self) -> Result<(), String> {
         // eprintln!("UDPv2: sending msg {:?}...", self.msg);
         let mut bytes = [0u8; 1500];
+        // ignore previously set time, use the time just before sending the message
+        self.msg.timestamp = time::SystemTime::now();
         self.msg.serialize(&mut bytes);
         self.socket.send(&bytes).map_err(|e| e.to_string())?;
         self.msg.seq_num = self.msg.seq_num.wrapping_add(1);

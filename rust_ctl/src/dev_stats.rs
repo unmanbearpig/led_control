@@ -166,7 +166,7 @@ impl MsgStats {
         self.f32_vals_last.resize_with(0, Default::default);
 
         println!(
-            "msg count: {:7}, msgs per sec: {:9.4}  dups: {:4}  loss: {:4}  \n  latency: {}\n{}",
+            "msg count: {:7}, msgs per sec: {:9.4}  dups: {:4}  loss: {:4}  \n  latency ms: {}\n{}",
             self.msg_cnt,
             msgs_per_sec,
             self.msg_dups,
@@ -271,12 +271,12 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
             Ok(latency) => {
                 self.msg_stats
                     .msg_recv_latency_ms
-                    .add(latency.as_secs_f64() / 1000.0);
+                    .add(latency.as_secs_f64() * 1000.0);
             }
             Err(e) => {
                 println!(
                     "msg created time is {} ms in the future",
-                    e.duration().as_secs_f64() / 1000.0
+                    e.duration().as_secs_f64() * 1000.0
                 );
             }
         }
