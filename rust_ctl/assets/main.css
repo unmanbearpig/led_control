@@ -10,13 +10,14 @@ body {
 }
 
 button {
-    background-color: #ddd;
+    background-color: #000;
     border-width: 3px;
     border-color: #3dd513;
     font-size: 38px;
 
     margin-left: 0.5em;
     margin-right: 0.5rem;
+    color: #405ed2;
 }
 
 button.btn-disco {
