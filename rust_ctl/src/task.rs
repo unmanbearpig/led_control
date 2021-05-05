@@ -21,7 +21,6 @@ impl Task {
     }
 
     pub fn ask_to_stop(&mut self) {
-        println!("asking task to stop...");
         match self.chan.send(TaskMsg::Stop) {
             Ok(_) => {}
             Err(e) => {
@@ -37,8 +36,25 @@ impl Task {
 
         // FIXME:
         //  I only have a reference by join moves
-        let res = self.join_handle.join();
-        println!("join task result: {:?}", res);
+        match self.join_handle.join() {
+            Ok(res) => {
+                if let Err(e) = res {
+                    eprintln!("Task returned error: {}", e)
+                }
+            },
+            Err(e) => {
+                eprintln!(r#"
+!!------------------------------------!!
+    Error while joining thread
+         I don't think I've seen it happen,
+         should investigate!
+Task name: {}
+Error:
+{:?}
+!!------------------------------------!!
+"#, self.name, e);
+            }
+        }
     }
 
     /// ask to stop and waits for it
