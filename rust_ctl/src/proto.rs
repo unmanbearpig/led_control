@@ -13,6 +13,7 @@ pub const MSG_HEADER_SIZE: usize = 4 + 4 + 8 + 4 + 4;
 pub const MSG_MAX_SIZE: usize = MSG_HEADER_SIZE + MSG_MAX_PAYLOAD;
 pub const MSG_MAGIC: u8 = 0x1c;
 
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChanId(pub u16);
 

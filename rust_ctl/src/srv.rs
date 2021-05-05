@@ -211,3 +211,89 @@ impl DevRead for Srv {
 }
 
 impl Dev for Srv {}
+
+#[cfg(test)]
+mod tests {
+    extern crate test;
+    use super::*;
+    use test::Bencher;
+    use crate::test_dev;
+    use std::sync::{Arc, Mutex};
+    use crate::chan::ChanConfig;
+
+    #[bench]
+    fn bench_srv_dev_with_chan_config(b: &mut Bencher) {
+        let mut srv = Srv::new();
+        let test_dev = test_dev::TestDev::new();
+        let sync_dev = Arc::new(Mutex::new(test_dev));
+        let chan_cfgs = vec![
+            ChanConfig {
+                index: 0, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+            ChanConfig {
+                index: 1, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+            ChanConfig {
+                index: 2, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+
+        ];
+        let chan_cfg = Some(chan_cfgs.into_iter());
+        srv.add_dev(sync_dev, chan_cfg);
+
+        b.iter(move || {
+            srv.set_f32(0, 0.1).unwrap();
+            srv.set_f32(1, 0.6).unwrap();
+            srv.set_f32(2, 0.99).unwrap();
+            srv.sync().unwrap();
+        })
+    }
+
+    #[bench]
+    fn bench_srv_dev_without_chan_config(b: &mut Bencher) {
+        let mut srv = Srv::new();
+        let test_dev = test_dev::TestDev::new();
+        let sync_dev = Arc::new(Mutex::new(test_dev));
+
+        let chan_cfg: Option<std::iter::Empty<ChanConfig>> = None;
+        srv.add_dev(sync_dev, chan_cfg);
+
+        b.iter(move || {
+            srv.set_f32(0, 0.1).unwrap();
+            srv.set_f32(1, 0.6).unwrap();
+            srv.set_f32(2, 0.99).unwrap();
+            srv.sync().unwrap();
+        })
+    }
+
+        #[bench]
+    fn bench_srv_handle_msg(b: &mut Bencher) {
+        let mut srv = Srv::new();
+        let test_dev = test_dev::TestDev::new();
+        let sync_dev = Arc::new(Mutex::new(test_dev));
+        let chan_cfgs = vec![
+            ChanConfig {
+                index: 0, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+            ChanConfig {
+                index: 1, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+            ChanConfig {
+                index: 2, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+            },
+
+        ]; // TODO: try with it too
+        let chan_cfg = Some(chan_cfgs.into_iter());
+        srv.add_dev(sync_dev, chan_cfg);
+
+        let msg = Msg::new(0, vec![
+            ChanVal(ChanId(0), Val::F32(0.1)),
+            ChanVal(ChanId(1), Val::F32(0.6)),
+            ChanVal(ChanId(2), Val::F32(0.99)),
+        ]);
+
+        b.iter(move || {
+            srv.handle_msg(&msg)
+        })
+    }
+}

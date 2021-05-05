@@ -7,15 +7,21 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
-lto = "fat"
+lto = "thin"
 opt-level = 3
-codegen-units = 4
+codegen-units = 16
 
 # both are `unused`, not sure why:
 #   warning: unused manifest key: profile.release.rustflags
 #   should be in .cargo/config.toml?
 # rustflags = ["-Ctarget-cpu=native"]
 # target-cpu = "native"
+
+[profile.bench]
+lto = "thin"
+opt-level = 3
+codegen-units = 16
+
 
 [dependencies]
 rusb = "0.6"
