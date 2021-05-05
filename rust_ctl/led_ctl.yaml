@@ -1,0 +1,156 @@
+---
+action: PrintConfig
+# the room is not actually a cube
+# this transforms it into it's rough proportions
+room_scale: [ 0.6, 0.5, 1.0 ]
+devs:
+  - dev:
+      UdpV2:
+        ip: 192.168.0.112
+        port: 8932
+        chans: 3
+    chans:
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.1
+        tags: ["blue", "rgb", "window"]
+        # from room's window top left corner x y z coordinates
+        # when looking at the window:
+        #   x: left-right, left is 0
+        #   y: up-down, ceiling is 0, floor is 1
+        #   z: distance from the window into the room, window is 0
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.1
+        tags: ["green", "rgb", "window"]
+        # the same as first channel
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 1.4
+        # the same as first channel
+        tags: ["red", "rgb", "window"]
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+
+  - dev: Usb
+    chans:
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.3
+        tags: ["top", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.4
+            z: 0.15
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.7
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 2.30
+        tags: ["bottom", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.01
+            z: 0.1
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.70
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.27
+        tags: ["scorpion", "bed", "wall"]
+        cuboid:
+          start:
+            x: 0.0
+            y: 0.04
+            z: 1.0
+          end:
+            x: 0.01
+            y: 0.95
+            z: 0.7
+
+  - dev:
+      UdpV2:
+        ip: 192.168.0.110
+        port: 8932
+        chans: 3
+    chans:
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["door", "ceiling"]
+        cuboid:
+          start:
+            x: 0.7
+            y: 0.8
+            z: 0.9
+          end:
+            x: 0.9
+            y: 1.0
+            z: 1.0
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["bed", "ceiling"]
+        cuboid:
+          start:
+            x: 0.8
+            y: 0.8
+            z: 0.9
+          end:
+            x: 1.0
+            y: 1.0
+            z: 1.0
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 2.2
+        tags: ["unused"]
+        cuboid:
+          start:
+            x: 0.8
+            y: 0.8
+            z: 0.9
+          end:
+            x: 1.0
+            y: 1.0
+            z: 1.0
