@@ -53,7 +53,8 @@ fn parse_ip_port(args: &[&str]) -> Result<(IpAddr, Option<u16>), String> {
         2 => Some(
             args[1]
                 .parse()
-                .map_err(|e| format!("parse_ip_port: port parse error: {:?}", e))?,
+                .map_err(|e|
+                         format!("parse_ip_port: port parse error: {:?}", e))?,
         ),
         _ => unreachable!(),
     };
@@ -100,14 +101,16 @@ impl DevChanConfig {
                 chans: chan_configs,
             }),
             "udpv1" => {
-                let (ip, maybe_port) = parse_ip_port(&dev_parts[1..3.min(dev_parts.len())])?;
+                let (ip, maybe_port) =
+                    parse_ip_port(&dev_parts[1..3.min(dev_parts.len())])?;
                 Ok(DevChanConfig {
                     dev: DevConfig::UdpV1(ip, maybe_port),
                     chans: chan_configs,
                 })
             }
             "udpv2" => {
-                let (ip, maybe_port) = parse_ip_port(&dev_parts[1..3.min(dev_parts.len())])?;
+                let (ip, maybe_port) =
+                    parse_ip_port(&dev_parts[1..3.min(dev_parts.len())])?;
                 let chans = 3; // TODO fix hardcoded
                 Ok(DevChanConfig {
                     dev: DevConfig::UdpV2 {
@@ -204,6 +207,9 @@ Actions:
     whoosh   -- Quick fade across all LEDs sequentially (I think, I also don't
                 remember clearly what it does)
 
+Other
+    space    -- does something cool or not
+
 ", default_config_path=DEFAULT_CONFIG_PATH);
 }
 
@@ -221,7 +227,8 @@ impl Config {
             .map_err(|e| format!("{:?}", e))?;
 
         let cfg: Config =
-            serde_yaml::from_str(buf.as_ref()).map_err(|e| format!("parsing config: {:?}", e))?;
+            serde_yaml::from_str(buf.as_ref())
+            .map_err(|e| format!("parsing config: {:?}", e))?;
         Ok(cfg)
     }
 
@@ -237,6 +244,7 @@ impl Config {
         loop {
             let arg = args.next();
             if arg.is_none() {
+                print_help();
                 break;
             }
             let arg = arg.unwrap();
@@ -248,7 +256,8 @@ impl Config {
                 "--cfg" => {
                     let filename = args.next();
                     if filename.is_none() {
-                        return Err("--cfg requires config filename".to_string());
+                        return Err("--cfg requires config filename"
+                                   .to_string());
                     }
                     cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
                 }
@@ -258,7 +267,8 @@ impl Config {
                 "--dev" => {
                     let dev_arg = args.next();
                     if dev_arg.is_none() {
-                        return Err("No device specified for --dev option".to_string());
+                        return Err("No device specified for --dev option"
+                                   .to_string());
                     }
                     let dev_arg = dev_arg.unwrap();
                     devs.push(DevChanConfig::parse(dev_arg)?);
@@ -270,7 +280,8 @@ impl Config {
                     let (listen_ip, listen_port) = match listen_arg {
                         Some(arg) => {
                             let parts: Vec<&str> = arg.split(':').collect();
-                            let (ip, port) = parse_ip_port(&parts[0..2.min(parts.len())])?;
+                            let (ip, port) =
+                                parse_ip_port(&parts[0..2.min(parts.len())])?;
                             (Some(ip), port)
                         }
                         None => (None, None),
@@ -288,12 +299,15 @@ impl Config {
                 "set" => {
                     let setarg = args.next();
                     if setarg.is_none() {
-                        return Err("set requires an argument: either 'f32' or 'u16'".to_string());
+                        return Err(
+                            "set requires an argument: either 'f32' or 'u16'"
+                                .to_string());
                     }
                     let setarg = setarg.unwrap();
                     let chan_spec_arg = args.next();
                     if chan_spec_arg.is_none() {
-                        return Err(format!("set {} requires chan spec argument", setarg));
+                        return Err(format!("set {} requires chan spec argument",
+                                           setarg));
                     }
                     let chan_spec_arg = chan_spec_arg.unwrap();
 
@@ -301,7 +315,9 @@ impl Config {
                         "f32" => ChanSpec::parse_f32(chan_spec_arg.as_ref()),
                         "u16" => ChanSpec::parse_u16(chan_spec_arg.as_ref()),
                         other => {
-                            return Err(format!("set only supports f32 and u16, got '{}'", other))
+                            return Err(format!(
+                                "set only supports f32 and u16, got '{}'",
+                                other))
                         }
                     }?;
                     action = Some(Action::Set(chan_spec));
@@ -315,7 +331,8 @@ impl Config {
                     let location = match args.next() {
                         None => {
                             return Err(
-                                "space needs: location (x,y,z) radius brightness".to_string()
+                                "space needs: location (x,y,z) \
+                                 radius brightness".to_string()
                             )
                         }
                         Some(loc) => loc,
@@ -323,7 +340,8 @@ impl Config {
 
                     let loc_parts: Vec<&str> = location.split(',').collect();
                     if loc_parts.len() != 3 {
-                        return Err("location coordinates needs to be x,y,z".to_string());
+                        return Err("location coordinates needs to be x,y,z"
+                                   .to_string());
                     }
                     let loc_parts: Vec<f32> = loc_parts
                         .iter()
@@ -332,7 +350,8 @@ impl Config {
 
                     let radius = match args.next() {
                         None => return Err(
-                            "space needs: location (x,y,z) radius (missing) brightness (missing)"
+                            "space needs: location (x,y,z) radius (missing) \
+                             brightness (missing)"
                                 .to_string(),
                         ),
                         Some(br) => br,
@@ -343,14 +362,16 @@ impl Config {
 
                     let brightness = match args.next() {
                         None => {
-                            return Err("space needs: location (x,y,z) radius brightness (missing)"
+                            return Err("space needs: location (x,y,z) \
+                                        radius brightness (missing)"
                                 .to_string())
                         }
                         Some(br) => br,
                     };
                     let brightness: f32 = brightness
                         .parse()
-                        .map_err(|e: ParseFloatError| return format!("{:?}", e))?;
+                        .map_err(|e: ParseFloatError|
+                                 return format!("{:?}", e))?;
 
                     action = Some(Action::Space(
                         Coord {
@@ -374,7 +395,8 @@ impl Config {
                         "hello" => action = Some(Action::DemoHello),
                         "fade" => action = Some(Action::DemoFade),
                         "whoosh" => action = Some(Action::DemoWhoosh),
-                        other => return Err(format!("demo \"{}\" does not exist", other)),
+                        other => return Err(
+                            format!("demo \"{}\" does not exist", other)),
                     }
                 }
                 other => return Err(format!("Unknown arg \"{}\"", other)),
@@ -386,7 +408,9 @@ impl Config {
                 Ok(_) => cfg = Some(Self::from_file(DEFAULT_CONFIG_PATH)?),
                 Err(e) => {
                     if e.kind() != io::ErrorKind::NotFound {
-                        return Err(format!("Could not read {}: {:?}", DEFAULT_CONFIG_PATH, e));
+                        return Err(
+                            format!("Could not read {}: {:?}",
+                                    DEFAULT_CONFIG_PATH, e));
                     }
                 }
             }
