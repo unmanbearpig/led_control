@@ -38,7 +38,9 @@ use std::env;
 
 fn main() -> Result<(), String> {
     let config = config::Config::from_args(env::args())?;
-    config.action.perform(&config)?;
+    if let Some(action) = &config.action {
+        action.perform(&config)?;
+    }
 
     Ok(())
 }

@@ -154,43 +154,62 @@ mod dev_config_test {
     }
 }
 
-/// cli
-///   config (by default /etc/led_ctl.yaml is used):
-///     --cfg config.yaml          -- use config.yaml
-///     --no-cfg                   -- don't use default /etc/led_ctl.yaml
-///
-///   specifying devices:
-///    --dev udpv1:127.0.0.1       -- udp version1 with default port
-///    --dev udpv2:127.0.0.1       -- v2 with default port
-///    --dev udpv2:127.0.0.1:1234  -- v2 with custom port
-///    --dev usb                   -- all usb devices
-///
-///   actions:
-///     list channels:
-///       ls
-///
-///     serve:
-///       srv              -- listen on 0.0.0.0 and default port
-///       srv 127.0.0.1    -- different ip, default port
-///       srv 0.0.0.0:1234 -- custom port
-///
-///     set values:
-///       set f32 0.1                    -- set all chans to f32 value
-///       set f32 0.0,0.34,0.88888,0.333 -- set multiple values in chan id order
-///       set f32 1,r:.9                 -- set all to 1 except channels tagged 'r'
-///                                         which are set to 0.9
-///       set f32 1,2:.7                 -- set all to 1 except 2 which is set to 0.7
-///     unimplemented:
-///       set u16 123                    -- set raw u16 value to all chans
-///       set u16 123,0,334              -- set raw u16 value per channel
-///
-///     demo
-///       test_seq -- fade all LEDs in sequence
-///
+fn print_help() {
+    println!("
+led_ctl (or rust_ctl, whatevers) [OPTIONS] ACTION
+OPTIONS
+  --help                         -- prints help
+
+Configuration (by default use {default_config_path})
+  --cfg filename.yaml         -- use config file `filename.yaml` instead of
+                                 default config {default_config_path}
+  --no-cfg                    -- Don't use {default_config_path} and instead use
+                                 automatic configuration if possible
+
+Specifying devices
+  --dev udpv1:127.0.0.1       -- UDP version 1 protocol with default port
+  --dev udpv2:127.0.0.1       -- UDP v2 with default port
+  --dev udpv2:127.0.0.1:1234  -- UDP v2 with custom port
+  --dev usb                   -- All usb devices
+
+Actions:
+  list channels:
+    ls
+
+  Serve:
+    srv              -- listen on 0.0.0.0 and default port
+    srv 127.0.0.1    -- different ip, default port
+    srv 0.0.0.0:1234 -- custom port
+
+    web [ADDR[:PORT]] -- serve web UI at ADDR:PORT or at default addr and port
+
+  Set values and exit:
+    set f32 0.1                    -- set all chans to f32 value
+    set f32 0.0,0.34,0.88888,0.333 -- set multiple values in chan id order
+    set f32 1,r:.9                 -- set all to 1 except channels tagged 'r'
+                                      which are set to 0.9
+    set f32 1,2:.7                 -- set all to 1 except 2 which is set to 0.7
+
+  Unimplemented (yet or ever. Or is it? I don't remember):
+    set u16 123                    -- set raw u16 value to all chans
+    set u16 123,0,334              -- set raw u16 value per channel
+
+  Demos (demo DEMO_NAME [OPTIONAL_ARGUMENTS])
+    test_seq -- Sequentially fade each LED in and out. Useful for testing
+    glitch   -- Glitchy demo that only works in some configurations
+                (don't remember which) but is kinda cool
+    hello    -- AKA Disco in web UI. Sine all LEDs at random-ish frequencies at
+                high brightness
+    fade     -- Probably fade out everything, I don't remember. Not very useful.
+    whoosh   -- Quick fade across all LEDs sequentially (I think, I also don't
+                remember clearly what it does)
+
+", default_config_path=DEFAULT_CONFIG_PATH);
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub action: Action,
+    pub action: Option<Action>,
     pub devs: Vec<DevChanConfig>,
 }
 
@@ -200,8 +219,6 @@ impl Config {
         let mut buf = String::new();
         file.read_to_string(&mut buf)
             .map_err(|e| format!("{:?}", e))?;
-
-        println!("config:\n{}", buf);
 
         let cfg: Config =
             serde_yaml::from_str(buf.as_ref()).map_err(|e| format!("parsing config: {:?}", e))?;
@@ -225,6 +242,9 @@ impl Config {
             let arg = arg.unwrap();
 
             match arg.as_ref() {
+                "--help" => {
+                    print_help();
+                },
                 "--cfg" => {
                     let filename = args.next();
                     if filename.is_none() {
@@ -376,15 +396,11 @@ impl Config {
             Some(mut cfg) => {
                 cfg.devs.extend(devs);
                 Config {
-                    action: action.unwrap_or(cfg.action),
+                    action: action,
                     devs: cfg.devs,
                 }
             }
             None => {
-                let action = match action {
-                    Some(a) => a,
-                    None => return Err("No action specified".to_string()),
-                };
                 Config { action, devs }
             }
         };
