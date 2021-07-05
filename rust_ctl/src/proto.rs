@@ -115,7 +115,9 @@ impl Msg {
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 
-        let ser: &mut MsgHeaderSer = unsafe { &mut *(buf.as_ptr() as *mut MsgHeaderSer) };
+        let ser: &mut MsgHeaderSer = unsafe {
+            &mut *(buf.as_ptr() as *mut MsgHeaderSer)
+        };
 
         ser.magic = MSG_MAGIC;
         ser.flags = 0;
@@ -146,11 +148,14 @@ impl Msg {
     }
 
     pub fn deserialize(buf: &[u8]) -> Result<Self, SerErr> {
-        let header: &MsgHeaderSer = unsafe { &*(buf.as_ptr() as *const MsgHeaderSer) };
+        let header: &MsgHeaderSer = unsafe {
+            &*(buf.as_ptr() as *const MsgHeaderSer)
+        };
         if header.magic != MSG_MAGIC {
             return Err(SerErr::InvalidMagic);
         }
-        let expected_size = MSG_HEADER_SIZE + header.num_vals as usize * MSG_VAL_SIZE;
+        let expected_size = MSG_HEADER_SIZE +
+            header.num_vals as usize * MSG_VAL_SIZE;
 
         if buf.len() < expected_size {
             return Err(SerErr::InvalidSize {
