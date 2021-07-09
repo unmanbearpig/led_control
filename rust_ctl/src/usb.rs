@@ -62,7 +62,9 @@ impl DevWrite for UsbDev {
         // eprintln!("usb write: {:?}", self.raw_vals);
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
-        let data: &[u8; 6] = unsafe { &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6]) };
+        let data: &[u8; 6] = unsafe {
+            &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6])
+        };
 
         self.last_f32_vals = self.f32_vals;
 
@@ -70,7 +72,8 @@ impl DevWrite for UsbDev {
         match res {
             Ok(numbytes) => {
                 if numbytes != data.len() {
-                    eprintln!("USB sync: written {} of {} bytes", numbytes, data.len());
+                    eprintln!("USB sync: written {} of {} bytes",
+                              numbytes, data.len());
                 }
                 Ok(())
             }
@@ -141,8 +144,10 @@ impl UsbDev {
         for dev in devs {
             let handle = dev.open();
             match handle {
-                Ok(h) => led_devs.push(UsbDev::new(h, dev.bus_number(), dev.address())),
-                Err(e) => return Err(format!("could not open dev {:?}: {}", dev, e)),
+                Ok(h) => led_devs.push(
+                    UsbDev::new(h, dev.bus_number(), dev.address())),
+                Err(e) => return Err(
+                    format!("could not open dev {:?}: {}", dev, e)),
             }
         }
 
