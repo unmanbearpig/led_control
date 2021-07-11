@@ -7,7 +7,7 @@ use crate::config;
 use crate::coord::Coord;
 use crate::demo;
 use crate::udp_srv;
-use crate::web_tiny;
+use crate::web;
 use crate::init_devs;
 use crate::dev_stats;
 use crate::srv;
@@ -136,7 +136,7 @@ impl Action {
             Action::Web { listen_addr } => {
                 let listen_addr: Option<String> = listen_addr.clone();
                 let config = config.clone();
-                let mut web = web_tiny::Web::new(listen_addr)?;
+                let mut web = web::Web::new(listen_addr)?;
 
                 let srv = init_srv()?;
                 web.run(srv, config)
