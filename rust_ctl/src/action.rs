@@ -128,8 +128,12 @@ impl Action {
                 println!("chans:");
                 let srv = init_srv()?;
                 let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
-                for (id, name) in srv.chans() {
-                    println!("chan {} {}", id, name);
+                for descr in srv.chan_descriptions() {
+                    let mut tags = String::new();
+                    for tag in descr.tags.iter() {
+                        tags += format!("{} ", tag.name()).as_ref();
+                    }
+                    println!("chan {} {} {}", descr.chan_id, descr.name, tags);
                 }
                 Ok(())
             }

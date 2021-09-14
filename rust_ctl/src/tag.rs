@@ -3,7 +3,6 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tag(String);
 
-// doesn't render in my Gentoo
 const RGB_EMOJI: &str = "🌈";
 const WINDOW_EMOJI: &str = "🌇";
 
