@@ -150,14 +150,17 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.base_url.join(url)
     }
 
-    fn fade_all_to(&mut self, val: f32, ok_msg: &str) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn fade_all_to(&mut self, val: f32, ok_msg: &str)
+            -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
         )), ok_msg, SmoothingType::Slow)
     }
 
-    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str, smoothing: SmoothingType) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str,
+               smoothing: SmoothingType)
+            -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
@@ -236,7 +239,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             .collect()
     }
 
-    fn home_with(&mut self, msg: Option<FlashMsg>) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn home_with(&mut self, msg: Option<FlashMsg>) 
+            -> tiny_http::Response<Cursor<Vec<u8>>> {
         let template = HomeTemplate {
             msg,
             chans: self.chans(),
@@ -246,7 +250,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let data = resp_str.into_bytes();
         let len = data.len();
         let cur = Cursor::new(data);
-        tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(), cur, Some(len), None)
+        tiny_http::Response::new(tiny_http::StatusCode(200), Vec::new(),
+                                 cur, Some(len), None)
     }
 
     fn home(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
@@ -263,7 +268,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let len = data.len();
         let cur = Cursor::new(data);
 
-        tiny_http::Response::new(tiny_http::StatusCode(404), Vec::new(), cur, Some(len), None)
+        tiny_http::Response::new(tiny_http::StatusCode(404), Vec::new(), cur,
+                                 Some(len), None)
     }
 
     /// path_segments exclude the first segment ("/assets")
@@ -328,18 +334,22 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             Some("off") => (0.0, SmoothingType::Slow),
             Some("set") => {
                 let mut body: Vec<u8> = Vec::new();
-                req.as_reader().read_to_end(&mut body).unwrap();// TODO fix unwrap
+                // TODO fix unwrap
+                req.as_reader().read_to_end(&mut body).unwrap();
 
                 let mut value: Option<f32> = None;
                 for (k, v) in form_urlencoded::parse(body.as_slice()) {
                     match k.as_ref() {
                         "value" => {
-                            let f32_val: f32 = v.parse().unwrap(); // TODO fix unwrap
+                            // TODO fix unwrap
+                            let f32_val: f32 = v.parse().unwrap(); 
                             value = Some(f32_val);
                         }
                         other => {
                             // log and ignore
-                            println!("unexpected form parameter {} with value '{}'", other, v);
+                            println!(
+                                "unexpected form parameter {} with value '{}'",
+                                other, v);
                         }
                     }
                 }
@@ -351,7 +361,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
                     }
                 }
             }
-            Some(_) => return self.err404(req.method(), url.to_string().as_ref()),
+            Some(_) => return self.err404(req.method(), url.to_string()
+                                          .as_ref()),
             None => return self.err404(req.method(), url.to_string().as_ref()),
         };
 
@@ -401,7 +412,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
 impl Web {
     pub fn new(listen_addr: Option<String>) -> Result<Self, String> {
-        let listen_addr = listen_addr.unwrap_or_else(|| DEFAULT_LISTEN_ADDR.to_string());
+        let listen_addr = listen_addr
+            .unwrap_or_else(|| DEFAULT_LISTEN_ADDR.to_string());
 
         Ok(Web { listen_addr })
     }
@@ -432,7 +444,8 @@ impl Web {
 
 
         let mut server = WebState {
-            base_url: Url::parse(format!("http://{}", self.listen_addr).as_ref()).unwrap(),
+            base_url: Url::parse(format!("http://{}", self.listen_addr)
+                                 .as_ref()).unwrap(),
             output: srv,
             output_config: config,
             http,
