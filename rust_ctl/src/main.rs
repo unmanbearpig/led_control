@@ -39,7 +39,7 @@ use std::env;
 fn main() -> Result<(), String> {
     let config = config::Config::from_args(env::args())?;
     if let Some(action) = &config.action {
-        action.perform(&config)?;
+        action.init()?.perform(&config)?;
     }
 
     Ok(())

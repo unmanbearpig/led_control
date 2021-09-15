@@ -5,13 +5,18 @@ use std::env;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::net::IpAddr;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::action::Action;
+use crate::action::{ActionSpec};
 use crate::chan::ChanConfig;
 use crate::chan_spec::ChanSpec;
 use crate::coord::Coord;
+use crate::dev_stats;
+use crate::srv;
+use crate::init_devs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
@@ -215,11 +220,11 @@ Other
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub action: Option<Action>,
+    pub action: Option<ActionSpec>,
     pub devs: Vec<DevChanConfig>,
 }
 
-impl Config {
+impl<'a> Config {
     fn from_file(filename: &str) -> Result<Self, String> {
         let mut file = File::open(filename).map_err(|e| format!("{:?}", e))?;
         let mut buf = String::new();
@@ -232,8 +237,26 @@ impl Config {
         Ok(cfg)
     }
 
+    pub fn init_srv(&self) ->
+            Result<Arc<Mutex<dev_stats::DevStats<srv::Srv>>>, String> {
+        let devs = init_devs::init_devs(&self.devs[..])?; // dyn
+        let mut srv = srv::Srv::new();
+        for (dev, chancfg) in devs.into_iter() {
+            srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
+        }
+
+        let sync_srv = Arc::new(Mutex::new(srv));
+        let dev_stats = dev_stats::DevStats::new(sync_srv);
+        let sync_dev = Arc::new(Mutex::new(dev_stats));
+        {
+            let sync_dev = sync_dev.clone();
+            dev_stats::start_mon(sync_dev, Duration::from_millis(200));
+        }
+        Ok(sync_dev)
+    }
+
     pub fn from_args(mut args: env::Args) -> Result<Self, String> {
-        let mut action: Option<Action> = None;
+        let mut action: Option<ActionSpec> = None;
         let mut devs: Vec<DevChanConfig> = Vec::new();
         let mut cfg: Option<Config> = None;
 
@@ -273,8 +296,8 @@ impl Config {
                     let dev_arg = dev_arg.unwrap();
                     devs.push(DevChanConfig::parse(dev_arg)?);
                 }
-                "ls" => action = Some(Action::ListChans),
-                "print_cfg" => action = Some(Action::PrintConfig),
+                "ls" => action = Some(ActionSpec::ListChans),
+                "print_cfg" => action = Some(ActionSpec::PrintConfig),
                 "srv" => {
                     let listen_arg = args.next();
                     let (listen_ip, listen_port) = match listen_arg {
@@ -287,7 +310,7 @@ impl Config {
                         None => (None, None),
                     };
 
-                    action = Some(Action::Srv {
+                    action = Some(ActionSpec::Srv {
                         listen_ip,
                         listen_port,
                     });
@@ -320,10 +343,10 @@ impl Config {
                                 other))
                         }
                     }?;
-                    action = Some(Action::Set(chan_spec));
+                    action = Some(ActionSpec::Set(chan_spec));
                 }
                 "web" => {
-                    action = Some(Action::Web {
+                    action = Some(ActionSpec::Web {
                         listen_addr: args.next(),
                     })
                 }
@@ -373,15 +396,15 @@ impl Config {
                         .map_err(|e: ParseFloatError|
                                  return format!("{:?}", e))?;
 
-                    action = Some(Action::Space(
-                        Coord {
+                    action = Some(ActionSpec::Space {
+                        location: Coord {
                             x: loc_parts[0],
                             y: loc_parts[1],
                             z: loc_parts[2],
                         },
                         radius,
                         brightness,
-                    ))
+                    })
                 }
                 "demo" => {
                     let demo_arg = args.next();
@@ -390,11 +413,11 @@ impl Config {
                     }
                     let demo_arg = demo_arg.unwrap();
                     match demo_arg.as_ref() {
-                        "test_seq" => action = Some(Action::DemoTestSeq),
-                        "glitch" => action = Some(Action::DemoGlitch),
-                        "hello" => action = Some(Action::DemoHello),
-                        "fade" => action = Some(Action::DemoFade),
-                        "whoosh" => action = Some(Action::DemoWhoosh),
+                        "test_seq" => action = Some(ActionSpec::TestSeq),
+                        "glitch" => action = Some(ActionSpec::Glitch),
+                        "hello" => action = Some(ActionSpec::Hello),
+                        "fade" => action = Some(ActionSpec::Fade),
+                        "whoosh" => action = Some(ActionSpec::Whoosh),
                         other => return Err(
                             format!("demo \"{}\" does not exist", other)),
                     }

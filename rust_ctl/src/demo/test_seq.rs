@@ -3,6 +3,17 @@ use crate::proto::{ChanVal, Msg, Val};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time;
+use crate::action::Action;
+use crate::config::Config;
+
+#[derive(Clone, std::fmt::Debug,
+         serde_derive::Serialize, serde_derive::Deserialize)]
+pub struct TestSeq;
+impl Action<'_> for TestSeq {
+    fn perform(&self, config: &Config) -> Result<(), String> {
+        run(config.init_srv()?)
+    }
+}
 
 pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
     println!("running test_seq...");

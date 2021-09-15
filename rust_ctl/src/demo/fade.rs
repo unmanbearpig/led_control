@@ -4,6 +4,17 @@ use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time;
+use crate::action::Action;
+use crate::config::Config;
+
+#[derive(Clone, std::fmt::Debug,
+         serde_derive::Serialize, serde_derive::Deserialize)]
+pub struct Fade;
+impl Action<'_> for Fade {
+    fn perform(&self, config: &Config) -> Result<(), String> {
+        run(config.init_srv()?)
+    }
+}
 
 struct DemoChan {
     start: f64,

@@ -8,12 +8,7 @@ use crate::coord::Coord;
 use crate::demo;
 use crate::udp_srv;
 use crate::web;
-use crate::init_devs;
-use crate::dev_stats;
-use crate::srv;
 use serde_derive::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 #[cfg(test)]
 mod chan_spec_parse_test {
@@ -66,119 +61,131 @@ mod chan_spec_parse_test {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum Action {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ActionSpec {
     ListChans,
     PrintConfig,
-    Srv {
-        listen_ip: Option<IpAddr>,
-        listen_port: Option<u16>,
-    },
-
+    Srv { listen_ip: Option<IpAddr>, listen_port: Option<u16> },
     Set(ChanSpec),
-
-    Web {
-        listen_addr: Option<String>,
-    },
-
-    // location, radius, brightness
-    Space(Coord, f32, f32),
-
-    DemoTestSeq,
-    DemoGlitch,
-    DemoHello,
-    DemoFade,
-    DemoWhoosh,
-    DemoFade2 {
-        chan_spec: ChanSpec,
-    },
+    Web { listen_addr: Option<String> },
+    Space { location: Coord, radius: f32, brightness: f32 },
+    TestSeq,
+    Glitch,
+    Hello,
+    Fade,
+    Whoosh,
 }
 
-impl Action {
-    pub fn perform(
-        &self,
-        config: &config::Config,
-    ) -> Result<(), String> {
-        let init_srv = || -> Result<Arc<Mutex<dev_stats::DevStats<srv::Srv>>>, String> {
-            let devs = init_devs::init_devs(&config.devs[..])?; // dyn
-            let mut srv = srv::Srv::new();
-            for (dev, chancfg) in devs.into_iter() {
-                srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
-            }
-
-            let sync_srv = Arc::new(Mutex::new(srv));
-            let dev_stats = dev_stats::DevStats::new(sync_srv);
-            let sync_dev = Arc::new(Mutex::new(dev_stats));
-            {
-                let sync_dev = sync_dev.clone();
-                dev_stats::start_mon(sync_dev, Duration::from_millis(200));
-            }
-            Ok(sync_dev)
-        };
-
+impl ActionSpec {
+    pub fn init(&self) -> Result<Box<dyn Action>, String> {
         match self {
-            Action::PrintConfig => {
-                println!(
-                    "{}",
-                    serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e))?
-                );
-                Ok(())
-            }
-            Action::ListChans => {
-                println!("chans:");
-                let srv = init_srv()?;
-                let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
-                for descr in srv.chan_descriptions() {
-                    let mut tags = String::new();
-                    for tag in descr.tags.iter() {
-                        tags += format!("{} ", tag.name()).as_ref();
-                    }
-                    println!("chan {} {} {}", descr.chan_id, descr.name, tags);
-                }
-                Ok(())
-            }
-            Action::Web { listen_addr } => {
-                let listen_addr: Option<String> = listen_addr.clone();
-                let config = config.clone();
-                let mut web = web::Web::new(listen_addr)?;
-
-                let srv = init_srv()?;
-                web.run(srv, config)
-            }
-            Action::Space(loc, radius, brightness) => {
-                println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
-
-                let srv = init_srv()?;
-                demo::space::run(
-                    srv,
-                    demo::space::Config {
-                        location: *loc,
-                        radius: *radius,
-                        brightness: *brightness,
-                    },
-                )
-            }
-            Action::Set(spec) => {
-                actions::set::run_msg(spec, init_srv()?)
-            }
-            Action::DemoTestSeq => demo::test_seq::run(init_srv()?),
-            Action::DemoGlitch => demo::glitch::run(init_srv()?),
-            Action::DemoHello => demo::hello::run(init_srv()?),
-            Action::DemoFade => demo::fade::run(init_srv()?),
-            Action::DemoWhoosh => demo::whoosh::run(init_srv()?),
-            Action::Srv {
-                listen_ip: ip,
-                listen_port: port,
-            } => {
-                let srv = init_srv()?;
-                let mut udp = udp_srv::UdpSrv::new(*ip, *port, srv)?;
-                udp.run();
-                Ok(())
-            }
-            action => {
-                eprintln!("action {:?} not implemented", action);
-                unimplemented!();
-            }
+            ActionSpec::ListChans => Ok(Box::new(ListChans)),
+            ActionSpec::PrintConfig => Ok(Box::new(PrintConfig)),
+            ActionSpec::Srv { listen_ip, listen_port, } =>
+                Ok(Box::new(Srv { listen_ip: listen_ip.clone(),
+                    listen_port: listen_port.clone() })),
+            ActionSpec::Set(chan_spec) => Ok(Box::new(Set(chan_spec.clone()))),
+            ActionSpec::Web { listen_addr } =>
+                Ok(Box::new(Web { listen_addr: listen_addr.clone() })),
+            ActionSpec::Space { location, radius, brightness } =>
+                Ok(Box::new(Space { location: *location, radius: *radius, 
+                    brightness: *brightness })),
+            ActionSpec::TestSeq => Ok(Box::new(demo::test_seq::TestSeq)),
+            ActionSpec::Glitch => Ok(Box::new(demo::glitch::Glitch)),
+            ActionSpec::Hello => Ok(Box::new(demo::hello::Hello)),
+            ActionSpec::Fade => Ok(Box::new(demo::fade::Fade)),
+            ActionSpec::Whoosh => Ok(Box::new(demo::whoosh::Whoosh)),
         }
+    }
+}
+
+pub trait Action<'a>: std::fmt::Debug {
+    fn perform(&self, config: &config::Config) -> Result<(), String>;
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct PrintConfig;
+impl Action<'_> for PrintConfig {
+    fn perform(&self, config: &config::Config,) -> Result<(), String> {
+        println!(
+            "{}",
+            serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e))?
+        );
+        Ok(())
+    }
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct Web { pub listen_addr: Option<String> }
+impl Action<'_> for Web {
+    fn perform(&self, config: &config::Config,) -> Result<(), String> {
+        let config = config.clone();
+        let mut web = web::Web::new(self.listen_addr.clone())?;
+
+        let srv = config.init_srv()?;
+        web.run(srv, config)
+    }
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct Space {
+    pub location: Coord,
+    pub radius: f32,
+    pub brightness: f32,
+}
+impl Action<'_> for Space {
+    fn perform(&self, config: &config::Config) -> Result<(), String> {
+        println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
+
+        let srv = config.init_srv()?;
+        demo::space::run(
+            srv,
+            demo::space::Config {
+                location: self.location,
+                radius: self.radius,
+                brightness: self.brightness,
+            },
+        )
+    }
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct ListChans;
+impl Action<'_> for ListChans {
+    fn perform(&self, config: &config::Config) -> Result<(), String> {
+        println!("chans:");
+        let srv = config.init_srv()?;
+        let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
+        for descr in srv.chan_descriptions() {
+            let mut tags = String::new();
+            for tag in descr.tags.iter() {
+                tags += format!("{} ", tag.name()).as_ref();
+            }
+            println!("chan {} {} {}", descr.chan_id, descr.name, tags);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct Srv {
+    listen_ip: Option<IpAddr>,
+    listen_port: Option<u16>,
+}
+impl Action<'_> for Srv {
+    fn perform(&self, config: &config::Config) -> Result<(), String> {
+        let srv = config.init_srv()?;
+        let mut udp = udp_srv::UdpSrv::new(
+            self.listen_ip, self.listen_port, srv)?;
+        udp.run();
+        Ok(())
+    }
+}
+
+#[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
+pub struct Set(pub ChanSpec);
+impl Action<'_> for Set {
+    fn perform( &self, config: &config::Config) -> Result<(), String> {
+        actions::set::run_msg(&self.0, config.init_srv()?)
     }
 }

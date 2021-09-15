@@ -145,7 +145,7 @@ impl HasChanDescriptions for Srv {
                         "[cid: {}, dev {}, chan {}]",
                         cid, chan.devid.0, chan.cfg.index
                     ),
-                    chan.cfg.tags.iter().map(Tag::new).collect(), // actually need clone?
+                    chan.cfg.tags.iter().map(Tag::new).collect(),
                     chan.cfg.cuboid,
                 )
             })
