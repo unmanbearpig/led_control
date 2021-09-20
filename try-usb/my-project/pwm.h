@@ -23,7 +23,9 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
    * - Channel 1
    * - PWM mode 2 (output low when CNT < CCR1, high otherwise)
    */
-	timer_set_oc_mode(TIM1, TIM_OC1, oc_mode);
+	/* temporary(?) hack to try to use different mode for one of the channels to 
+	 * try to reduce EMI from PWM */
+	timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM1);
 	timer_set_oc_mode(TIM1, TIM_OC2, oc_mode);
   timer_set_oc_mode(TIM1, TIM_OC3, oc_mode);
   /* timer_set_oc_mode(TIM1, TIM_OC4, oc_mode); */
@@ -32,8 +34,6 @@ void pwm_setup(enum tim_oc_mode oc_mode, uint16_t pwm_period) {
 	timer_enable_oc_output(TIM1, TIM_OC1);
   // this doesn't work without TIM_OC1, so does nothing?
 	/* timer_enable_oc_output(TIM1, TIM_OC1N); /\* TODO: we don't need it do we? *\/ */
-
-	timer_set_oc_mode(TIM1, TIM_OC2, TIM_OCM_PWM2);
 
   timer_enable_oc_output(TIM1, TIM_OC2);
 	/* timer_enable_oc_output(TIM1, TIM_OC2N); /\* TODO: we don't need it do we? *\/ */
@@ -70,7 +70,10 @@ void set_3_leds(uint16_t *leds) {
   // uint16_t pwm_period = 16383;
   uint16_t pwm_period = 22126;
 
-  timer_set_oc_value(TIM1, TIM_OC1, (pwm_period - leds[2]));
+	/* because of temporary hack with a different PWM mode for channel 1 */
+  timer_set_oc_value(TIM1, TIM_OC1, leds[2]);
+
+  /* timer_set_oc_value(TIM1, TIM_OC1, (pwm_period - leds[2])); */
   timer_set_oc_value(TIM1, TIM_OC2, (pwm_period - leds[1]));
   timer_set_oc_value(TIM1, TIM_OC3, (pwm_period - leds[0]));
 }
