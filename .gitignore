@@ -20,3 +20,6 @@ rust_ctl/target
 
 /try-usb/my-project/*.bin
 /try-usb/my-project/*.elf
+
+tags
+TAGS
