@@ -13,12 +13,6 @@
 
 #include "pwm.h"
 
-#define LED_COUNT 3
-#define INITIAL_LED_VALUE 0xEEEE
-uint16_t led_values[LED_COUNT] = {
-  INITIAL_LED_VALUE,
-  INITIAL_LED_VALUE,
-  INITIAL_LED_VALUE };
 
 #define LED1PORT GPIOC
 #define LED1PIN GPIO13
@@ -404,8 +398,6 @@ void reconnect_usb() {
   }
 }
 
-const uint16_t PWM_PERIOD = 22126;
-
 uint32_t xorshift32(uint32_t *rnd) {
   uint32_t x = *rnd;
   x ^= x << 13;
@@ -415,16 +407,55 @@ uint32_t xorshift32(uint32_t *rnd) {
   return x;
 }
 
+uint16_t lowest_non_zero_led_value() {
+  uint16_t lowest = 0;
+  for (int i = 0; i < LED_COUNT; i++) {
+    uint16_t val = led_values[i];
+    if (val == 0) { continue; }
+    if (lowest == 0 || val < lowest) {
+      lowest = val;
+    }
+  }
+
+  return lowest;
+}
+
+/* returns true if duty cycle is high enough to make the LEDs produce 
+ * significant amounts of EMI */
+bool is_noisy() {
+  const uint16_t noisy_floor = 6500;
+  const uint16_t noisy_ceiling = 21500;
+  // Noisy when:
+  // - 7k 0 0
+  // - 7k 7k 0
+  //
+  // Not noisy when:
+  // - 7k 7k 15k (15k inverted)
+  // - above 21k
+
+  for (int i = 0; i < LED_COUNT; i++) {
+    uint16_t val = led_values[i];
+    if (val > noisy_floor && val < noisy_ceiling) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // uint32_t rnd = 0x1CE4E5B9;
 
 uint32_t tim_iter = 0;
 /* Wiggle the frequency a bit so the EMI from PWM is a bit less noticeable */
 void tim2_isr(void) {
+  if (!is_noisy()) {
+    goto done;
+  }
+  goto done;
   tim_iter += 1;
   int i = tim_iter % 17;
 
   /* - tim_iter % 128 doesn't do much */
-  uint16_t new_period = PWM_PERIOD - (tim_iter % 128);
+  uint16_t new_period = BASE_PWM_PERIOD - (tim_iter % 128) * 8;
   /* sounds better than xorshift */
   switch(i) {
     case 0: new_period -= 0; break;
@@ -446,8 +477,9 @@ void tim2_isr(void) {
     case 16: new_period -= 71; break;
   }
   // rnd = xorshift32(&rnd);
-  // uint16_t new_period = PWM_PERIOD - (rnd & 0x7ff);
-  timer_set_period(TIM1, new_period);
+  // uint16_t new_period = pwm_period - (rnd & 0x7ff);
+  set_pwm_period(new_period);
+done:
   timer_clear_flag(TIM2, TIM_SR_CC1IF);
 }
 
@@ -467,7 +499,7 @@ int main(void)
   printf("USART initialized!\r\n");
 
   printf("Setting up PWM...\r\n");
-  pwm_setup(TIM_OCM_PWM2, PWM_PERIOD);
+  pwm_setup();
 
   // Setup TIM2 for frequency wiggle
   rcc_periph_clock_enable(RCC_TIM2);
@@ -481,7 +513,6 @@ int main(void)
   timer_set_oc_value(TIM2, TIM_OC1, 1);
   timer_enable_counter(TIM2);
   timer_enable_irq(TIM2, TIM_DIER_CC1IE);
-
 
   uint16_t init_values[3] = { 0xFFFF, 0xAAAA, 0x1111 };
   set_3_leds(init_values);
@@ -503,6 +534,7 @@ int main(void)
 
     if (ipoll % 400000 == 0) {
       gpio_toggle(LED1PORT, LED1PIN);
+
       printf("%s\r\n", test_str);
       usbd_ep_write_packet(usbd_dev, 0x82, test_str, sizeof(test_str)-1);
       usbd_ep_write_packet(usbd_dev, 0x86, test_str, sizeof(test_str)-1);

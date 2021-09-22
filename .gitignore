@@ -17,3 +17,6 @@ esp8266_wifi_bridge/build
 common/secrets.h
 
 rust_ctl/target
+
+/try-usb/my-project/*.bin
+/try-usb/my-project/*.elf
