@@ -21,8 +21,8 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig]) -> Result<DevConfList, S
             config::DevConfig::TestDev => {
                 devs.push((Arc::new(Mutex::new(test_dev::TestDev::new())), chancfg));
             }
-            config::DevConfig::Usb => {
-                for usbdev in usb::UsbDev::find_devs()? {
+            config::DevConfig::Usb { pwm_period }=> {
+                for usbdev in usb::UsbDev::find_devs(pwm_period)? {
                     devs.push((Arc::new(Mutex::new(usbdev)), chancfg.clone()));
                 }
             }

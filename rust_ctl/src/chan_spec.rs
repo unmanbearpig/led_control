@@ -4,6 +4,9 @@ use std::num::ParseIntError;
 
 use crate::chan_description::ChanDescription;
 
+// TODO It seems to represent both a group of channels and a value, but 
+// it would be better to have it represent only a group of channels without
+// the value, because we might want to supply it in a differnt way
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ChanSpecGeneric<F> {
     Each(Vec<F>),

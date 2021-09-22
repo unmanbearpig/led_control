@@ -7,6 +7,7 @@ pub struct UsbDev {
     bus_number: u8,
     dev_addr: u8,
     raw_vals: [u16; 3],
+    pwm_period: u16,
     last_f32_vals: [f32; 3], // the values actually written to the device
     f32_vals: [f32; 3], // buffer that is not `sync`ed yet
 }
@@ -32,6 +33,8 @@ impl DevRead for UsbDev {
         Ok(self.last_f32_vals[chan as usize])
     }
 }
+
+const DEFAULT_PWM_PERIOD: u16 = 22126;
 
 impl DevWrite for UsbDev {
     /// sets the internal state of the LED to the float value
@@ -89,11 +92,13 @@ impl UsbDev {
         devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
         bus_number: u8,
         dev_addr: u8,
+        pwm_period: u16,
     ) -> Self {
         UsbDev {
             devhandle,
             bus_number,
             dev_addr,
+            pwm_period,
             raw_vals: [0u16; 3],
             f32_vals: [0.0; 3],
             last_f32_vals: [0.0; 3],
@@ -108,9 +113,8 @@ impl UsbDev {
         Duration::from_millis(6)
     }
 
-    // not sure if needed
     pub fn max_int(&self) -> u16 {
-        22126
+        self.pwm_period
     }
 
     /// doesn't scale the value i.e. doesn't take `max_int` into account
@@ -127,7 +131,8 @@ impl UsbDev {
         Ok(())
     }
 
-    pub fn find_devs() -> Result<Vec<Self>, String> {
+    pub fn find_devs(pwm_period: Option<u16>) -> Result<Vec<Self>, String> {
+        let pwm_period = pwm_period.unwrap_or(DEFAULT_PWM_PERIOD);
         let devs = rusb::devices();
 
         let devs = match devs {
@@ -145,7 +150,8 @@ impl UsbDev {
             let handle = dev.open();
             match handle {
                 Ok(h) => led_devs.push(
-                    UsbDev::new(h, dev.bus_number(), dev.address())),
+                    UsbDev::new(h, dev.bus_number(), dev.address(),
+                                pwm_period)),
                 Err(e) => return Err(
                     format!("could not open dev {:?}: {}", dev, e)),
             }

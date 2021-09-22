@@ -17,11 +17,12 @@ use crate::coord::Coord;
 use crate::dev_stats;
 use crate::srv;
 use crate::init_devs;
+use crate::template::Template;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
     TestDev,
-    Usb,
+    Usb { pwm_period: Option<u16> },
     UdpV1(IpAddr, Option<u16>),
     UdpV2 {
         ip: IpAddr,
@@ -102,7 +103,7 @@ impl DevChanConfig {
                 chans: chan_configs,
             }),
             "usb" => Ok(DevChanConfig {
-                dev: DevConfig::Usb,
+                dev: DevConfig::Usb { pwm_period: None },
                 chans: chan_configs,
             }),
             "udpv1" => {
@@ -181,6 +182,8 @@ Specifying devices
   --dev usb                   -- All usb devices
 
 Actions:
+  print parsed config:
+    print_cfg
   list channels:
     ls
 

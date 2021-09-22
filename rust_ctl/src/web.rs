@@ -273,10 +273,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     }
 
     /// path_segments exclude the first segment ("/assets")
-    fn handle_static_asset(
-        &mut self,
-        path_segments: Vec<&str>,
-    ) -> tiny_http::Response<Cursor<Vec<u8>>> {
+    fn handle_static_asset(&mut self, path_segments: Vec<&str>)
+            -> tiny_http::Response<Cursor<Vec<u8>>> {
         let path: String = path_segments.join("/");
         let asset = StaticAsset::get(path.as_ref());
 
