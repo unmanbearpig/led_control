@@ -224,6 +224,7 @@ Other
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub action: Option<ActionSpec>,
+    pub templates: Option<Vec<Template>>,
     pub devs: Vec<DevChanConfig>,
 }
 
@@ -447,11 +448,12 @@ impl<'a> Config {
                 cfg.devs.extend(devs);
                 Config {
                     action: action,
+                    templates: cfg.templates,
                     devs: cfg.devs,
                 }
             }
             None => {
-                Config { action, devs }
+                Config { action, devs, templates: None }
             }
         };
 

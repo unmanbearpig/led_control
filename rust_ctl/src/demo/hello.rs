@@ -50,7 +50,7 @@ pub fn run_with_channel<T: DevWrite + ?Sized>(
     for _ in 0..num_chans {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.78,
+            min: 0.70,
             max: 1.0,
             phi: 0.0,
         });

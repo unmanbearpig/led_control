@@ -104,6 +104,21 @@ pub enum ChanSpec {
     U16(ChanSpecGeneric<u16>),
 }
 
+// impl<'de> serde::Visitor<'de> for ChanSpec {
+//     type Value = String;
+// 
+//     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//         write!(formatter, "a string representing a chan spec, i.e. \
+// \"tag\", \"tag1,tag2\", \"tag1+tag2\", \"0,1,2\", etc.")
+//     }
+// 
+//     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+//         where E: de::Error,
+//     {
+//         
+//     }
+// }
+
 impl ChanSpec {
     /// examples:
     ///   0.8         => SomeWithDefault(0.8, vec![])

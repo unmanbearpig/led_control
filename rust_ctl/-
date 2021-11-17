@@ -6,7 +6,7 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::fmt;
 
-use std::io::{Write, Cursor};
+use std::io::Cursor;
 
 use crate::actions;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
@@ -310,7 +310,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             None)
     }
 
-    /// Responds with json hashmap of chan_id: value
     fn handle_chans_json(
         &mut self,
         url: Url,
@@ -322,19 +321,14 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             .map(|chan| (chan.chan_id, output.get_f32(chan.chan_id).unwrap()) )
             .collect()
         };
-        let mut out: Vec<u8> = Vec::new();
-        write!(out, "{{ ").unwrap();
-        let mut chanvals = chanvals.into_iter().peekable();
-        while let Some((cid, val)) = chanvals.next() {
-            write!(out, "\"{cid}\": {val}").unwrap();
-            if chanvals.peek().is_some() {
-                write!(out, ", ").unwrap();
-            }
+        let mut outstr = String::new();
+        outstr.push_str("{ ");
+        for (cid, val) in chanvals.into_iter() {
+            outstr.push_str(format!("{cid}: {val}, ").as_str());
         }
-        write!(out, " }}").unwrap();
-
-        let len = out.len();
-        let cur = Cursor::new(out);
+        outstr.push_str(" }");
+        let len = outstr.len();
+        let cur = Cursor::new(outstr.as_bytes());
         tiny_http::Response::new(
             tiny_http::StatusCode(200),
             Vec::new(),
@@ -343,7 +337,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             None)
     }
 
-    /// Sets channel values
     fn handle_chans(
         &mut self,
         url: Url,
@@ -472,7 +465,7 @@ impl Web {
         let ma_fast = MovingAverage::new(
             srv.clone(),
             Duration::from_millis(4),
-            Duration::from_millis(70), // should be same(ish?) as in javascript
+            Duration::from_millis(50),
         );
         let ma_fast = Arc::new(Mutex::new(ma_fast));
 

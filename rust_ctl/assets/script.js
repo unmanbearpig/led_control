@@ -1,31 +1,95 @@
 // TODO fix mime type when serving it
-// TODO add js for buttons
+// TODO don't update slider that's being touched by mouse/finger
+// TODO throttle
+
+function now() {
+  return(Date.now());
+}
+
+window.chan_send_delay_ms = 85;
+window.last_sent = now();
+window.pending_updates = {};
+
+function send_chan_updates() {
+  if (now() - window.last_sent < window.chan_send_delay_ms) {
+    setTimeout(send_chan_updates, now() - window.last_sent + 1);
+    return;
+  }
+
+  for (cid in window.pending_updates) {
+    var val = window.pending_updates[cid];
+    send_chan_value(cid, val);
+    delete window.pending_updates[cid];
+  }
+  window.last_sent = now();
+}
+
+function send_chan_value(cid, val) {
+  var url = "/chans/" + cid + "/set";
+  var body = "value=" + val;
+  fetch(url, { method: 'POST', body: body});
+  window.last_sent = now();
+}
 
 function sliderchange(event) {
   var el = event.srcElement;
-  var form = el.closest('form');
+  var cid = el.getAttribute("data-channel-id");
+  var val = el.value;
+  // send_chan_value(cid, val);
+  window.pending_updates[cid] = val;
+  send_chan_updates();
+}
+async function fetch_slider_data() {
+  return(await fetch('/chans.json').then(response => response.json()));
+}
 
-  var form_data = new FormData(form);
+function fetch_update_sliders() {
+  var data = fetch_slider_data().then(data => {
+    sliders = get_sliders();
+    for (s in sliders) {
+      var s = sliders[s];
+      if (s.getAttribute === undefined) { continue; }
+      var cid = s.getAttribute("data-channel-id");
 
-  var req_vals = [];
-  var entries = form_data.entries();
-  for (var pair of form_data.entries()) {
-    req_vals.push(encodeURIComponent(pair[0]) + "=" + encodeURIComponent(pair[1]));
-  }
-  var req_body = req_vals.join("&");
+      if (window.touched_sliders[cid] === true) { continue; }
 
-  fetch(form.action, {
-    method: form.method,
-    body: req_body,
+      var val = data[cid];
+      s.value = val;
+    }
   });
 }
 
+function get_sliders() {
+  return(document.getElementsByClassName("js-chan-slider"));
+}
+
+window.touched_sliders = {};
+
+function touching_slider(event) {
+  var el = event.srcElement;
+  var cid = el.getAttribute("data-channel-id");
+  window.touched_sliders[cid] = true;
+}
+
+function untouching_slider(event) {
+  var el = event.srcElement;
+  var cid = el.getAttribute("data-channel-id");
+  window.touched_sliders[cid] = false;
+}
+
 window.onload = function onload() {
-  var sliders = document.getElementsByClassName("js-chan-slider");
+  var sliders = get_sliders();
 
   for (let i = 0; i < sliders.length; i++) {
     var slider = sliders[i];
+    var cid = slider.getAttribute("data-channel-id");
+    window.touched_sliders[cid] = false;
 
     slider.oninput = sliderchange;
+    slider.onmousedown = touching_slider;
+    slider.onmouseup = untouching_slider;
   };
+  setInterval(fetch_update_sliders, 250);
+  setInterval(send_chan_updates, window.chan_send_delay_ms);
+  fetch_update_sliders();
 }

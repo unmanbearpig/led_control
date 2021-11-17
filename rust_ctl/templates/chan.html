@@ -20,6 +20,8 @@
 
 <form action="{{ self.path() }}/set" method="POST" class="chan flex space-between chan-row">
   <input
+    id="chan-slider--{{ self.chan.chan_id }}"
+    data-channel-id="{{ self.chan.chan_id }}"
     name="value"
     type="range"
     value="{{ self.value }}"

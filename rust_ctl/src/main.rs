@@ -1,4 +1,6 @@
 #![feature(test, div_duration)]
+#![feature(format_args_capture)]
+#![feature(iter_intersperse)]
 
 mod action;
 mod chan;
@@ -30,6 +32,7 @@ mod init_devs;
 mod frame;
 mod chan_description;
 mod tag;
+mod template;
 
 #[macro_use]
 extern crate rust_embed;
