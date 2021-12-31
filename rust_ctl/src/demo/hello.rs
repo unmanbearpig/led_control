@@ -45,18 +45,18 @@ pub fn run_with_channel<T: DevWrite + ?Sized>(
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(num_chans as usize);
 
-    let freq_dist = rand::distributions::Uniform::new(0.09, 0.5);
+    let freq_dist = rand::distributions::Uniform::new(0.002, 0.1);
     let mut rng = rand::thread_rng();
     for _ in 0..num_chans {
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.70,
+            min: 0.40,
             max: 1.0,
             phi: 0.0,
         });
     }
 
-    let delay = time::Duration::from_micros(4000);
+    let delay = time::Duration::from_micros(10_000);
     let mut t = time::Instant::now();
 
     loop {

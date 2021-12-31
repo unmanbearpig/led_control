@@ -7,6 +7,7 @@ function now() {
 }
 
 window.chan_send_delay_ms = 85;
+window.last_slide = 0;
 window.last_sent = now();
 window.pending_updates = {};
 
@@ -21,7 +22,6 @@ function send_chan_updates() {
     send_chan_value(cid, val);
     delete window.pending_updates[cid];
   }
-  window.last_sent = now();
 }
 
 function send_chan_value(cid, val) {
@@ -32,6 +32,7 @@ function send_chan_value(cid, val) {
 }
 
 function sliderchange(event) {
+  window.last_slide = now();
   var el = event.srcElement;
   var cid = el.getAttribute("data-channel-id");
   var val = el.value;
@@ -44,6 +45,9 @@ async function fetch_slider_data() {
 }
 
 function fetch_update_sliders() {
+  if (now() - window.last_sent  < 300) { return; }
+  if (now() - window.last_slide < 300) { return; }
+
   var data = fetch_slider_data().then(data => {
     sliders = get_sliders();
     for (s in sliders) {
@@ -89,7 +93,7 @@ window.onload = function onload() {
     slider.onmousedown = touching_slider;
     slider.onmouseup = untouching_slider;
   };
-  setInterval(fetch_update_sliders, 250);
+  setInterval(fetch_update_sliders, 100);
   setInterval(send_chan_updates, window.chan_send_delay_ms);
   fetch_update_sliders();
 }
