@@ -274,10 +274,9 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
                     .add(latency.as_secs_f64() * 1000.0);
             }
             Err(e) => {
-                println!(
-                    "msg created time is {} ms in the future",
-                    e.duration().as_secs_f64() * 1000.0
-                );
+                self.msg_stats
+                    .msg_recv_latency_ms
+                    .add(e.duration().as_secs_f64() * -1000.0);
             }
         }
 

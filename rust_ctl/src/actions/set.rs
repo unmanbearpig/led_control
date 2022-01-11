@@ -28,22 +28,25 @@ pub fn run_msg<T: MsgHandler>(chan_spec: &ChanSpec, srv: Arc<Mutex<T>>) -> Resul
     }
 }
 
-pub fn run_dev<T: DevWrite + HasChanDescriptions>(chan_spec: &ChanSpec, dev: Arc<Mutex<T>>) -> Result<(), String> {
+pub fn run_dev<T: DevWrite + HasChanDescriptions>(
+    chan_spec: &ChanSpec, dev: Arc<Mutex<T>>
+) -> Result<(), String> {
     let mut dev = dev.lock().map_err(|e| format!("{:?}", e))?;
 
     match chan_spec {
         ChanSpec::F32(spec) => {
             // need some ChanSpec(Generic?) method
             // that will give us the values for each specified chan
-            let chan_descriptions: Vec<ChanDescription> = dev.chan_descriptions();
+            let chan_descriptions: Vec<ChanDescription> =
+                dev.chan_descriptions();
 
-            let chanvals = spec.resolve_for_chans(chan_descriptions.as_slice())?
+            let chanvals =
+                spec.resolve_for_chans(chan_descriptions.as_slice())?
                 .into_iter()
                 .map(|(cid, v)| (cid, v));
             for (cid, val) in chanvals {
                 dev.set_f32(cid, val)?;
             }
-
 
             dev.sync()
         }

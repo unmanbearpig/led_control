@@ -1,7 +1,7 @@
 #![feature(test, div_duration)]
-#![feature(format_args_capture)]
 #![feature(iter_intersperse)]
 
+mod error;
 mod action;
 mod chan;
 mod chan_spec;

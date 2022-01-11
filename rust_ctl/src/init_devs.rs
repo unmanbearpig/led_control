@@ -14,17 +14,20 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig]) -> Result<DevConfList, S
     let mut devs: DevConfList = Vec::new();
 
     for devchanconfig in dev_configs.iter() {
-        let devcfg = devchanconfig.dev;
+        let devcfg = devchanconfig.dev.clone();
         let chancfg: Option<Vec<ChanConfig>> = devchanconfig.chans.clone();
 
         match devcfg {
             config::DevConfig::TestDev => {
                 devs.push((Arc::new(Mutex::new(test_dev::TestDev::new())), chancfg));
             }
-            config::DevConfig::Usb { pwm_period }=> {
-                for usbdev in usb::UsbDev::find_devs(pwm_period)? {
-                    devs.push((Arc::new(Mutex::new(usbdev)), chancfg.clone()));
-                }
+            config::DevConfig::Usb { pwm_period, serial }=> {
+                let dev = usb::UsbDev::find_dev(serial.as_deref(), pwm_period);
+                let dev = match dev {
+                    Ok(dev) => dev,
+                    Err(e) => return Err(format!("Find USB device error (serial: {serial:?}): {:?}", e).into()),
+                };
+                devs.push((Arc::new(Mutex::new(dev)), chancfg.clone()));
             }
             config::DevConfig::UdpV1(ip, port) => {
                 devs.push((

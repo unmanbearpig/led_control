@@ -153,10 +153,12 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
                 // it's likely that we can't exactly reach the target
                 // because of f32 impreciseness
                 if i > mov_avg.frames.len() {
-                    let furthest_frame = mov_avg.frames[mov_avg.frames.len() -1].clone();
+                    let furthest_frame =
+                        mov_avg.frames[mov_avg.frames.len() -1].clone();
 
-                    // average frame is the same as the last frame in the VecDeque
-                    // which means that we've reached the closest values to the target
+                    // average frame is the same as the last frame
+                    // in the VecDeque which means that we've reached
+                    // the closest values to the target
                     if avg_frame.almost_same_as(&furthest_frame, 0.000001) {
                         avg_frame = mov_avg.target_frame.clone();
                     }
@@ -219,9 +221,11 @@ impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
             dev.chans().len()
         };
 
-        let frames_num: usize = transition_period.div_duration_f32(frame_period).ceil() as usize;
+        let frames_num: usize =
+            transition_period.div_duration_f32(frame_period).ceil() as usize;
 
-        let mut frames: VecDeque<Frame<f32>> = VecDeque::with_capacity(frames_num);
+        let mut frames: VecDeque<Frame<f32>> =
+            VecDeque::with_capacity(frames_num);
         for _ in 0..frames_num {
             frames.push_back(Frame::new(num_chans as u16));
         }

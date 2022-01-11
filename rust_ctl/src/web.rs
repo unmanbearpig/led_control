@@ -26,6 +26,9 @@ use std::time::Duration;
 
 use crate::runner::Runner;
 
+// TODO we send messages to all devices even when setting only 1 channel
+// TODO do we send messages to devices in parallel?
+
 #[derive(RustEmbed)]
 #[folder = "assets"]
 struct StaticAsset;
@@ -214,8 +217,18 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
         let join_handle = {
             let output = self.output.clone();
-
-            thread::spawn(move || demo::hello::run_with_channel(output, rx))
+            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> = Vec::new();
+            for dev in self.output_config.devs.iter() {
+                if let Some(chans) = &dev.chans {
+                    for chan in chans.iter() {
+                        let disco_config =
+                            demo::hello::DiscoChanConfig::default();
+                        disco_configs.push(disco_config);
+                    }
+                }
+            }
+            thread::spawn(move || demo::hello::run_with_config(
+                    output, disco_configs, rx))
         };
 
         self.task = Some(Task {
@@ -227,6 +240,33 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.home_with(Some(FlashMsg::Ok("Wooooo111!!!")))
     }
 
+    fn disco_harder(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.stop_task();
+        let (tx, rx) = mpsc::channel::<TaskMsg>();
+
+        let join_handle = {
+            let output = self.output.clone();
+            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> = Vec::new();
+            for dev in self.output_config.devs.iter() {
+                if let Some(chans) = &dev.chans {
+                    for chan in chans.iter() {
+                        let disco_config = chan.disco_config.clone().unwrap_or_default();
+                        disco_configs.push(disco_config);
+                    }
+                }
+            }
+            thread::spawn(move || demo::hello::run_with_config(
+                    output, disco_configs, rx))
+        };
+
+        self.task = Some(Task {
+            name: "Hello task from web test".to_string(),
+            chan: tx,
+            join_handle,
+        });
+
+        self.home_with(Some(FlashMsg::Ok("Enjoy the colors!")))
+    }
     fn chans(&mut self) -> Vec<ChanTemplate> {
         let output = self.output.lock().unwrap();
         output
@@ -427,6 +467,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             (tiny_http::Method::Post, Some("on")) => self.on(),
             (tiny_http::Method::Post, Some("off")) => self.off(),
             (tiny_http::Method::Post, Some("disco")) => self.disco(),
+            (tiny_http::Method::Post, Some("disco_harder")) =>
+                self.disco_harder(),
             (tiny_http::Method::Get, Some("")) => self.home(),
             (tiny_http::Method::Get, Some("assets")) => {
                 // TODO: check it's a GET request

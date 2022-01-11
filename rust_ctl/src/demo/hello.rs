@@ -17,10 +17,42 @@ impl Action<'_> for Hello {
     }
 }
 
+const DEFAULT_FREQ_MIN: f64 = 0.002;
+const DEFAULT_FREQ_MAX: f64 = 0.1;
+
+const DEFAULT_MIN: f64 = 0.40;
+const DEFAULT_MAX: f64 = 1.0;
+
+
+// should derive serialize and deserialize
+#[derive(Debug, Clone, PartialEq,
+         serde_derive::Serialize, serde_derive::Deserialize)]
+pub struct DiscoChanConfig {
+    freq_min: f64,
+    freq_max: f64,
+    min: f64,
+    max: f64,
+    /// raise the value to this power
+    adjustment: f64,
+}
+
+impl Default for DiscoChanConfig {
+    fn default() -> Self {
+        DiscoChanConfig {
+            freq_min: DEFAULT_FREQ_MIN,
+            freq_max: DEFAULT_FREQ_MAX,
+            min: DEFAULT_MIN,
+            max: DEFAULT_MAX,
+            adjustment: 1.0,
+        }
+    }
+}
+
 struct DemoChan {
     freq: f64,
     min: f64,
     max: f64,
+    adjustment: f64,
     phi: f64,
 }
 
@@ -31,27 +63,28 @@ pub fn run<T: DevWrite + ?Sized>(dev: Arc<Mutex<T>>) -> Result<(), String> {
     run_with_channel(dev, receiver)
 }
 
-pub fn run_with_channel<T: DevWrite + ?Sized>(
+pub fn run_with_config<T: DevWrite + ?Sized>(
     dev: Arc<Mutex<T>>,
+    configs: Vec<DiscoChanConfig>,
     stop: mpsc::Receiver<TaskMsg>,
 ) -> Result<(), String> {
     println!("running hello demo...");
 
-    let num_chans = {
-        let dev = dev.lock().map_err(|e| format!("read lock: {:?}", e))?;
-        dev.num_chans()
-    };
-    let mut frame = Frame::new(num_chans);
+    let num_chans = configs.len();
+    let mut frame = Frame::new(num_chans as u16);
 
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(num_chans as usize);
 
-    let freq_dist = rand::distributions::Uniform::new(0.002, 0.1);
     let mut rng = rand::thread_rng();
-    for _ in 0..num_chans {
+    for chan_conf in configs.iter() {
+        let freq_dist = rand::distributions::Uniform::new(
+            chan_conf.freq_min, chan_conf.freq_max);
+
         dchans.push(DemoChan {
             freq: rng.sample(freq_dist),
-            min: 0.40,
-            max: 1.0,
+            min: chan_conf.min,
+            max: chan_conf.max,
+            adjustment: chan_conf.adjustment,
             phi: 0.0,
         });
     }
@@ -66,6 +99,9 @@ pub fn run_with_channel<T: DevWrite + ?Sized>(
             let amp = d.max - d.min;
             let delta = dt * d.freq * std::f64::consts::PI * 2.0;
             let new_sin = (((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
+            // TODO Probably should be applied earlier, so we stay within
+            // min-max limits
+            let new_sin = new_sin.powf(d.adjustment);
             d.phi += delta;
             frame.set(i as u16, new_sin as f32);
         }
@@ -92,4 +128,21 @@ pub fn run_with_channel<T: DevWrite + ?Sized>(
             },
         }
     }
+}
+
+pub fn run_with_channel<T: DevWrite + ?Sized>(
+    dev: Arc<Mutex<T>>,
+    stop: mpsc::Receiver<TaskMsg>,
+) -> Result<(), String> {
+    println!("running hello demo...");
+
+    let num_chans = {
+        let dev = dev.lock().map_err(|e| format!("read lock: {:?}", e))?;
+        dev.num_chans()
+    };
+
+    let configs: Vec<DiscoChanConfig> =
+        vec![DiscoChanConfig::default(); num_chans as usize];
+
+    run_with_config(dev, configs, stop)
 }

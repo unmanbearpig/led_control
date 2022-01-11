@@ -19,10 +19,15 @@ use crate::srv;
 use crate::init_devs;
 use crate::template::Template;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
     TestDev,
-    Usb { pwm_period: Option<u16> },
+    Usb {
+        /// Use only devices with this serial (iSerial)
+        /// None means don't check serial (only 1 usb device allowed)
+        serial: Option<String>,
+        pwm_period: Option<u16>,
+    },
     UdpV1(IpAddr, Option<u16>),
     UdpV2 {
         ip: IpAddr,
@@ -103,7 +108,10 @@ impl DevChanConfig {
                 chans: chan_configs,
             }),
             "usb" => Ok(DevChanConfig {
-                dev: DevConfig::Usb { pwm_period: None },
+                dev: DevConfig::Usb {
+                    pwm_period: None,
+                    serial: None,
+                },
                 chans: chan_configs,
             }),
             "udpv1" => {

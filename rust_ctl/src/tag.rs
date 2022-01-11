@@ -20,6 +20,9 @@ const BED_EMOJI: &str = "🛏️";
 
 const CEILING_EMOJI: &str = "🌌";
 
+const PINBOARD_EMOJI: &str = "📌";
+const PROJECTOR_EMOJI: &str = "📽️";
+
 const UNUSED_EMOJI: &str = "🔧";
 
 impl Tag {
@@ -34,25 +37,28 @@ impl Tag {
 
     pub fn humanized(&self) -> &str {
         match self.as_ref() {
-            "r" => RED_EMOJI,
-            "red" => RED_EMOJI,
-            "g" => GREEN_EMOJI,
-            "green" => GREEN_EMOJI,
-            "b" => BLUE_EMOJI,
-            "blue" => BLUE_EMOJI,
-            "w" => WHITE_EMOJI,
-            "white" => WHITE_EMOJI,
-            "rgb" => RGB_EMOJI,
-            "window" => WINDOW_EMOJI,
-            "top" => WALL_TOP_EMOJI,
-            "bottom" => WALL_BOTTOM_EMOJI,
-            "wall" => WALL_EMOJI,
-            "scorpion" => SCORPION_EMOJI,
-            "bed" => BED_EMOJI,
-            "door" => DOOR_EMOJI,
-            "ceiling" => CEILING_EMOJI,
-            "unused" => UNUSED_EMOJI,
-            other => other,
+            "r"          => RED_EMOJI,
+            "red"        => RED_EMOJI,
+            "g"          => GREEN_EMOJI,
+            "green"      => GREEN_EMOJI,
+            "b"          => BLUE_EMOJI,
+            "blue"       => BLUE_EMOJI,
+            "w"          => WHITE_EMOJI,
+            "white"      => WHITE_EMOJI,
+            "rgb"        => RGB_EMOJI,
+            "window"     => WINDOW_EMOJI,
+            "top"        => WALL_TOP_EMOJI,
+            "bottom"     => WALL_BOTTOM_EMOJI,
+            "wall"       => WALL_EMOJI,
+            "scorpion"   => SCORPION_EMOJI,
+            "bed"        => BED_EMOJI,
+            "door"       => DOOR_EMOJI,
+            "ceiling"    => CEILING_EMOJI,
+            "pinboard"   => PINBOARD_EMOJI,
+            "projector"  => PROJECTOR_EMOJI,
+            "projectors" => PROJECTOR_EMOJI,
+            "unused"     => UNUSED_EMOJI,
+            other        => other,
         }
     }
 }

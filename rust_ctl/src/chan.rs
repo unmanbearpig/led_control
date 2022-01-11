@@ -1,3 +1,4 @@
+use crate::demo::hello::DiscoChanConfig;
 use crate::cuboid::Cuboid;
 use serde_derive::{Deserialize, Serialize};
 
@@ -9,6 +10,7 @@ pub struct ChanConfig {
     pub exp: Option<f64>,
     pub tags: Vec<String>,
     pub cuboid: Option<Cuboid>,
+    pub disco_config: Option<DiscoChanConfig>,
 }
 
 
@@ -21,6 +23,7 @@ impl Default for ChanConfig {
             exp: None,
             tags: Vec::new(),
             cuboid: None,
+            disco_config: None,
         }
     }
 }

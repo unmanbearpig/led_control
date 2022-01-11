@@ -1,4 +1,5 @@
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
+use crate::error::Error;
 use std::fmt;
 use std::time::Duration;
 
@@ -87,6 +88,8 @@ impl DevWrite for UsbDev {
 
 impl Dev for UsbDev {}
 
+const DEFAULT_SERIAL: &str = "Generic USB PWM driver";
+
 impl UsbDev {
     pub fn new(
         devhandle: rusb::DeviceHandle<rusb::GlobalContext>,
@@ -131,32 +134,81 @@ impl UsbDev {
         Ok(())
     }
 
-    pub fn find_devs(pwm_period: Option<u16>) -> Result<Vec<Self>, String> {
+    pub fn find_dev(serial: Option<&str>, pwm_period: Option<u16>) -> Result<Self, Error> {
+        let expected_serial = serial;
         let pwm_period = pwm_period.unwrap_or(DEFAULT_PWM_PERIOD);
         let devs = rusb::devices();
 
         let devs = match devs {
-            Err(e) => return Err(format!("USB device enumeration: {}", e)),
+            Err(e) => return Err(format!("USB device enumeration: {}", e).into()),
             Ok(d) => d,
         };
 
-        let devs = devs.iter().filter(|dev| {
-            let desc = dev.device_descriptor().unwrap();
-            desc.vendor_id() == 0xCAFE && desc.product_id() == 0xCAFE
-        });
+        let mut found_dev: Option<rusb::Device<rusb::GlobalContext>> = None;
+        for dev in devs.iter() {
+            let handle = dev.open()?;
+            let desc = dev.device_descriptor()?;
+            if desc.vendor_id() != 0xCAFE || desc.product_id() != 0xCAFE {
+                // not our device
+                continue;
+            }
+            let serial: String =
+                handle.read_serial_number_string_ascii(&desc)?;
 
-        let mut led_devs = Vec::new();
-        for dev in devs {
-            let handle = dev.open();
-            match handle {
-                Ok(h) => led_devs.push(
-                    UsbDev::new(h, dev.bus_number(), dev.address(),
-                                pwm_period)),
-                Err(e) => return Err(
-                    format!("could not open dev {:?}: {}", dev, e)),
+            if let Some(expected_serial) = expected_serial {
+                if serial == expected_serial {
+                    if found_dev.is_some() {
+                        return Err(format!(
+                                "Found more than one USB device \
+with serial {expected_serial}").into())
+                    }
+                    found_dev = Some(dev);
+                }
+            } else {
+                if found_dev.is_some() {
+                    return Err(format!(
+                            "Found more than one USB device \
+with serial {expected_serial:?}").into())
+                }
+                found_dev = Some(dev);
+            }
+        }
+        let dev = match found_dev {
+            None => {
+                return Err(format!("Could not find a USB device \
+with serial {expected_serial:?}").into())
+            },
+            Some(dev) => dev,
+        };
+
+        let handle = dev.open();
+        match handle {
+            Ok(handle) =>
+                Ok(UsbDev::new(
+                        handle, dev.bus_number(), dev.address(), pwm_period)),
+            Err(e) => {
+                Err(format!("Could not open USB device \
+with serial {expected_serial:?}: {:?}", e).into())
             }
         }
 
-        Ok(led_devs)
+        // let devs = devs.iter().filter(|dev| {
+        //     let desc = dev.device_descriptor().unwrap();
+        //     desc.vendor_id() == 0xCAFE && desc.product_id() == 0xCAFE
+        // });
+
+        // let mut led_devs = Vec::new();
+        // for dev in devs {
+        //     let handle = dev.open();
+        //     match handle {
+        //         Ok(h) => led_devs.push(
+        //             UsbDev::new(h, dev.bus_number(), dev.address(),
+        //                         pwm_period)),
+        //         Err(e) => return Err(
+        //             format!("could not open dev {:?}: {}", dev, e)),
+        //     }
+        // }
+
+        // Ok(led_devs)
     }
 }

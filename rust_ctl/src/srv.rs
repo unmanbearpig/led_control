@@ -20,6 +20,7 @@ impl Display for DevId {
 struct SrvChan {
     devid: DevId,
     pub cfg: ChanConfig,
+    prev_val_f32: f32,
 }
 
 struct SrvDev {
@@ -49,7 +50,9 @@ impl<'a> Srv {
         }
     }
 
-    pub fn add_dev<T>(&mut self, dev: Arc<Mutex<dyn Dev>>, chancfg: Option<T>) -> DevId
+    pub fn add_dev<T>(
+        &mut self, dev: Arc<Mutex<dyn Dev>>, chancfg: Option<T>
+    ) -> DevId
     where
         T: ExactSizeIterator<Item = ChanConfig>,
     {
@@ -61,18 +64,24 @@ impl<'a> Srv {
 
         match chancfg {
             Some(chancfgs) => {
-                if chancfgs.len() as u16 != num_chans {
-                    panic!(
-                        "invalid number of chans specified in chancfg: {} instead of {}",
-                        chancfgs.len(),
-                        num_chans
-                    );
-                }
+                // Not checking because:
+                // Config can override number of chans
+                // because we don't know the number of channels for
+                // udp protocol
+                //
+                // if chancfgs.len() as u16 != num_chans {
+                //     panic!(
+                //         "invalid number of chans specified in chancfg: {} instead of {}",
+                //         chancfgs.len(),
+                //         num_chans
+                //     );
+                // }
 
                 for chan in chancfgs {
                     self.chans.push(SrvChan {
                         devid: dev_id,
                         cfg: chan,
+                        prev_val_f32: 0.0,
                     })
                 }
             }
@@ -86,6 +95,7 @@ impl<'a> Srv {
                     self.chans.push(SrvChan {
                         devid: dev_id,
                         cfg: cc,
+                        prev_val_f32: 0.0,
                     });
                 }
             }
@@ -173,8 +183,22 @@ impl DevNumChans for Srv {
 
 impl DevWrite for Srv {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+        if chan as usize >= self.chans.len() {
+            eprintln!("srv: chan {chan} out of bounds");
+            return Ok(())
+        }
+
         let chan: &mut SrvChan = &mut self.chans[chan as usize];
+        // it doesn't work too well because of float precision
+        // it things the value is changed when it didn't
+        if val == chan.prev_val_f32 {
+            // skip it when trying to set to the previous value
+            return Ok(())
+        }
+        chan.prev_val_f32 = val;
+
         let val = chan.cfg.adjust_value(val);
+
         let dev = &mut self.devs[chan.devid.0 as usize];
         dev.dirty = true;
         let mut dev = dev.dev.lock().unwrap();
