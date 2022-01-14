@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+gdb try-usb.elf \
+	-ex 'target extended-remote /dev/ttyBmpGdb' \
+	-ex 'mon swdp_scan' \
+	-ex 'att 1' \
+	-ex 'load' \
+	-ex 'quit'
+
+
