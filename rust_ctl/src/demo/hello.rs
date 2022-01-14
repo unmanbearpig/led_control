@@ -36,6 +36,8 @@ pub struct DiscoChanConfig {
     adjustment: f64,
 }
 
+
+
 impl Default for DiscoChanConfig {
     fn default() -> Self {
         DiscoChanConfig {
@@ -54,6 +56,17 @@ struct DemoChan {
     max: f64,
     adjustment: f64,
     phi: f64,
+}
+
+impl DemoChan {
+    fn sine(&mut self, dt_secs: f64) -> f64 {
+        let amp = self.max - self.min;
+        let new_sin = ((((self.phi.sin() + 1.0) / 2.0) * amp) + self.min)
+            .powf(self.adjustment);
+        let delta = dt_secs * self.freq * std::f64::consts::PI * 2.0;
+        self.phi += delta;
+        new_sin
+    }
 }
 
 pub fn run<T: DevWrite + ?Sized>(dev: Arc<Mutex<T>>) -> Result<(), String> {
@@ -96,13 +109,9 @@ pub fn run_with_config<T: DevWrite + ?Sized>(
         let dt = t.elapsed().as_secs_f64();
         t = time::Instant::now();
         for (i, d) in dchans.iter_mut().enumerate() {
-            let amp = d.max - d.min;
-            let delta = dt * d.freq * std::f64::consts::PI * 2.0;
-            let new_sin = (((d.phi.sin() + 1.0) / 2.0) * amp) + d.min;
+            let new_sin = d.sine(dt);
             // TODO Probably should be applied earlier, so we stay within
             // min-max limits
-            let new_sin = new_sin.powf(d.adjustment);
-            d.phi += delta;
             frame.set(i as u16, new_sin as f32);
         }
 
