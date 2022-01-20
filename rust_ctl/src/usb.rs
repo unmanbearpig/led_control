@@ -88,8 +88,6 @@ impl DevWrite for UsbDev {
 
 impl Dev for UsbDev {}
 
-const DEFAULT_SERIAL: &str = "Generic USB PWM driver";
-
 impl UsbDev {
     pub fn new(
         devhandle: rusb::DeviceHandle<rusb::GlobalContext>,

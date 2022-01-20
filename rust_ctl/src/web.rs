@@ -21,7 +21,7 @@ use crate::demo;
 use crate::task::{Task, TaskMsg};
 use std::thread;
 
-use crate::filters::moving_average::MovingAverage;
+use crate::demo::Fade;
 use std::time::Duration;
 
 use crate::runner::Runner;
@@ -103,13 +103,30 @@ struct WebState<T: fmt::Debug> {
 
     http: tiny_http::Server,
     task: Option<Task>,
-    smoother_slow: Arc<Mutex<MovingAverage<T>>>,
-    smoother_fast: Arc<Mutex<MovingAverage<T>>>,
+
+    fader: Arc<Mutex<Fade<T>>>,
+    fade_task: Task,
 }
 
 #[derive(Clone, Copy)]
-enum SmoothingType {
-    Slow, Fast
+enum FadingType {
+    Slow, Fast, TensOfMinutes
+}
+
+impl FadingType {
+    fn duration(&self) -> Duration {
+        match self {
+            // TODO change me
+            // Slow fade in
+            FadingType::TensOfMinutes => Duration::from_secs(1800),
+
+            // On / Off buttons
+            FadingType::Slow => Duration::from_millis(900),
+
+            // Fast transition on manual adjustments
+            FadingType::Fast => Duration::from_millis(100),
+        }
+    }
 }
 
 impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
@@ -122,6 +139,10 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         }
 
         Some(task)
+    }
+
+    fn stop_fade(&mut self) {
+        self.fade_task.ask_to_pause();
     }
 
     fn stop_task(&mut self) {
@@ -158,41 +179,52 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
             val,
             vec![],
-        )), ok_msg, SmoothingType::Slow)
+        )), ok_msg, FadingType::Slow)
     }
 
-    fn fade_to(&mut self, chan_spec: &ChanSpec, ok_msg: &str,
-               smoothing: SmoothingType)
+    fn fade_to<S: AsRef<str>>(&mut self, chan_spec: &ChanSpec, ok_msg: S,
+               fading: FadingType)
             -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.stop_task();
-        let (tx, rx) = mpsc::channel::<TaskMsg>();
+        // let (tx, rx) = mpsc::channel::<TaskMsg>();
 
-        let smoother = match smoothing {
-            SmoothingType::Slow => self.smoother_slow.clone(),
-            SmoothingType::Fast => self.smoother_fast.clone(),
-        };
+        // let fader = Arc::new(Mutex::new(Fade::new(
+        //     self.output.clone(),
+        //     Duration::from_millis(4),
+        //     fading.duration(),
+        // )));
 
-        let join_handle = {
-            let smoother = smoother.clone();
-            thread::spawn(move || {
-                Runner::run(smoother, rx)
-            })
-        };
+        // let join_handle = {
+        //     let fader = fader.clone();
+        //     thread::spawn(move || {
+        //         Runner::run(fader, rx)
+        //     })
+        // };
 
-        let mut msg = FlashMsg::Ok(ok_msg);
+        // let mut msg = FlashMsg::Ok(ok_msg.as_ref());
 
-        let result = actions::set::run_dev(chan_spec, smoother);
-        msg = msg.and_result(&result);
+        // let result = actions::set::run_dev(chan_spec, fader);
+        // msg = msg.and_result(&result);
 
-        if let Err(e) = &result {
-            eprintln!("fade_all_to: action.perform error: {:?}", e);
+        // if let Err(e) = &result {
+        //     eprintln!("fade_all_to: action.perform error: {:?}", e);
+        // }
+
+        // self.task = Some(Task {
+        //     name: "Smooth set val".to_string(),
+        //     chan: tx,
+        //     join_handle,
+        // });
+
+        {
+            let mut fader = self.fader.lock().unwrap();
+            fader.fade_duration = fading.duration();
         }
 
-        self.task = Some(Task {
-            name: "Smooth set val".to_string(),
-            chan: tx,
-            join_handle,
-        });
+        let mut msg = FlashMsg::Ok(ok_msg.as_ref());
+
+        let result = actions::set::run_dev(chan_spec, self.fader.clone());
+        msg = msg.and_result(&result);
 
         self.home_with(Some(msg))
     }
@@ -204,6 +236,26 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         )
     }
 
+    fn slow_fade_in(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let fade_type = FadingType::TensOfMinutes;
+        let duration = fade_type.duration();
+        self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+            1.0,
+            vec![],
+        )), format!("Doing slow fade in ({:?})", duration),
+        fade_type)
+    }
+
+    fn slow_fade_out(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        let fade_type = FadingType::TensOfMinutes;
+        let duration = fade_type.duration();
+        self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::SomeWithDefault(
+            0.0,
+            vec![],
+        )), format!("Doing slow fade out ({:?})", duration),
+        fade_type)
+    }
+
     fn off(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
         self.fade_all_to(
             0.0,
@@ -212,15 +264,17 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     }
 
     fn disco(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.stop_fade();
         self.stop_task();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let join_handle = {
             let output = self.output.clone();
-            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> = Vec::new();
+            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> =
+                Vec::new();
             for dev in self.output_config.devs.iter() {
                 if let Some(chans) = &dev.chans {
-                    for chan in chans.iter() {
+                    for _chan in chans.iter() {
                         let disco_config =
                             demo::hello::DiscoChanConfig::default();
                         disco_configs.push(disco_config);
@@ -241,16 +295,19 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     }
 
     fn disco_harder(&mut self) -> tiny_http::Response<Cursor<Vec<u8>>> {
+        self.stop_fade();
         self.stop_task();
         let (tx, rx) = mpsc::channel::<TaskMsg>();
 
         let join_handle = {
             let output = self.output.clone();
-            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> = Vec::new();
+            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> =
+                Vec::new();
             for dev in self.output_config.devs.iter() {
                 if let Some(chans) = &dev.chans {
                     for chan in chans.iter() {
-                        let disco_config = chan.disco_config.clone().unwrap_or_default();
+                        let disco_config =
+                            chan.disco_config.clone().unwrap_or_default();
                         disco_configs.push(disco_config);
                     }
                 }
@@ -353,8 +410,8 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     /// Responds with json hashmap of chan_id: value
     fn handle_chans_json(
         &mut self,
-        url: Url,
-        req: &mut tiny_http::Request
+        _url: Url,
+        _req: &mut tiny_http::Request
     ) -> tiny_http::Response<Cursor<Vec<u8>>> {
         let chanvals: Vec<(u16, f32)> = {
             let output = self.output.lock().unwrap();
@@ -401,9 +458,9 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             None => return self.err404(req.method(), url.to_string().as_ref()),
         };
 
-        let (val, smoothing_type) = match path_segments.next() {
-            Some("on") => (1.0, SmoothingType::Slow),
-            Some("off") => (0.0, SmoothingType::Slow),
+        let (val, fading_type) = match path_segments.next() {
+            Some("on") => (1.0, FadingType::Slow),
+            Some("off") => (0.0, FadingType::Slow),
             Some("set") => {
                 let mut body: Vec<u8> = Vec::new();
                 // TODO fix unwrap
@@ -427,7 +484,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
                 }
 
                 match value {
-                    Some(v) => (v, SmoothingType::Fast),
+                    Some(v) => (v, FadingType::Fast),
                     None => {
                         todo!()
                     }
@@ -443,7 +500,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         self.fade_to(&ChanSpec::F32(ChanSpecGeneric::<f32>::Some(vec![(
             chan_id_str.to_string(),
             val,
-        )])), ok_msg.as_ref(), smoothing_type)
+        )])), ok_msg, fading_type)
     }
 
     /// All static files should start with /assets/
@@ -466,6 +523,10 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
                 self.handle_chans_json(url, &mut req),
             (tiny_http::Method::Post, Some("on")) => self.on(),
             (tiny_http::Method::Post, Some("off")) => self.off(),
+            (tiny_http::Method::Post, Some("slow_fade_in")) =>
+                self.slow_fade_in(),
+            (tiny_http::Method::Post, Some("slow_fade_out")) =>
+                self.slow_fade_out(),
             (tiny_http::Method::Post, Some("disco")) => self.disco(),
             (tiny_http::Method::Post, Some("disco_harder")) =>
                 self.disco_harder(),
@@ -502,22 +563,23 @@ impl Web {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
             .map_err(|e| format!("server err: {:?}", e))?;
 
-        let ma_slow = MovingAverage::new(
-            srv.clone(),
-            Duration::from_millis(4),
-            Duration::from_millis(900),
-        );
+        let fader = Arc::new(Mutex::new(Fade::new(
+                        srv.clone(),
+                        Duration::from_millis(6), Duration::from_millis(0))));
 
-        let ma_slow = Arc::new(Mutex::new(ma_slow));
+        let (fade_tx, fade_rx) = mpsc::channel::<TaskMsg>();
+        let fade_join_handle = {
+            let fader = fader.clone();
+            thread::spawn(move || {
+                Runner::run(fader, fade_rx)
+            })
+        };
 
-
-        let ma_fast = MovingAverage::new(
-            srv.clone(),
-            Duration::from_millis(4),
-            Duration::from_millis(70), // should be same(ish?) as in javascript
-        );
-        let ma_fast = Arc::new(Mutex::new(ma_fast));
-
+        let fade_task = Task {
+            name: "Fade task".to_string(),
+            chan: fade_tx,
+            join_handle: fade_join_handle,
+        };
 
         let mut server = WebState {
             base_url: Url::parse(format!("http://{}", self.listen_addr)
@@ -526,8 +588,9 @@ impl Web {
             output_config: config,
             http,
             task: None,
-            smoother_slow: ma_slow,
-            smoother_fast: ma_fast,
+
+            fader: fader,
+            fade_task: fade_task,
         };
 
         server.run();

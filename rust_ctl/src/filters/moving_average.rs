@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 use crate::dev::{DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{MsgHandler};
@@ -14,8 +14,8 @@ use crate::frame::Frame;
 
 #[derive(Debug)]
 pub struct MovingAverage<T> {
+    pub transition_period: Duration,
     frame_period: Duration,
-    transition_period: Duration,
     frames: VecDeque<Frame<f32>>,
     output: Arc<Mutex<T>>,
     current_frame: Frame<f32>,
@@ -23,7 +23,6 @@ pub struct MovingAverage<T> {
     incomplete_target_frame: Frame<f32>,
     last_msg_recv_time: Instant,
     last_msg_target_time: Instant,
-    msg_buf: Msg,
 }
 
 impl<T: Send + fmt::Display> fmt::Display for MovingAverage<T> {
@@ -159,6 +158,7 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
                     // average frame is the same as the last frame
                     // in the VecDeque which means that we've reached
                     // the closest values to the target
+                    // TODO is this value any good?
                     if avg_frame.almost_same_as(&furthest_frame, 0.000001) {
                         avg_frame = mov_avg.target_frame.clone();
                     }
@@ -171,6 +171,9 @@ impl<T: DevRead + DevWrite> Runner for MovingAverage<T> {
 
             match stop.recv_timeout(frame_period) {
                 Ok(msg) => match msg {
+                    TaskMsg::Pause => {
+                        todo!()
+                    },
                     TaskMsg::Stop => {
                         return Ok(())
                     },
@@ -191,7 +194,8 @@ impl<T: fmt::Debug + Send + fmt::Display + HasChanDescriptions> MsgHandler for M
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         self.target_frame.merge_msg(msg);
         self.last_msg_recv_time = Instant::now();
-        self.last_msg_target_time = self.last_msg_recv_time + self.transition_period;
+        self.last_msg_target_time =
+            self.last_msg_recv_time + self.transition_period;
         Ok(())
     }
 }
@@ -235,12 +239,6 @@ impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
             vals.push(ChanVal(ChanId(i as u16), Val::F32(0.0)))
         }
 
-        let msg_buf = Msg {
-            seq_num: 0,
-            timestamp: SystemTime::now(),
-            vals,
-        };
-
         let target_frame = Frame::new(num_chans as u16);
 
         let now = Instant::now();
@@ -252,7 +250,6 @@ impl<T: HasChanDescriptions + fmt::Debug> MovingAverage<T> {
             current_frame: target_frame.clone(),
             target_frame,
             incomplete_target_frame: Frame::new(num_chans as u16),
-            msg_buf,
             last_msg_recv_time: now,
             last_msg_target_time: now,
         }

@@ -4,7 +4,11 @@ use std::time::Duration;
 
 #[derive(Debug)]
 pub enum TaskMsg {
-    Ping, // does nothing
+    // Stop doing what you're doing, but don't exit the thread
+    Pause,
+
+    // Does nothing
+    Ping,
     Stop,
 }
 
@@ -18,6 +22,15 @@ impl Task {
     pub fn is_running(&self) -> bool {
         let res = self.chan.send(TaskMsg::Ping);
         res.is_ok()
+    }
+
+    pub fn ask_to_pause(&mut self) {
+        match self.chan.send(TaskMsg::Pause) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("got err while sending msg: {:?}", e);
+            }
+        }
     }
 
     pub fn ask_to_stop(&mut self) {

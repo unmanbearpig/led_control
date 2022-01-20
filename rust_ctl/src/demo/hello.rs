@@ -50,22 +50,48 @@ impl Default for DiscoChanConfig {
     }
 }
 
-struct DemoChan {
+struct SineVal {
     freq: f64,
     min: f64,
     max: f64,
     adjustment: f64,
     phi: f64,
+    blend_mode: BlendMode,
 }
 
-impl DemoChan {
+impl SineVal {
     fn sine(&mut self, dt_secs: f64) -> f64 {
         let amp = self.max - self.min;
         let new_sin = ((((self.phi.sin() + 1.0) / 2.0) * amp) + self.min)
             .powf(self.adjustment);
-        let delta = dt_secs * self.freq * std::f64::consts::PI * 2.0;
-        self.phi += delta;
+        self.phi += dt_secs * self.freq * std::f64::consts::PI * 2.0;
         new_sin
+    }
+}
+
+enum BlendMode {
+    Add,
+    Mul,
+}
+
+
+struct DemoChan {
+    sines: Vec<SineVal>,
+}
+
+impl DemoChan {
+    fn sine(&mut self, dt_secs: f64) -> f64 {
+        let mut result = 0.0f64;
+
+        for s in self.sines.iter_mut() {
+            let sinval = s.sine(dt_secs).min(1.0).max(0.0);
+            match s.blend_mode {
+                BlendMode::Add => result += sinval,
+                BlendMode::Mul => result *= sinval,
+            }
+        }
+
+        result.min(1.0).max(0.0)
     }
 }
 
@@ -89,16 +115,40 @@ pub fn run_with_config<T: DevWrite + ?Sized>(
     let mut dchans: Vec<DemoChan> = Vec::with_capacity(num_chans as usize);
 
     let mut rng = rand::thread_rng();
+    // let secondary_freq_dist = rand::distributions::Uniform::new(0.5, 2.0);
     for chan_conf in configs.iter() {
         let freq_dist = rand::distributions::Uniform::new(
             chan_conf.freq_min, chan_conf.freq_max);
 
-        dchans.push(DemoChan {
+        let main_sine = SineVal {
             freq: rng.sample(freq_dist),
             min: chan_conf.min,
             max: chan_conf.max,
             adjustment: chan_conf.adjustment,
             phi: 0.0,
+            blend_mode: BlendMode::Add,
+        };
+
+        let secondary_sine = SineVal {
+            freq: rng.sample(freq_dist) / 3.1,
+            min: 0.7,
+            max: 1.1,
+            adjustment: 1.0,
+            phi: 0.0,
+            blend_mode: BlendMode::Mul,
+        };
+
+        let third_sine = SineVal {
+            freq: rng.sample(freq_dist) / 7.2,
+            min: 0.7,
+            max: 1.1,
+            adjustment: 1.0,
+            phi: 0.0,
+            blend_mode: BlendMode::Mul,
+        };
+
+        dchans.push(DemoChan {
+            sines: vec![main_sine, secondary_sine, third_sine],
         });
     }
 
@@ -125,6 +175,9 @@ pub fn run_with_config<T: DevWrite + ?Sized>(
             Ok(msg) => {
                 println!("received task msg: {:?}", msg);
                 match msg {
+                    TaskMsg::Pause => {
+                        todo!()
+                    },
                     TaskMsg::Stop => return Ok(()),
                     TaskMsg::Ping => {}
                 }

@@ -9,6 +9,9 @@ pub struct Frame<T: Clone> {
 
 use std::collections::VecDeque; // TODO use iterator
 impl Frame<f32> {
+    pub fn empty() -> Self {
+        Frame { vals: Vec::new() }
+    }
     pub fn simple_average(frames: &VecDeque<Frame<f32>>) -> Frame<f32> {
         let mut result = Frame::new(0);
         let mut counts: Frame<usize> = Frame::new(0);
