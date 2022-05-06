@@ -27,7 +27,7 @@ fn find_chans<'a>(
 
             match maybe_cid {
                 Ok(cid) => cdesc.chan_id == cid,
-                Err(_) => cdesc.tags.iter().any(|tag| {
+                Err(_) => cdesc.config.tags.iter().any(|tag| {
                     let t: &str = tag.as_ref();
                     t == chan_descr
                 }),

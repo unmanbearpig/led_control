@@ -1,4 +1,5 @@
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
+use crate::frame::Frame;
 use crate::error::Error;
 use std::fmt;
 use std::time::Duration;
@@ -38,31 +39,37 @@ impl DevRead for UsbDev {
 const DEFAULT_PWM_PERIOD: u16 = 22126;
 
 impl DevWrite for UsbDev {
-    /// sets the internal state of the LED to the float value
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        if val > 1.0 {
+    fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
+        if frame.vals.len() >= self.num_chans() as usize {
             return Err(format!(
-                "UsbDev set_f32: value {} for chan {} is larger than 1.0",
-                val, chan
+                "UsbDev set_frame: too many values: {} instead of {}",
+                frame.vals.len(), self.num_chans()
             ));
         }
 
-        if chan >= self.num_chans() {
-            return Err(format!(
-                "UsbDev set_f32: Invalid chan {}, only {} are available",
-                chan,
-                self.num_chans()
-            ));
+        for (cid, val) in frame.vals.iter().enumerate() {
+            if let Some(val) = *val {
+                let cid = cid as u16;
+                if val > 1.0 {
+                    return Err(format!(
+                            "UsbDev set_f32: value {} for chan {} is larger than 1.0",
+                            val, cid
+                            ));
+                }
+
+                if cid >= self.num_chans() {
+                    return Err(format!(
+                            "UsbDev set_f32: Invalid chan {}, only {} are available",
+                            cid, self.num_chans()));
+                }
+
+                self.f32_vals[cid as usize] = val;
+
+                let raw_val = (val * self.max_int() as f32).round() as u16;
+                self.set_raw(cid, raw_val);
+            }
         }
 
-        self.f32_vals[chan as usize] = val;
-
-        let raw_val = (val * self.max_int() as f32).round() as u16;
-        self.set_raw(chan, raw_val)
-    }
-
-    /// sends the set LED values to the device
-    fn sync(&mut self) -> Result<(), String> {
         // eprintln!("usb write: {:?}", self.raw_vals);
         let endpoint = self.usb_endpoint();
         let timeout = self.timeout();
@@ -84,6 +91,53 @@ impl DevWrite for UsbDev {
             Err(e) => Err(format!("USB sync error: {}", e)),
         }
     }
+
+    // /// sets the internal state of the LED to the float value
+    // fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+    //     if val > 1.0 {
+    //         return Err(format!(
+    //             "UsbDev set_f32: value {} for chan {} is larger than 1.0",
+    //             val, chan
+    //         ));
+    //     }
+
+    //     if chan >= self.num_chans() {
+    //         return Err(format!(
+    //             "UsbDev set_f32: Invalid chan {}, only {} are available",
+    //             chan,
+    //             self.num_chans()
+    //         ));
+    //     }
+
+    //     self.f32_vals[chan as usize] = val;
+
+    //     let raw_val = (val * self.max_int() as f32).round() as u16;
+    //     self.set_raw(chan, raw_val)
+    // }
+
+    // /// sends the set LED values to the device
+    // fn sync(&mut self) -> Result<(), String> {
+    //     // eprintln!("usb write: {:?}", self.raw_vals);
+    //     let endpoint = self.usb_endpoint();
+    //     let timeout = self.timeout();
+    //     let data: &[u8; 6] = unsafe {
+    //         &*(&self.raw_vals as *const [u16; 3] as *const [u8; 6])
+    //     };
+
+    //     self.last_f32_vals = self.f32_vals;
+
+    //     let res = self.devhandle.write_interrupt(endpoint, data, timeout);
+    //     match res {
+    //         Ok(numbytes) => {
+    //             if numbytes != data.len() {
+    //                 eprintln!("USB sync: written {} of {} bytes",
+    //                           numbytes, data.len());
+    //             }
+    //             Ok(())
+    //         }
+    //         Err(e) => Err(format!("USB sync error: {}", e)),
+    //     }
+    // }
 }
 
 impl Dev for UsbDev {}

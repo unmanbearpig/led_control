@@ -59,7 +59,7 @@ pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>, conf: Config) -> Result<(
                 .chan_descriptions()
                 .iter()
                 .enumerate()
-                .filter_map(|(i, cfg)| cfg.cuboid.map(|c| (i, c)))
+                .filter_map(|(i, cfg)| cfg.config.cuboid.map(|c| (i, c)))
             {
                 // let intersection = cuboid.sphere_intersection(loc, conf.radius);
                 // let result = (intersection * conf.brightness).min(1.0);

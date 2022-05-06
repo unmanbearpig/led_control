@@ -1,4 +1,4 @@
-use crate::tag::Tag;
+use crate::frame::Frame;
 use crate::chan::ChanConfig;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{MsgHandler};
@@ -11,7 +11,8 @@ use std::sync::{Arc, Mutex};
 pub struct DevId(u16);
 
 impl Display for DevId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>)
+            -> std::result::Result<(), std::fmt::Error> {
         write!(f, "[Dev {}]", self.0)
     }
 }
@@ -26,6 +27,7 @@ struct SrvChan {
 struct SrvDev {
     dev: Arc<Mutex<dyn Dev>>,
     dirty: bool,
+    frame: Frame<f32>,
 }
 
 pub struct Srv {
@@ -101,7 +103,8 @@ impl<'a> Srv {
             }
         };
 
-        self.devs.push(SrvDev { dev, dirty: true });
+        let frame = Frame::empty();
+        self.devs.push(SrvDev { dev, dirty: true, frame });
 
         dev_id
     }
@@ -117,13 +120,37 @@ impl MsgHandler for Srv {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
                 Val::F32(fval) => {
-                    self.set_f32(*cid, *fval)?;
+                    if *cid as usize >= self.chans.len() {
+                        eprintln!("srv: chan {cid} out of bounds");
+                        return Ok(())
+                    }
+                    let chan: &mut SrvChan = &mut self.chans[*cid as usize];
+                    if *fval == chan.prev_val_f32 {
+                        // skip it when trying to set to the previous value
+                        continue;
+                    }
+                    chan.prev_val_f32 = *fval;
+                    let val = chan.cfg.adjust_value(*fval);
+                    let dev = &mut self.devs[chan.devid.0 as usize];
+                    dev.dirty = true;
+                    dev.frame.set(*cid, *fval);
+                    // dev.msg.add_val(ChanVal(ChanId(*cid), Val::F32(*fval)));
                 }
-                _ => unimplemented!(),
+                _ => todo!(),
             }
         }
 
-        self.sync()
+        for dev in self.devs.iter_mut() {
+            {
+                let mut locked = dev.dev.lock().unwrap();
+                locked.set_frame(&dev.frame);
+                // locked.handle_msg(&dev.msg);
+            }
+            dev.dirty = false;
+            dev.frame.clear();
+        }
+
+        Ok(())
     }
 }
 
@@ -149,15 +176,11 @@ impl HasChanDescriptions for Srv {
             .iter()
             .enumerate()
             .map(|(cid, chan)| {
-                ChanDescription::new(
-                    cid as u16,
-                    format!(
+                let name = format!(
                         "[cid: {}, dev {}, chan {}]",
-                        cid, chan.devid.0, chan.cfg.index
-                    ),
-                    chan.cfg.tags.iter().map(Tag::new).collect(),
-                    chan.cfg.cuboid,
-                )
+                        cid, chan.devid.0, chan.cfg.index);
+
+                ChanDescription::new(cid as u16, name, chan.cfg.clone())
             })
             .collect()
     }
@@ -181,7 +204,7 @@ impl DevNumChans for Srv {
     }
 }
 
-impl DevWrite for Srv {
+impl Srv {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         if chan as usize >= self.chans.len() {
             eprintln!("srv: chan {chan} out of bounds");
@@ -201,8 +224,9 @@ impl DevWrite for Srv {
 
         let dev = &mut self.devs[chan.devid.0 as usize];
         dev.dirty = true;
-        let mut dev = dev.dev.lock().unwrap();
-        dev.set_f32(chan.cfg.index, val)?;
+        dev.frame.set(chan.cfg.index, val);
+        // let mut dev = dev.dev.lock().unwrap();
+        // dev.set_f32(chan.cfg.index, val)?;
 
         Ok(())
     }
@@ -212,14 +236,30 @@ impl DevWrite for Srv {
         // the ones without dirty bit set,
         let devs = self.devs.iter_mut().filter(|d| d.dirty).map(|d| {
             d.dirty = false;
-            &mut d.dev
+            d
         });
 
-        for dev in devs {
-            let mut dev = dev.lock().unwrap();
-            dev.sync()?;
+        for d in devs {
+            let mut dev = d.dev.lock().unwrap();
+            if let Err(e) = dev.set_frame(&d.frame) {
+                eprintln!("srv set_frame: {e:?}");
+                // should we report the error?
+            }
         }
         Ok(())
+    }
+}
+
+impl DevWrite for Srv {
+    fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
+        // eprintln!("Srv set_frame {frame:?}");
+        for (cid, val) in frame.vals.iter().enumerate() {
+            let cid = cid as u16;
+            if let Some(val) = val {
+                self.set_f32(cid, *val);
+            }
+        }
+        self.sync()
     }
 }
 

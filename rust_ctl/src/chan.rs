@@ -1,5 +1,6 @@
 use crate::demo::hello::DiscoChanConfig;
 use crate::cuboid::Cuboid;
+use crate::tag::Tag;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -8,21 +9,20 @@ pub struct ChanConfig {
     pub min: f64, // min and max are ignored when exp is None
     pub max: f64,
     pub exp: Option<f64>,
-    pub tags: Vec<String>,
+    pub tags: Vec<Tag>,
     pub cuboid: Option<Cuboid>,
     pub disco_config: Option<DiscoChanConfig>,
 }
 
-
 impl Default for ChanConfig {
     fn default() -> Self {
         ChanConfig {
-            index: 0,
-            min: 0.0,
-            max: 1.0,
-            exp: None,
-            tags: Vec::new(),
-            cuboid: None,
+            index:        0,
+            min:          0.0,
+            max:          1.0,
+            exp:          None,
+            tags:         Vec::new(),
+            cuboid:       None,
             disco_config: None,
         }
     }

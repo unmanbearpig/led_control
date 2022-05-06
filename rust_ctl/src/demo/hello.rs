@@ -107,7 +107,7 @@ pub fn run_with_config<T: DevWrite + ?Sized>(
     configs: Vec<DiscoChanConfig>,
     stop: mpsc::Receiver<TaskMsg>,
 ) -> Result<(), String> {
-    println!("running hello demo...");
+    println!("running demo disco...");
 
     let num_chans = configs.len();
     let mut frame = Frame::new(num_chans as u16);
@@ -158,17 +158,25 @@ pub fn run_with_config<T: DevWrite + ?Sized>(
     loop {
         let dt = t.elapsed().as_secs_f64();
         t = time::Instant::now();
+
+        // println!("dchans len = {}", dchans.len());
+
         for (i, d) in dchans.iter_mut().enumerate() {
             let new_sin = d.sine(dt);
             // TODO Probably should be applied earlier, so we stay within
             // min-max limits
+
+            // println!("set {i} to {new_sin}");
             frame.set(i as u16, new_sin as f32);
         }
 
         {
-            let mut dev = dev.lock().map_err(|e| format!("write lock: {:?}", e))?;
-            dev.set_frame(&frame)?;
-            dev.sync()?;
+            let mut dev =
+                dev.lock().map_err(|e| format!("write lock: {:?}", e))?;
+            // println!("DISCO set frame {:?}", frame);
+            if let Err(e) = dev.set_frame(&frame) {
+                eprintln!("disco err: {e:?}");
+            }
         }
 
         match stop.recv_timeout(delay) {

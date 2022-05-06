@@ -21,10 +21,12 @@ use crate::demo;
 use crate::task::{Task, TaskMsg};
 use std::thread;
 
-use crate::demo::Fade;
+use crate::demo::{Fade, FadeSpec};
 use std::time::Duration;
 
 use crate::runner::Runner;
+
+use crate::proto::ChanId;
 
 // TODO we send messages to all devices even when setting only 1 channel
 // TODO do we send messages to devices in parallel?
@@ -73,7 +75,7 @@ struct TagTemplate<'a>(&'a Tag);
 
 impl ChanTemplate {
     fn tags(&self) -> Vec<TagTemplate> {
-        self.chan.tags.iter()
+        self.chan.config.tags.iter()
             .map(|tag| TagTemplate(tag))
             .collect()
     }
@@ -185,40 +187,45 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
     fn fade_to<S: AsRef<str>>(&mut self, chan_spec: &ChanSpec, ok_msg: S,
                fading: FadingType)
             -> tiny_http::Response<Cursor<Vec<u8>>> {
+        // eprintln!("fade_to {chan_spec:?}");
         self.stop_task();
-        // let (tx, rx) = mpsc::channel::<TaskMsg>();
+        let (tx, rx) = mpsc::channel::<TaskMsg>();
 
-        // let fader = Arc::new(Mutex::new(Fade::new(
-        //     self.output.clone(),
-        //     Duration::from_millis(4),
-        //     fading.duration(),
-        // )));
+        let settings = FadeSpec {
+            frame_duration: Duration::from_millis(4),
+            fade_duration: fading.duration(),
+        };
 
-        // let join_handle = {
-        //     let fader = fader.clone();
-        //     thread::spawn(move || {
-        //         Runner::run(fader, rx)
-        //     })
-        // };
+        let fader = Arc::new(Mutex::new(Fade::new(
+            self.output.clone(),
+            settings,
+        )));
 
-        // let mut msg = FlashMsg::Ok(ok_msg.as_ref());
+        let join_handle = {
+            let fader = fader.clone();
+            thread::spawn(move || {
+                Runner::run(fader, rx)
+            })
+        };
 
-        // let result = actions::set::run_dev(chan_spec, fader);
-        // msg = msg.and_result(&result);
+        let mut msg = FlashMsg::Ok(ok_msg.as_ref());
 
-        // if let Err(e) = &result {
-        //     eprintln!("fade_all_to: action.perform error: {:?}", e);
-        // }
+        let result = actions::set::run_dev(chan_spec, fader);
+        msg = msg.and_result(&result);
 
-        // self.task = Some(Task {
-        //     name: "Smooth set val".to_string(),
-        //     chan: tx,
-        //     join_handle,
-        // });
+        if let Err(e) = &result {
+            eprintln!("fade_all_to: action.perform error: {:?}", e);
+        }
+
+        self.task = Some(Task {
+            name: "Smooth set val".to_string(),
+            chan: tx,
+            join_handle,
+        });
 
         {
             let mut fader = self.fader.lock().unwrap();
-            fader.fade_duration = fading.duration();
+            fader.settings.fade_duration = fading.duration();
         }
 
         let mut msg = FlashMsg::Ok(ok_msg.as_ref());
@@ -270,19 +277,17 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
         let join_handle = {
             let output = self.output.clone();
-            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> =
-                Vec::new();
-            for dev in self.output_config.devs.iter() {
-                if let Some(chans) = &dev.chans {
-                    for _chan in chans.iter() {
-                        let disco_config =
-                            demo::hello::DiscoChanConfig::default();
-                        disco_configs.push(disco_config);
-                    }
-                }
-            }
+
+            let disco_chan_configs: Vec<demo::hello::DiscoChanConfig> =
+            {
+                let output = output.lock().unwrap();
+                output.chans().iter().map(|_chan| {
+                    demo::hello::DiscoChanConfig::default()
+                }).collect()
+            };
+
             thread::spawn(move || demo::hello::run_with_config(
-                    output, disco_configs, rx))
+                    output, disco_chan_configs, rx))
         };
 
         self.task = Some(Task {
@@ -301,19 +306,25 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
 
         let join_handle = {
             let output = self.output.clone();
-            let mut disco_configs: Vec<demo::hello::DiscoChanConfig> =
-                Vec::new();
-            for dev in self.output_config.devs.iter() {
-                if let Some(chans) = &dev.chans {
-                    for chan in chans.iter() {
-                        let disco_config =
-                            chan.disco_config.clone().unwrap_or_default();
-                        disco_configs.push(disco_config);
-                    }
-                }
-            }
+
+            let disco_chan_configs: Vec<demo::hello::DiscoChanConfig> =
+            {
+                let output = output.lock().unwrap();
+
+                // for dcc in self.output_config.devs.iter() {
+                //     println!("dcc: {:?}", dcc);
+                // }
+
+                println!("output = {output:?}");
+
+                output.chans().iter().map(|(ChanId(cid), desc)| {
+                    // println!("chan: {:?}", chan);
+                    demo::hello::DiscoChanConfig::default()
+                }).collect()
+            };
+
             thread::spawn(move || demo::hello::run_with_config(
-                    output, disco_configs, rx))
+                    output, disco_chan_configs, rx))
         };
 
         self.task = Some(Task {
@@ -322,9 +333,10 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             join_handle,
         });
 
-        self.home_with(Some(FlashMsg::Ok("Enjoy the colors!")))
+        self.home_with(Some(FlashMsg::Ok("Wooooo111!!!")))
     }
-    fn chans(&mut self) -> Vec<ChanTemplate> {
+
+    fn chans_templates(&mut self) -> Vec<ChanTemplate> {
         let output = self.output.lock().unwrap();
         output
             .chan_descriptions()
@@ -340,7 +352,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             -> tiny_http::Response<Cursor<Vec<u8>>> {
         let template = HomeTemplate {
             msg,
-            chans: self.chans(),
+            chans: self.chans_templates(),
         };
         // todo fix unwrap
         let resp_str = template.render().unwrap();
@@ -565,7 +577,10 @@ impl Web {
 
         let fader = Arc::new(Mutex::new(Fade::new(
                         srv.clone(),
-                        Duration::from_millis(6), Duration::from_millis(0))));
+                        FadeSpec {
+                            fade_duration:  Duration::from_millis(6),
+                            frame_duration: Duration::from_secs_f32(1.0 / 60.0),
+                        })));
 
         let (fade_tx, fade_rx) = mpsc::channel::<TaskMsg>();
         let fade_join_handle = {

@@ -1,17 +1,20 @@
 use std::fmt;
 
-struct BarBounds {
-    start: char,
-    end: char,
+pub struct BarBounds {
+    pub start: char,
+    pub end: char,
 }
 
 pub struct TermBarConfig {
-    bar_len: usize,
-    min: f32,
-    max: f32,
-    tick_char: char,
-    empty_char: char,
-    bounds: Option<BarBounds>,
+    pub bar_len: usize,
+    pub min: f32,
+    pub max: f32,
+    pub tick_char: char,
+    pub empty_char: char,
+    pub bounds: Option<BarBounds>,
+
+    /// If Some, then print the value after the bar with this number of digits
+    pub print_val_digits: Option<usize>,
 }
 
 pub struct TermBar<'a> {
@@ -20,6 +23,23 @@ pub struct TermBar<'a> {
 }
 
 impl TermBarConfig {
+    pub const fn default_config() -> Self {
+        TermBarConfig {
+            bar_len: 40,
+            min: 0.0,
+            max: 1.0,
+            tick_char: '=',
+            empty_char: ' ',
+            bounds: Some(BarBounds {
+                start: '|',
+                end: '|',
+            }),
+            print_val_digits: None,
+        }
+    }
+
+    // Configuration
+
     #[allow(dead_code)]
     pub fn tick_char(mut self, tick_char: char) -> Self {
         self.tick_char = tick_char;
@@ -58,11 +78,25 @@ impl TermBarConfig {
     }
 
     #[allow(dead_code)]
+    pub fn print_val_digits(mut self, digits: usize) -> Self {
+        self.print_val_digits = Some(digits);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub fn no_print_val_digits(mut self) -> Self {
+        self.print_val_digits = None;
+        self
+    }
+
+    // value
+
+    #[allow(dead_code)]
     pub fn val(&self, val: f32) -> TermBar {
         TermBar { config: self, val }
     }
 
-    /// returns bar length including bounds chars if they're present
+    /// Returns bar length including bounds chars if they're present
     pub fn whole_len(&self) -> usize {
         let mut len = self.bar_len;
         if self.bounds.is_some() {
@@ -72,23 +106,13 @@ impl TermBarConfig {
     }
 }
 
-pub fn config() -> TermBarConfig {
-    TermBarConfig::default()
+pub const fn config() -> TermBarConfig {
+    TermBarConfig::default_config()
 }
 
 impl Default for TermBarConfig {
     fn default() -> Self {
-        TermBarConfig {
-            bar_len: 40,
-            min: 0.0,
-            max: 1.0,
-            tick_char: '=',
-            empty_char: ' ',
-            bounds: Some(BarBounds {
-                start: '|',
-                end: '|',
-            }),
-        }
+        TermBarConfig::default_config()
     }
 }
 
@@ -100,6 +124,10 @@ impl TermBar<'_> {
 
     fn bar_ticks(&self) -> usize {
         (self.amount() * self.config.bar_len as f32) as usize
+    }
+
+    pub fn print(&self) {
+        println!("{}", self)
     }
 }
 
@@ -128,6 +156,10 @@ impl fmt::Display for TermBar<'_> {
 
         if let Some(bounds) = &self.config.bounds {
             buf.push(bounds.end);
+        }
+
+        if let Some(digits) = self.config.print_val_digits {
+            buf.push_str(format!(" {1:.0$}", digits, self.val).as_ref());
         }
 
         write!(f, "{}", buf)

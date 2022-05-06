@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::time::Duration;
 
 use crate::actions;
 use crate::chan_spec::ChanSpec;
@@ -88,12 +89,17 @@ impl ActionSpec {
             ActionSpec::Web { listen_addr } =>
                 Ok(Box::new(Web { listen_addr: listen_addr.clone() })),
             ActionSpec::Space { location, radius, brightness } =>
-                Ok(Box::new(Space { location: *location, radius: *radius, 
+                Ok(Box::new(Space { location: *location, radius: *radius,
                     brightness: *brightness })),
             ActionSpec::TestSeq => Ok(Box::new(demo::test_seq::TestSeq)),
             ActionSpec::Glitch => Ok(Box::new(demo::glitch::Glitch)),
             ActionSpec::Hello => Ok(Box::new(demo::hello::Hello)),
-            ActionSpec::Fade => Ok(Box::new(demo::fade::Fade)),
+            ActionSpec::Fade => {
+                Ok(Box::new(demo::fade::FadeSpec {
+                    frame_duration: Duration::from_secs_f32(1.0 / 60.0),
+                    fade_duration: Duration::from_secs_f32(1.0),
+                }))
+            },
             ActionSpec::Whoosh => Ok(Box::new(demo::whoosh::Whoosh)),
         }
     }
@@ -158,7 +164,7 @@ impl Action<'_> for ListChans {
         let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
         for descr in srv.chan_descriptions() {
             let mut tags = String::new();
-            for tag in descr.tags.iter() {
+            for tag in descr.config.tags.iter() {
                 tags += format!("{} ", tag.name()).as_ref();
             }
             println!("chan {} {} {}", descr.chan_id, descr.name, tags);

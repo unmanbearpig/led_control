@@ -1,3 +1,4 @@
+use crate::frame::Frame;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::proto::{self, ChanId, ChanVal, Msg, Val};
 
@@ -48,24 +49,20 @@ impl DevRead for UdpV2Dev {
 }
 
 impl DevWrite for UdpV2Dev {
-    /// sets the internal state of the LED to the float value
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        // We might have more than 3 chans
-        //
-        // if chan >= self.num_chans() {
-        //     return Err(format!(
-        //         "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
-        //         chan
-        //     ));
-        // }
+    fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
+        // eprintln!("UdpV2 set_frame {frame:?}");
+        if frame.vals.len() > self.num_chans() as usize {
+            return Err(format!(
+                    "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
+                    frame.vals.len()));
+        }
+        for (cid, val) in frame.vals.iter().enumerate() {
+            if let Some(val) = val {
+                self.msg.vals[cid] =
+                    ChanVal(ChanId(cid as u16), Val::F32(*val));
+            }
+        }
 
-        self.msg.vals[chan as usize] = ChanVal(ChanId(chan), Val::F32(val));
-
-        Ok(())
-    }
-
-    /// sends the set LED values to the device
-    fn sync(&mut self) -> Result<(), String> {
         // eprintln!("UDPv2: sending msg {:?}...", self.msg);
         let mut bytes = [0u8; 1500];
         // ignore previously set time, use the time just before
@@ -76,6 +73,35 @@ impl DevWrite for UdpV2Dev {
         self.msg.seq_num = self.msg.seq_num.wrapping_add(1);
         Ok(())
     }
+
+    // /// sets the internal state of the LED to the float value
+    // fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+    //     // We might have more than 3 chans
+    //     //
+    //     // if chan >= self.num_chans() {
+    //     //     return Err(format!(
+    //     //         "UDPv2 set_f32: invalid chan {}, only 0-3 are allowed",
+    //     //         chan
+    //     //     ));
+    //     // }
+
+    //     self.msg.vals[chan as usize] = ChanVal(ChanId(chan), Val::F32(val));
+
+    //     Ok(())
+    // }
+
+    // /// sends the set LED values to the device
+    // fn sync(&mut self) -> Result<(), String> {
+    //     // eprintln!("UDPv2: sending msg {:?}...", self.msg);
+    //     let mut bytes = [0u8; 1500];
+    //     // ignore previously set time, use the time just before
+    //     // sending the message
+    //     self.msg.timestamp = time::SystemTime::now();
+    //     let size = self.msg.serialize(&mut bytes);
+    //     self.socket.send(&bytes[0..size]).map_err(|e| e.to_string())?;
+    //     self.msg.seq_num = self.msg.seq_num.wrapping_add(1);
+    //     Ok(())
+    // }
 }
 
 impl Dev for UdpV2Dev {}

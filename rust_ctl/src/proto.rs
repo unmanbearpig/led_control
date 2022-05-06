@@ -112,6 +112,14 @@ impl Msg {
         }
     }
 
+    pub fn add_val(&mut self, chanval: ChanVal) {
+        self.vals.push(chanval);
+    }
+
+    pub fn clear(&mut self) {
+        self.vals.clear();
+    }
+
     pub fn serialize(&self, buf: &mut [u8]) -> usize {
         assert!(buf.len() >= MSG_MAX_SIZE);
 

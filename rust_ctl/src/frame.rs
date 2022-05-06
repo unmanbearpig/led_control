@@ -1,4 +1,5 @@
 use crate::proto::{Val, ChanVal, ChanId, Msg};
+use crate::term_bar;
 
 use std::ops::{Add};
 
@@ -17,7 +18,7 @@ impl Frame<f32> {
         let mut counts: Frame<usize> = Frame::new(0);
 
         for frame in frames.iter() {
-            result.ensure_bounds(frame.len() -1);
+            result.ensure_bounds(frame.num_chans() -1);
             result.add_assign(frame);
             for (chan, _) in frame.iter_some() {
                 counts.add_to_val(chan, 1);
@@ -71,6 +72,16 @@ impl Frame<f32> {
         }
         true
     }
+
+    pub fn print_vals(&self) {
+        let conf = term_bar::config().print_val_digits(4);
+        for val in self.vals.iter() {
+            match val {
+                Some(val) => conf.val(*val).print(),
+                None => println!(""),
+            }
+        }
+    }
 }
 
 impl<T: Clone + PartialEq> Frame<T> {
@@ -91,8 +102,12 @@ impl<T: Clone> Frame<T> {
         }
     }
 
-    pub fn len(&self) -> u16 {
+    pub fn num_chans(&self) -> u16 {
         self.vals.len() as u16
+    }
+
+    pub fn len(&self) -> usize {
+        self.vals.len()
     }
 
     pub fn clear(&mut self) {
@@ -110,6 +125,12 @@ impl<T: Clone> Frame<T> {
     pub fn set(&mut self, chan: u16, val: T) {
         self.ensure_bounds(chan);
         self.vals[chan as usize] = Some(val)
+    }
+
+    pub fn set_all(&mut self, val: T) {
+        for chan in 0..self.num_chans() {
+            self.set(chan, val.clone())
+        }
     }
 
     /// makes sure the vals size is at least `len`
@@ -146,7 +167,8 @@ impl<T: Clone> Frame<T> {
             .map(|(cid, v)| (cid as u16, v.as_ref().unwrap()))
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, &mut Option<T>)> + '_ {
+    pub fn iter_mut(&mut self)
+            -> impl Iterator<Item = (u16, &mut Option<T>)> + '_ {
         self.vals.iter_mut().enumerate()
             .map(|(cid, v)| (cid as u16, v))
     }
@@ -156,6 +178,24 @@ impl<T: Clone> Frame<T> {
             .filter(|(_, v)| v.is_some())
             .map(|(cid, v)| (cid, v.iter_mut().next().unwrap()))
     }
+
+    pub fn merge_frame(&mut self, from: &Frame<T>) -> Result<(), String> {
+        if from.num_chans() > self.num_chans() {
+            return Err(format!(
+                    "Cannot merge more frame channels than we have. \
+We have {}, trying to merge {} channels",
+                    self.num_chans(), from.num_chans()));
+        }
+
+        for (ii, val) in from.vals.iter().enumerate() {
+            if val.is_some() {
+                self.vals[ii] = val.clone();
+            }
+        }
+
+        Ok(())
+    }
+
 }
 
 #[cfg(test)]

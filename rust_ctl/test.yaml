@@ -1,0 +1,58 @@
+---
+action: PrintConfig
+room_scale: [ 0.6, 0.5, 1.0 ]
+
+devs:
+  - dev: TestDev
+    chans:
+      - index: 2
+        min: 0.0
+        max: 1.0
+        exp: 2.1
+        tags: ["blue", "rgb", "window"]
+        # from room's window top left corner x y z coordinates
+        # when looking at the window:
+        #   x: left-right, left is 0
+        #   y: up-down, ceiling is 0, floor is 1
+        #   z: distance from the window into the room, window is 0
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+      - index: 1
+        min: 0.0
+        max: 1.0
+        exp: 2.1
+        tags: ["green", "rgb", "window"]
+        # the same as first channel
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+
+      - index: 0
+        min: 0.0
+        max: 1.0
+        exp: 2.1
+        # the same as first channel
+        tags: ["red", "rgb", "window"]
+        cuboid:
+          start:
+            x: 0.15
+            y: 0.1
+            z: 0.001
+          end:
+            x: 0.9
+            y: 0.1
+            z: 0.002
+

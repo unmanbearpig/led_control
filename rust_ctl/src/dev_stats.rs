@@ -179,35 +179,30 @@ impl MsgStats {
 
 #[derive(Debug)]
 pub struct DevWriteStats {
-    incomplete_frame: Frame<f32>,
     stats: Vec<ValStats>,
 }
 
 impl DevWriteStats {
     fn new() -> Self {
         DevWriteStats {
-            incomplete_frame: Frame::new(1),
             stats: Vec::new(),
         }
     }
 
-    fn frame_complete(&mut self) {
-        // println!("DevWriteStats frame_complete {:?}, \n{:?}", self.incomplete_frame, self.stats);
+    // fn frame_complete(&mut self) {
+    //     if self.stats.len() < self.incomplete_frame.vals.len() {
+    //         self.stats.resize_with(self.incomplete_frame.vals.len(),
+    //                                Default::default);
+    //     }
 
-        if self.stats.len() < self.incomplete_frame.vals.len() {
-            self.stats.resize_with(self.incomplete_frame.vals.len(),
-                                   Default::default);
-        }
+    //     for (cid, val) in self.incomplete_frame.iter_some() {
+    //         self.stats[cid as usize].add(*val as f64);
+    //     }
 
-        for (cid, val) in self.incomplete_frame.iter_some() {
-            self.stats[cid as usize].add(*val as f64);
-        }
-
-        self.incomplete_frame.clear();
-    }
+    //     self.incomplete_frame.clear();
+    // }
 
     fn print(&mut self) {
-        println!("Dev stats: ({})", self.stats.len());
         for (i, chan) in self.stats.iter().enumerate() {
             println!("Chan {}: {}", i, chan);
         }
@@ -328,19 +323,32 @@ impl<D: DevRead> DevRead for DevStats<D> {
 }
 
 impl<D: DevWrite> DevWrite for DevStats<D> {
-    fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-        self.dev_write_stats.incomplete_frame
-            .set(chan, val);
-
-        let mut dev = self.dev.lock().unwrap();
-        dev.set_f32(chan, val)
+    fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
+        let res = {
+            let mut dev = self.dev.lock().unwrap();
+            dev.set_frame(frame)
+        };
+        self.msg_stats.msg_cnt += 1;
+        res
     }
 
-    fn sync(&mut self) -> Result<(), String> {
-        let mut dev = self.dev.lock().unwrap();
-        self.dev_write_stats.frame_complete();
-        dev.sync()
-    }
+    // fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
+    //     self.dev_write_stats.incomplete_frame
+    //         .set(chan, val);
+
+    //     let mut dev = self.dev.lock().unwrap();
+    //     dev.set_f32(chan, val)
+    // }
+
+    // fn sync(&mut self) -> Result<(), String> {
+    //     let res = {
+    //         let mut dev = self.dev.lock().unwrap();
+    //         dev.sync()
+    //     };
+    //     self.msg_stats.msg_cnt += 1;
+    //     self.dev_write_stats.frame_complete();
+    //     res
+    // }
 }
 
 impl<D: Dev> Dev for DevStats<D> {

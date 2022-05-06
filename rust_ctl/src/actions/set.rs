@@ -1,3 +1,4 @@
+use crate::frame::Frame;
 use crate::chan_spec::ChanSpec;
 use crate::proto;
 use crate::dev::{DevWrite};
@@ -40,15 +41,16 @@ pub fn run_dev<T: DevWrite + HasChanDescriptions>(
             let chan_descriptions: Vec<ChanDescription> =
                 dev.chan_descriptions();
 
+            let mut frame = Frame::empty();
+
             let chanvals =
                 spec.resolve_for_chans(chan_descriptions.as_slice())?
                 .into_iter()
                 .map(|(cid, v)| (cid, v));
             for (cid, val) in chanvals {
-                dev.set_f32(cid, val)?;
+                frame.set(cid, val);
             }
-
-            dev.sync()
+            dev.set_frame(&frame)
         }
         ChanSpec::U16(_) => unimplemented!(),
     }
