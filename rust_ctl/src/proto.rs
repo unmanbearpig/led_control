@@ -29,6 +29,7 @@ pub enum Val {
     F32(f32),
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, PartialEq)]
 pub enum SerErr {
     InvalidMagic,
@@ -86,6 +87,7 @@ pub struct ChanValSer {
     val: [u8; 4],
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for ChanValSer {
     fn default() -> Self {
         ChanValSer {
@@ -112,10 +114,12 @@ impl Msg {
         }
     }
 
+    #[allow(unused)]
     pub fn add_val(&mut self, chanval: ChanVal) {
         self.vals.push(chanval);
     }
 
+    #[allow(unused)]
     pub fn clear(&mut self) {
         self.vals.clear();
     }
@@ -192,8 +196,7 @@ impl Msg {
 
         let out_vals: Vec<ChanVal> = vals
             .iter()
-            .map(|v| ChanVal::deserialize_from_struct(v).into_iter())
-            .flatten()
+            .flat_map(|v| ChanVal::deserialize_from_struct(v).into_iter())
             .collect();
 
         Ok(Msg {

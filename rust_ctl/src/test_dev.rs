@@ -42,7 +42,7 @@ impl DevRead for TestDev {
             ));
         }
 
-        Ok(self.frame.get(chan).unwrap_or_else(|| { 0.0 }))
+        Ok(self.frame.get(chan).unwrap_or(0.0))
     }
 }
 
@@ -53,7 +53,7 @@ impl DevWrite for TestDev {
         if self.print_vals {
             println!(" -- Frame {} -------------", self.frame_num);
             self.frame.print_vals();
-            println!("");
+            println!();
             self.frame_num += 1;
         }
         res

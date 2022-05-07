@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::frame::Frame;
 use crate::dev::{DevWrite};
 use crate::task::TaskMsg;
@@ -34,18 +36,10 @@ pub struct OscConfig {
     adjustment: f64,
 }
 
-#[derive(Debug, Clone, PartialEq,
+#[derive(Debug, Clone, PartialEq, Default,
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct SchroomConfig {
     oscs: Vec<OscConfig>,
-}
-
-impl Default for SchroomConfig {
-    fn default() -> Self {
-        SchroomConfig {
-            oscs: Vec::new(),
-        }
-    }
 }
 
 struct SineVal {

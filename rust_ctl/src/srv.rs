@@ -130,11 +130,11 @@ impl MsgHandler for Srv {
                         continue;
                     }
                     chan.prev_val_f32 = *fval;
+                    // TODO `val` not used? probably should be used
                     let val = chan.cfg.adjust_value(*fval);
                     let dev = &mut self.devs[chan.devid.0 as usize];
                     dev.dirty = true;
                     dev.frame.set(*cid, *fval);
-                    // dev.msg.add_val(ChanVal(ChanId(*cid), Val::F32(*fval)));
                 }
                 _ => todo!(),
             }
@@ -143,8 +143,7 @@ impl MsgHandler for Srv {
         for dev in self.devs.iter_mut() {
             {
                 let mut locked = dev.dev.lock().unwrap();
-                locked.set_frame(&dev.frame);
-                // locked.handle_msg(&dev.msg);
+                locked.set_frame(&dev.frame)?;
             }
             dev.dirty = false;
             dev.frame.clear();
@@ -161,7 +160,7 @@ impl HasChanDescriptions for Srv {
             .iter()
             .enumerate()
             .map(|(chan_id, SrvChan { devid, .. })| {
-                let dev = self.get_dev(&devid);
+                let dev = self.get_dev(devid);
                 let dev = dev.lock().unwrap();
                 (
                     ChanId(chan_id as u16),
@@ -256,7 +255,7 @@ impl DevWrite for Srv {
         for (cid, val) in frame.vals.iter().enumerate() {
             let cid = cid as u16;
             if let Some(val) = val {
-                self.set_f32(cid, *val);
+                self.set_f32(cid, *val)?;
             }
         }
         self.sync()

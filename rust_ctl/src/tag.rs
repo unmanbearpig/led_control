@@ -28,6 +28,7 @@ const PROJECTOR_EMOJI: &str = "📽️";
 const UNUSED_EMOJI: &str = "🔧";
 
 impl Tag {
+    #[allow(unused)]
     pub fn new<T: AsRef<str>>(name: T) -> Self {
         let name = name.as_ref();
         Tag(name.to_string())

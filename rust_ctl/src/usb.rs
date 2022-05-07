@@ -66,7 +66,7 @@ impl DevWrite for UsbDev {
                 self.f32_vals[cid as usize] = val;
 
                 let raw_val = (val * self.max_int() as f32).round() as u16;
-                self.set_raw(cid, raw_val);
+                self.set_raw(cid, raw_val)?;
             }
         }
 

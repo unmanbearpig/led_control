@@ -26,8 +26,6 @@ use std::time::Duration;
 
 use crate::runner::Runner;
 
-use crate::proto::ChanId;
-
 // TODO we send messages to all devices even when setting only 1 channel
 // TODO do we send messages to devices in parallel?
 
@@ -76,7 +74,7 @@ struct TagTemplate<'a>(&'a Tag);
 impl ChanTemplate {
     fn tags(&self) -> Vec<TagTemplate> {
         self.chan.config.tags.iter()
-            .map(|tag| TagTemplate(tag))
+            .map(TagTemplate)
             .collect()
     }
 }
@@ -228,8 +226,6 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             fader.settings.fade_duration = fading.duration();
         }
 
-        let mut msg = FlashMsg::Ok(ok_msg.as_ref());
-
         let result = actions::set::run_dev(chan_spec, self.fader.clone());
         msg = msg.and_result(&result);
 
@@ -311,14 +307,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             {
                 let output = output.lock().unwrap();
 
-                // for dcc in self.output_config.devs.iter() {
-                //     println!("dcc: {:?}", dcc);
-                // }
-
-                println!("output = {output:?}");
-
-                output.chans().iter().map(|(ChanId(cid), desc)| {
-                    // println!("chan: {:?}", chan);
+                output.chans().iter().map(|(_cid, _desc)| {
                     demo::hello::DiscoChanConfig::default()
                 }).collect()
             };
@@ -396,8 +385,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
         let cur = Cursor::new(data);
 
         let extension: Option<&str> = path_segments.last()
-            .map(|seg| seg.split('.').last())
-            .flatten();
+            .and_then(|seg| seg.split('.').last());
 
         const DEFAULT_CONTENT_TYPE: &str = "text/plain";
         let content_type: &str = match extension {

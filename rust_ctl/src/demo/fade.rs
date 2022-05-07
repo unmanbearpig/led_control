@@ -66,14 +66,14 @@ impl<T: HasChanDescriptions + DevNumChans + DevRead + fmt::Debug> Fade<T> {
         let target_frame = {
             let output = output.clone();
             let output = output.lock().unwrap();
-            output.get_to_frame(&mut current_frame);
+
+            output.get_to_frame(&mut current_frame).unwrap();
 
             let mut target_frame: Frame<f32> =
                 Frame::new(output.num_chans());
             target_frame.set_all(1.0);
             target_frame
         };
-
 
         Fade {
             output:        output,
@@ -121,7 +121,6 @@ impl<T: HasChanDescriptions + DevRead> DevWrite for Fade<T> {
 
 impl<T: DevRead + DevWrite> Fade<T> {
     fn send_current_frame(&mut self) -> Result<(), String> {
-        let frame = &self.current_frame;
         let mut output = self.output.lock().unwrap();
         if let Err(e) = output.set_frame(&self.current_frame) {
             // eprintln!("fade output.set_frame err: {:?}", e);

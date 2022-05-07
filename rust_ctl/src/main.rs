@@ -1,6 +1,8 @@
 #![feature(test, div_duration)]
 #![feature(iter_intersperse)]
 
+#![allow(clippy::redundant_field_names)]
+
 mod error;
 mod action;
 mod chan;

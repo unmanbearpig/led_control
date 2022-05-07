@@ -13,6 +13,8 @@ impl Frame<f32> {
     pub fn empty() -> Self {
         Frame { vals: Vec::new() }
     }
+
+    #[allow(unused)]
     pub fn simple_average(frames: &VecDeque<Frame<f32>>) -> Frame<f32> {
         let mut result = Frame::new(0);
         let mut counts: Frame<usize> = Frame::new(0);
@@ -34,6 +36,7 @@ impl Frame<f32> {
     /// Replaces frame values with values from msg
     ///   useful because msg might not contain values for all channels
     /// Keeps old values as is
+    #[allow(unused)]
     pub fn merge_msg(&mut self, msg: &Msg) {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             let val = match val {
@@ -45,6 +48,7 @@ impl Frame<f32> {
         }
     }
 
+    #[allow(unused)]
     pub fn almost_same_as(&self, other: &Frame<f32>, margin: f32) -> bool {
         if self.vals.len() != other.vals.len() {
             return false
@@ -78,13 +82,14 @@ impl Frame<f32> {
         for val in self.vals.iter() {
             match val {
                 Some(val) => conf.val(*val).print(),
-                None => println!(""),
+                None => println!(),
             }
         }
     }
 }
 
 impl<T: Clone + PartialEq> Frame<T> {
+    #[allow(unused)]
     pub fn is_subset_of(&self, other: &Frame<T>) -> bool {
         self.vals.iter().zip(other.vals.iter()).all(|(a, b)| {
             match a {
@@ -104,10 +109,6 @@ impl<T: Clone> Frame<T> {
 
     pub fn num_chans(&self) -> u16 {
         self.vals.len() as u16
-    }
-
-    pub fn len(&self) -> usize {
-        self.vals.len()
     }
 
     pub fn clear(&mut self) {

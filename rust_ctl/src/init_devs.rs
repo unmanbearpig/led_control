@@ -30,7 +30,7 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig])
                     Err(e) => {
                         return Err(format!(
                                 "Find USB device error (serial: {serial:?}): \
-{:?}", e).into())
+{:?}", e))
                     },
 
                 };

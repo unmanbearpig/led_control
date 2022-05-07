@@ -455,7 +455,7 @@ impl<'a> Config {
             Some(mut cfg) => {
                 cfg.devs.extend(devs);
                 Config {
-                    action: action,
+                    action,
                     templates: cfg.templates,
                     devs: cfg.devs,
                 }

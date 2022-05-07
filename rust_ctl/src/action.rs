@@ -83,8 +83,8 @@ impl ActionSpec {
             ActionSpec::ListChans => Ok(Box::new(ListChans)),
             ActionSpec::PrintConfig => Ok(Box::new(PrintConfig)),
             ActionSpec::Srv { listen_ip, listen_port, } =>
-                Ok(Box::new(Srv { listen_ip: listen_ip.clone(),
-                    listen_port: listen_port.clone() })),
+                Ok(Box::new(Srv { listen_ip: *listen_ip,
+                    listen_port: *listen_port })),
             ActionSpec::Set(chan_spec) => Ok(Box::new(Set(chan_spec.clone()))),
             ActionSpec::Web { listen_addr } =>
                 Ok(Box::new(Web { listen_addr: listen_addr.clone() })),
