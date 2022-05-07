@@ -7,16 +7,19 @@ use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 pub struct TestDev {
     frame: Frame<f32>,
 
-    /// Whether we should print the values on receiving new frame
-    print_vals: bool,
-
-    /// frame counter for printing (only used if print_vals is true)
-    frame_num: usize,
+    /// Frame counter for printing if enabled, `None` means disabled
+    print_frame_num: Option<usize>,
 }
 
 impl TestDev {
     pub fn new(print_vals: bool) -> Self {
-        TestDev { frame: Frame::new(3), print_vals: print_vals, frame_num: 0 }
+        let print_frame_num = if print_vals {
+            Some(0)
+        } else {
+            None
+        };
+
+        TestDev { frame: Frame::new(3), print_frame_num }
     }
 }
 
@@ -50,11 +53,11 @@ impl DevWrite for TestDev {
     fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
         let res = self.frame.merge_frame(frame);
 
-        if self.print_vals {
-            println!(" -- Frame {} -------------", self.frame_num);
+        if let Some(frame_num) = &mut self.print_frame_num {
+            println!(" -- Frame {:7} -------------", *frame_num);
             self.frame.print_vals();
             println!();
-            self.frame_num += 1;
+            *frame_num += 1
         }
         res
     }
