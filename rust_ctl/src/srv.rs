@@ -287,17 +287,23 @@ mod tests {
     #[bench]
     fn bench_srv_dev_with_chan_config(b: &mut Bencher) {
         let mut srv = Srv::new();
-        let test_dev = test_dev::TestDev::new();
+        let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
         let chan_cfgs = vec![
             ChanConfig {
-                index: 0, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 0, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
             ChanConfig {
-                index: 1, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 1, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
             ChanConfig {
-                index: 2, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 2, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
 
         ];
@@ -315,7 +321,7 @@ mod tests {
     #[bench]
     fn bench_srv_dev_without_chan_config(b: &mut Bencher) {
         let mut srv = Srv::new();
-        let test_dev = test_dev::TestDev::new();
+        let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
 
         let chan_cfg: Option<std::iter::Empty<ChanConfig>> = None;
@@ -332,17 +338,23 @@ mod tests {
         #[bench]
     fn bench_srv_handle_msg(b: &mut Bencher) {
         let mut srv = Srv::new();
-        let test_dev = test_dev::TestDev::new();
+        let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
         let chan_cfgs = vec![
             ChanConfig {
-                index: 0, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 0, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
             ChanConfig {
-                index: 1, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 1, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
             ChanConfig {
-                index: 2, min: 0.0, max: 1.0, exp: Some(2.2), tags: Vec::new(), cuboid: None,
+                index: 2, min: 0.0, max: 1.0, exp: Some(2.2),
+                tags: Vec::new(), cuboid: None,
+                disco_config: None,
             },
 
         ]; // TODO: try with it too

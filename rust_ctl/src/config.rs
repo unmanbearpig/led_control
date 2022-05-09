@@ -150,7 +150,7 @@ mod dev_config_test {
         assert_eq!(
             DevChanConfig::parse("usb"),
             Ok(DevChanConfig {
-                dev: DevConfig::Usb,
+                dev: DevConfig::Usb { serial: None, pwm_period: None },
                 chans: None
             })
         );

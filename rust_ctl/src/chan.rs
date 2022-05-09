@@ -65,6 +65,7 @@ mod tests {
         let chan_config = ChanConfig {
             index: 0, min: 0.15, max: 0.86, exp: Some(2.2),
             tags: Vec::new(), cuboid: None,
+            disco_config: None
         };
 
         assert_eq!(0.4,
