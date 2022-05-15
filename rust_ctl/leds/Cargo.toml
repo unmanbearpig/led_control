@@ -1,0 +1,40 @@
+[package]
+name = "leds"
+version = "0.1.0"
+authors = ["unmanbearpig <unmanbearpig@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+lto = "thin"
+opt-level = 3
+codegen-units = 16
+
+# both are `unused`, not sure why:
+#   warning: unused manifest key: profile.release.rustflags
+#   should be in .cargo/config.toml?
+# rustflags = ["-Ctarget-cpu=native"]
+# target-cpu = "native"
+
+[profile.bench]
+lto = "thin"
+opt-level = 3
+codegen-units = 16
+
+
+[dependencies]
+rusb = "0.6"
+rand = "0.8"
+
+# Serialization
+serde = "1.0"
+serde_derive = "1.0"
+serde_yaml = "0.8"
+
+tiny_http = "0.8.0"
+url = "2.2.1"
+form_urlencoded = "1.0.1"
+
+rust-embed = "5.8.0"
+askama = "0.10"

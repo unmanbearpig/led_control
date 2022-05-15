@@ -1,0 +1,4 @@
+demo like hello, but have N oscilators that are linked to multiple outputs
+  possibly with predefined offsets(phase?) and amounts
+  possibly each output can have multiple inputs
+  + multiple presets
