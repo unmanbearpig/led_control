@@ -1,6 +1,6 @@
 use crate::frame::Frame;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
-use crate::old_proto;
+use proto::old_proto;
 
 use std::fmt;
 use std::net::IpAddr;

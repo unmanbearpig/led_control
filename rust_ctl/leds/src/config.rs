@@ -103,6 +103,8 @@ impl<'a> Config {
 
         loop {
             let arg = args.next();
+            println!("arg = {arg:?}");
+
             if arg.is_none() {
                 print_help();
                 break;

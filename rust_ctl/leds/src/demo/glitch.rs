@@ -1,5 +1,5 @@
 use crate::msg_handler::MsgHandler;
-use crate::proto::{ChanVal, Msg, Val};
+use proto::v1::{ChanVal, Msg, Val};
 use rand::{self, Rng};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;

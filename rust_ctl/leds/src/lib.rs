@@ -17,8 +17,6 @@ mod dev;
 mod dev_stats;
 mod filters;
 mod msg_handler;
-mod old_proto;
-mod proto;
 mod runner;
 mod srv;
 mod task;

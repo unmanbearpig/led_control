@@ -24,6 +24,9 @@ codegen-units = 16
 
 
 [dependencies]
+proto = { path = "../proto" }
+term_bar = { path = "../term_bar" }
+
 rusb = "0.6"
 rand = "0.8"
 

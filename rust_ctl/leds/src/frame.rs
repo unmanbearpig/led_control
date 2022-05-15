@@ -1,5 +1,5 @@
-use crate::proto::{Val, ChanVal, ChanId, Msg};
-use crate::term_bar;
+use proto::v1::{Val, ChanVal, ChanId, Msg};
+use term_bar;
 
 use std::ops::{Add};
 

@@ -830,12 +830,14 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "form_urlencoded",
+ "proto",
  "rand",
  "rusb",
  "rust-embed",
  "serde",
  "serde_derive",
  "serde_yaml",
+ "term_bar",
  "tiny_http",
  "url",
 ]
@@ -1302,6 +1304,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "proto"
+version = "0.1.0"
+
+[[package]]
 name = "quote"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1561,6 +1567,10 @@ dependencies = [
  "libc",
  "xattr",
 ]
+
+[[package]]
+name = "term_bar"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"

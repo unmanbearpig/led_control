@@ -3,7 +3,7 @@ use crate::chan::ChanConfig;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
-use crate::proto::{ChanId, ChanVal, Msg, Val};
+use proto::v1::{ChanId, ChanVal, Msg, Val};
 use crate::dev_stats;
 use crate::init_devs;
 use crate::configuration;

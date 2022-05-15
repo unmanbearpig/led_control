@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use std::fmt;
 use crate::dev::{DevNumChans, DevRead, DevWrite};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
-use crate::proto::{ChanId};
+use proto::v1::{ChanId};
 use crate::frame::Frame;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};

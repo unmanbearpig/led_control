@@ -1,4 +1,4 @@
-use crate::proto::{Msg};
+use proto::v1::{Msg};
 use crate::chan_description::{HasChanDescriptions};
 
 use std::fmt::{Debug, Display};

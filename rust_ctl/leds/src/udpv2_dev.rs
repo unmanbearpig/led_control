@@ -1,6 +1,6 @@
 use crate::frame::Frame;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
-use crate::proto::{self, ChanId, ChanVal, Msg, Val};
+use proto::v1::{ChanId, ChanVal, Msg, Val};
 
 use std::fmt;
 use std::net::IpAddr;
@@ -11,7 +11,7 @@ pub struct UdpV2Dev {
     ip: IpAddr,
     port: u16,
     socket: UdpSocket,
-    msg: proto::Msg,
+    msg: Msg,
     num_chans: u16,
 }
 

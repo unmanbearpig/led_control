@@ -1,4 +1,4 @@
-use crate::proto::{ChanId};
+use proto::v1::{ChanId};
 use crate::tag::{self};
 use crate::chan::ChanConfig;
 

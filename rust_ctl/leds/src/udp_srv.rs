@@ -1,5 +1,5 @@
 use crate::msg_handler::MsgHandler;
-use crate::proto;
+use proto;
 use std::net;
 use std::sync::{Arc, Mutex};
 
@@ -8,7 +8,7 @@ pub struct UdpSrv {
     listen_ip: net::IpAddr,
     listen_port: u16,
     socket: net::UdpSocket,
-    buf: [u8; proto::MSG_MAX_SIZE],
+    buf: [u8; proto::v1::MSG_MAX_SIZE],
     output: Arc<Mutex<dyn MsgHandler>>,
 }
 
@@ -35,14 +35,14 @@ impl UdpSrv {
             listen_ip,
             listen_port,
             socket,
-            buf: [0; proto::MSG_MAX_SIZE],
+            buf: [0; proto::v1::MSG_MAX_SIZE],
             output,
         })
     }
 
-    fn recv(&mut self) -> Result<proto::Msg, String> {
+    fn recv(&mut self) -> Result<proto::v1::Msg, String> {
         let (len, _addr) = self.socket.recv_from(&mut self.buf).unwrap();
-        let msg = proto::Msg::deserialize(&self.buf[0..len]).unwrap();
+        let msg = proto::v1::Msg::deserialize(&self.buf[0..len]).unwrap();
         Ok(msg)
     }
 

@@ -1,7 +1,7 @@
 use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{HasChanDescriptions, ChanDescription};
-use crate::proto::{ChanId, ChanVal, Msg, Val};
-use crate::term_bar;
+use proto::v1::{ChanId, ChanVal, Msg, Val};
+use term_bar;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::frame::Frame;
 

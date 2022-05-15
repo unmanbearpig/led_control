@@ -1,6 +1,6 @@
 use crate::frame::Frame;
 use crate::chan_spec::ChanSpec;
-use crate::proto;
+use proto;
 use crate::dev::{DevWrite};
 use std::sync::{Arc, Mutex};
 use crate::msg_handler::{MsgHandler};
@@ -18,10 +18,10 @@ pub fn run_msg<T: MsgHandler>(chan_spec: &ChanSpec, srv: Arc<Mutex<T>>) -> Resul
 
             let chanvals = chanvals
                 .into_iter()
-                .map(|(cid, v)| proto::ChanVal(proto::ChanId(cid), proto::Val::F32(v)))
+                .map(|(cid, v)| proto::v1::ChanVal(proto::v1::ChanId(cid), proto::v1::Val::F32(v)))
                 .collect();
 
-            let msg = proto::Msg::new(0, chanvals);
+            let msg = proto::v1::Msg::new(0, chanvals);
 
             srv.handle_msg(&msg)
         }
