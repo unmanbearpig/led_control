@@ -1,5 +1,5 @@
 use crate::dev;
-use crate::config;
+use crate::configuration;
 use std::sync::{Arc, Mutex};
 use crate::chan::ChanConfig;
 use crate::test_dev;
@@ -10,7 +10,7 @@ use crate::udpv2_dev;
 
 type DevConfList = Vec<(Arc<Mutex<dyn dev::Dev>>, Option<Vec<ChanConfig>>)>;
 
-pub fn init_devs(dev_configs: &[config::DevChanConfig])
+pub fn init_devs(dev_configs: &[configuration::DevChanConfig])
       -> Result<DevConfList, String> {
     let mut devs: DevConfList = Vec::new();
 
@@ -19,11 +19,11 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig])
         let chancfg: Option<Vec<ChanConfig>> = devchanconfig.chans.clone();
 
         match devcfg {
-            config::DevConfig::TestDev => {
+            configuration::DevConfig::TestDev => {
                 devs.push((Arc::new(Mutex::new(
                                 test_dev::TestDev::new(true))), chancfg));
             }
-            config::DevConfig::Usb { pwm_period, serial }=> {
+            configuration::DevConfig::Usb { pwm_period, serial }=> {
                 let dev = usb::UsbDev::find_dev(serial.as_deref(), pwm_period);
                 let dev = match dev {
                     Ok(dev) => dev,
@@ -36,13 +36,13 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig])
                 };
                 devs.push((Arc::new(Mutex::new(dev)), chancfg.clone()));
             }
-            config::DevConfig::UdpV1(ip, port) => {
+            configuration::DevConfig::UdpV1(ip, port) => {
                 devs.push((
                     Arc::new(Mutex::new(udpv1_dev::UdpV1Dev::new(ip, port)?)),
                     chancfg,
                 ));
             }
-            config::DevConfig::UdpV2 { ip, port, chans } => {
+            configuration::DevConfig::UdpV2 { ip, port, chans } => {
                 devs.push((
                     Arc::new(Mutex::new(
                             udpv2_dev::UdpV2Dev::new(ip, Some(port), chans)?)),
@@ -54,6 +54,3 @@ pub fn init_devs(dev_configs: &[config::DevChanConfig])
 
     Ok(devs)
 }
-
-// TODO 1. Workspace
-//      2. Graphics

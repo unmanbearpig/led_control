@@ -8,6 +8,8 @@ mod action;
 mod chan;
 mod chan_spec;
 mod config;
+mod configuration;
+mod parse_ip_port;
 mod controller;
 mod coord;
 mod cuboid;
