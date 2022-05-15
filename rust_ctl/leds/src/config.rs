@@ -2,16 +2,12 @@ use core::num::ParseFloatError;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self, Read};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use serde_derive::{Deserialize, Serialize};
 
 use crate::action::{ActionSpec};
 use crate::chan_spec::ChanSpec;
 use crate::coord::Coord;
-use crate::srv;
-use crate::init_devs;
 use crate::template::Template;
 use crate::configuration::{Configuration, DevChanConfig};
 use crate::parse_ip_port::parse_ip_port;
