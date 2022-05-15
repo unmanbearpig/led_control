@@ -4,6 +4,11 @@ use crate::parse_ip_port::parse_ip_port;
 use serde_derive::{Deserialize, Serialize};
 use std::net::IpAddr;
 
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Configuration {
+    pub devs: Vec<DevChanConfig>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DevConfig {
     TestDev,
@@ -28,6 +33,7 @@ pub struct DevChanConfig {
 }
 
 impl DevChanConfig {
+    /// Parse cmd line argument passed to --devv
     pub fn parse<S: AsRef<str>>(string: S) -> Result<Self, String> {
         let parts: Vec<&str> = string.as_ref().split('@').collect();
 

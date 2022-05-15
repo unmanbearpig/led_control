@@ -9,6 +9,7 @@ use crate::coord::Coord;
 use crate::demo;
 use crate::udp_srv;
 use crate::web;
+use crate::srv::Srv;
 use serde_derive::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -83,7 +84,7 @@ impl ActionSpec {
             ActionSpec::ListChans => Ok(Box::new(ListChans)),
             ActionSpec::PrintConfig => Ok(Box::new(PrintConfig)),
             ActionSpec::Srv { listen_ip, listen_port, } =>
-                Ok(Box::new(Srv { listen_ip: *listen_ip,
+                Ok(Box::new(ListenConf { listen_ip: *listen_ip,
                     listen_port: *listen_port })),
             ActionSpec::Set(chan_spec) => Ok(Box::new(Set(chan_spec.clone()))),
             ActionSpec::Web { listen_addr } =>
@@ -128,7 +129,7 @@ impl Action<'_> for Web {
         let config = config.clone();
         let mut web = web::Web::new(self.listen_addr.clone())?;
 
-        let srv = config.init_srv()?;
+        let srv = Srv::init_from_config(&config.configuration)?;
         web.run(srv, config)
     }
 }
@@ -143,7 +144,7 @@ impl Action<'_> for Space {
     fn perform(&self, config: &config::Config) -> Result<(), String> {
         println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
 
-        let srv = config.init_srv()?;
+        let srv = Srv::init_from_config(&config.configuration)?;
         demo::space::run(
             srv,
             demo::space::Config {
@@ -160,7 +161,7 @@ pub struct ListChans;
 impl Action<'_> for ListChans {
     fn perform(&self, config: &config::Config) -> Result<(), String> {
         println!("chans:");
-        let srv = config.init_srv()?;
+        let srv = Srv::init_from_config(&config.configuration)?;
         let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
         for descr in srv.chan_descriptions() {
             let mut tags = String::new();
@@ -174,13 +175,13 @@ impl Action<'_> for ListChans {
 }
 
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
-pub struct Srv {
+pub struct ListenConf {
     listen_ip: Option<IpAddr>,
     listen_port: Option<u16>,
 }
-impl Action<'_> for Srv {
+impl Action<'_> for ListenConf {
     fn perform(&self, config: &config::Config) -> Result<(), String> {
-        let srv = config.init_srv()?;
+        let srv = Srv::init_from_config(&config.configuration)?;
         let mut udp = udp_srv::UdpSrv::new(
             self.listen_ip, self.listen_port, srv)?;
         udp.run();
@@ -192,6 +193,8 @@ impl Action<'_> for Srv {
 pub struct Set(pub ChanSpec);
 impl Action<'_> for Set {
     fn perform( &self, config: &config::Config) -> Result<(), String> {
-        actions::set::run_msg(&self.0, config.init_srv()?)
+        actions::set::run_msg(
+            &self.0,
+            Srv::init_from_config(&config.configuration)?)
     }
 }

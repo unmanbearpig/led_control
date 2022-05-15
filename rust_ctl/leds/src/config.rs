@@ -1,4 +1,3 @@
-// use std::env;
 use core::num::ParseFloatError;
 use std::env;
 use std::fs::{self, File};
@@ -11,11 +10,10 @@ use serde_derive::{Deserialize, Serialize};
 use crate::action::{ActionSpec};
 use crate::chan_spec::ChanSpec;
 use crate::coord::Coord;
-use crate::dev_stats;
 use crate::srv;
 use crate::init_devs;
 use crate::template::Template;
-use crate::configuration::{DevChanConfig};
+use crate::configuration::{Configuration, DevChanConfig};
 use crate::parse_ip_port::parse_ip_port;
 
 const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
@@ -82,7 +80,7 @@ Other
 pub struct Config {
     pub action: Option<ActionSpec>,
     pub templates: Option<Vec<Template>>,
-    pub devs: Vec<DevChanConfig>,
+    pub configuration: Configuration,
 }
 
 impl<'a> Config {
@@ -98,27 +96,9 @@ impl<'a> Config {
         Ok(cfg)
     }
 
-    pub fn init_srv(&self) ->
-            Result<Arc<Mutex<dev_stats::DevStats<srv::Srv>>>, String> {
-        let devs = init_devs::init_devs(&self.devs[..])?; // dyn
-        let mut srv = srv::Srv::new();
-        for (dev, chancfg) in devs.into_iter() {
-            srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
-        }
-
-        let sync_srv = Arc::new(Mutex::new(srv));
-        let dev_stats = dev_stats::DevStats::new(sync_srv);
-        let sync_dev = Arc::new(Mutex::new(dev_stats));
-        {
-            let sync_dev = sync_dev.clone();
-            dev_stats::start_mon(sync_dev, Duration::from_millis(500));
-        }
-        Ok(sync_dev)
-    }
-
     pub fn from_args(mut args: env::Args) -> Result<Self, String> {
         let mut action: Option<ActionSpec> = None;
-        let mut devs: Vec<DevChanConfig> = Vec::new();
+        let mut configuration = Configuration::default();
         let mut cfg: Option<Config> = None;
 
         args.next(); // remove the executable name from args
@@ -155,7 +135,7 @@ impl<'a> Config {
                                    .to_string());
                     }
                     let dev_arg = dev_arg.unwrap();
-                    devs.push(DevChanConfig::parse(dev_arg)?);
+                    configuration.devs.push(DevChanConfig::parse(dev_arg)?);
                 }
                 "ls" => action = Some(ActionSpec::ListChans),
                 "print_cfg" => action = Some(ActionSpec::PrintConfig),
@@ -302,15 +282,15 @@ impl<'a> Config {
 
         let cfg = match cfg {
             Some(mut cfg) => {
-                cfg.devs.extend(devs);
+                cfg.configuration.devs.extend(configuration.devs);
                 Config {
                     action,
                     templates: cfg.templates,
-                    devs: cfg.devs,
+                    configuration: cfg.configuration,
                 }
             }
             None => {
-                Config { action, devs, templates: None }
+                Config { action, configuration, templates: None }
             }
         };
 

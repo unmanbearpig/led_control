@@ -10,6 +10,7 @@ use crate::task::TaskMsg;
 use crate::runner::Runner;
 use crate::action::Action;
 use crate::config::Config;
+use crate::srv::Srv;
 
 #[derive(Debug, Clone)]
 pub struct FadeSpec {
@@ -24,7 +25,7 @@ impl Action<'_> for FadeSpec {
     fn perform(&self, config: &Config) -> Result<(), String> {
         let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
-        let out = config.init_srv()?;
+        let out = Srv::init_from_config(&config.configuration)?;
         let fade = Fade::new(out, self.clone());
         Fade::run(Arc::new(Mutex::new(fade)), receiver)
     }

@@ -4,6 +4,10 @@ use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use crate::proto::{ChanId, ChanVal, Msg, Val};
+use crate::dev_stats;
+use crate::init_devs;
+use crate::configuration;
+use std::time::Duration;
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
 
@@ -50,6 +54,24 @@ impl<'a> Srv {
             devs: Vec::new(),
             chans: Vec::new(),
         }
+    }
+
+    pub fn init_from_config(config: &configuration::Configuration) ->
+            Result<Arc<Mutex<dev_stats::DevStats<Srv>>>, String> {
+        let devs = init_devs::init_devs(config)?; // dyn
+        let mut srv = Srv::new();
+        for (dev, chancfg) in devs.into_iter() {
+            srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
+        }
+
+        let sync_srv = Arc::new(Mutex::new(srv));
+        let dev_stats = dev_stats::DevStats::new(sync_srv);
+        let sync_dev = Arc::new(Mutex::new(dev_stats));
+        {
+            let sync_dev = sync_dev.clone();
+            dev_stats::start_mon(sync_dev, Duration::from_millis(500));
+        }
+        Ok(sync_dev)
     }
 
     pub fn add_dev<T>(

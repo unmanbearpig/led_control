@@ -5,13 +5,14 @@ use std::thread::sleep;
 use std::time::{self, Duration};
 use crate::action::Action;
 use crate::config::Config;
+use crate::srv::Srv;
 
 #[derive(Clone, std::fmt::Debug,
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct Whoosh;
 impl Action<'_> for Whoosh {
     fn perform(&self, config: &Config) -> Result<(), String> {
-        run(config.init_srv()?)
+        run(Srv::init_from_config(&config.configuration)?)
     }
 }
 
