@@ -4,6 +4,7 @@
 mod error;
 mod action;
 mod actions;
+mod action_spec;
 mod chan;
 mod chan_spec;
 mod config;

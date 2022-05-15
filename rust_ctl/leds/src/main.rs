@@ -31,6 +31,7 @@ mod udpv2_dev;
 mod usb;
 mod wacom;
 mod web;
+mod action_spec;
 mod actions;
 mod init_devs;
 mod frame;

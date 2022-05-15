@@ -5,7 +5,7 @@ use std::io::{self, Read};
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::action::{ActionSpec};
+use crate::action_spec::ActionSpec;
 use crate::chan_spec::ChanSpec;
 use crate::coord::Coord;
 use crate::template::Template;
