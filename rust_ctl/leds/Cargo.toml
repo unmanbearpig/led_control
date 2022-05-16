@@ -22,7 +22,6 @@ lto = "thin"
 opt-level = 3
 codegen-units = 16
 
-
 [dependencies]
 proto = { path = "../proto" }
 term_bar = { path = "../term_bar" }
@@ -34,10 +33,3 @@ rand = "0.8"
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.8"
-
-tiny_http = "0.8.0"
-url = "2.2.1"
-form_urlencoded = "1.0.1"
-
-rust-embed = "5.8.0"
-askama = "0.10"

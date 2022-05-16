@@ -9,22 +9,21 @@ use std::fmt;
 use std::io::{Write, Cursor};
 
 use crate::actions;
-use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
-use crate::configuration::Configuration;
-use crate::msg_handler::{MsgHandler};
-use crate::chan_description::{ChanDescription, HasChanDescriptions};
-use crate::dev::Dev;
+
+use leds::chan_spec::{ChanSpec, ChanSpecGeneric};
+use leds::configuration::Configuration;
+use leds::msg_handler::{MsgHandler};
+use leds::chan_description::{ChanDescription, HasChanDescriptions};
+use leds::dev::Dev;
+use leds::tag::Tag;
+use leds::demo::{self, Fade, FadeSpec};
+use leds::task::{Task, TaskMsg};
+use leds::runner::{Runner};
+
 use askama::Template;
-use crate::tag::Tag;
 
-use crate::demo;
-use crate::task::{Task, TaskMsg};
 use std::thread;
-
-use crate::demo::{Fade, FadeSpec};
 use std::time::Duration;
-
-use crate::runner::{Runner};
 
 // TODO we send messages to all devices even when setting only 1 channel
 // TODO do we send messages to devices in parallel?

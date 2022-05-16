@@ -7,7 +7,6 @@ mod error;
 mod action;
 mod chan;
 mod chan_spec;
-mod config;
 mod configuration;
 mod parse_ip_port;
 mod controller;
@@ -28,9 +27,6 @@ mod udpv1_dev;
 mod udpv2_dev;
 mod usb;
 mod wacom;
-mod web;
-mod action_spec;
-mod actions;
 mod init_devs;
 mod frame;
 mod chan_description;
@@ -38,16 +34,8 @@ mod tag;
 mod template;
 mod wrapper;
 
-#[macro_use]
-extern crate rust_embed;
-
 use std::env;
 
 fn main() -> Result<(), String> {
-    let (action, config) = config::from_args(env::args())?;
-    if let Some(action) = &action {
-        action.init()?.perform(&config.configuration)?;
-    }
-
-    Ok(())
+    Err("Use ctl binary instead".to_string())
 }

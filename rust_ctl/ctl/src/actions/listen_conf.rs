@@ -1,8 +1,8 @@
-use crate::srv::Srv;
-use crate::action::Action;
-use crate::chan_spec::ChanSpec;
-use crate::udp_srv;
-use crate::configuration::Configuration;
+use leds::srv::Srv;
+use leds::action::Action;
+use leds::chan_spec::ChanSpec;
+use leds::udp_srv;
+use leds::configuration::Configuration;
 
 use std::net::IpAddr;
 use serde_derive::{Deserialize, Serialize};

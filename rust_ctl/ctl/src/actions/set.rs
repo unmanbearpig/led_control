@@ -1,10 +1,10 @@
-use crate::frame::Frame;
-use crate::chan_spec::ChanSpec;
+use leds::frame::Frame;
+use leds::chan_spec::ChanSpec;
 use proto;
-use crate::dev::{DevWrite};
+use leds::dev::{DevWrite};
+use leds::msg_handler::{MsgHandler};
+use leds::chan_description::{ChanDescription, HasChanDescriptions};
 use std::sync::{Arc, Mutex};
-use crate::msg_handler::{MsgHandler};
-use crate::chan_description::{ChanDescription, HasChanDescriptions};
 
 pub fn run_msg<T: MsgHandler>(chan_spec: &ChanSpec, srv: Arc<Mutex<T>>) -> Result<(), String> {
     let mut srv = srv.lock().map_err(|e| format!("{:?}", e))?;

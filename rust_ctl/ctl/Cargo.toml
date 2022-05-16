@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 leds = { path = "../leds" }
+proto = { path = "../proto" }
 serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.8"

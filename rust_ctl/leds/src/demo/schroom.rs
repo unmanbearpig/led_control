@@ -8,7 +8,6 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time;
 use crate::action::Action;
-use crate::config::Config;
 use crate::srv::Srv;
 
 #[derive(Clone, std::fmt::Debug,

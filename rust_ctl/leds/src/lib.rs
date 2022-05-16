@@ -2,40 +2,33 @@
 #![feature(iter_intersperse)]
 
 mod error;
-mod action;
+pub mod action;
 mod wrapper;
-mod actions;
-mod action_spec;
-mod chan;
-mod chan_spec;
-mod config;
-mod configuration;
-mod parse_ip_port;
+// pub mod actions;
+pub mod chan;
+pub mod chan_spec;
+pub mod chan_description;
+pub mod configuration;
+pub mod parse_ip_port;
 mod controller;
-mod coord;
+pub mod coord;
 mod cuboid;
-mod demo;
-mod dev;
+pub mod demo;
+pub mod dev;
 mod dev_stats;
 mod filters;
-mod msg_handler;
-mod runner;
-mod srv;
-mod task;
+pub mod msg_handler;
+pub mod runner;
+pub mod srv;
+pub mod task;
 mod term_bar;
 mod test_dev;
-mod udp_srv;
+pub mod udp_srv;
 mod udpv1_dev;
 mod udpv2_dev;
 mod usb;
 mod wacom;
 mod init_devs;
-mod frame;
-mod chan_description;
-mod tag;
-mod template;
-mod web;
-
-#[macro_use]
-extern crate rust_embed;
-
+pub mod frame;
+pub mod tag;
+pub mod template;

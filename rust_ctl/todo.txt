@@ -1,5 +1,4 @@
-Runner2
-Fade::perform
+Action::perform -- get rid of config
 
 move action and action_spec to ctl
 

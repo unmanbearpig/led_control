@@ -3,14 +3,14 @@ pub mod list_chans;
 pub use list_chans::ListChans;
 pub mod listen_conf;
 pub use listen_conf::ListenConf;
-use crate::srv::Srv;
-use crate::chan_spec::ChanSpec;
-use crate::action::Action;
-use serde_derive::{Deserialize, Serialize};
-use crate::coord::Coord;
 use crate::web;
-use crate::demo;
-use crate::configuration::Configuration;
+use leds::srv::Srv;
+use leds::chan_spec::ChanSpec;
+use leds::action::Action;
+use leds::coord::Coord;
+use leds::demo;
+use leds::configuration::Configuration;
+use serde_derive::{Deserialize, Serialize};
 
 // TODO the only thing that "needs" the full Config
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]

@@ -396,6 +396,7 @@ dependencies = [
  "askama",
  "form_urlencoded",
  "leds",
+ "proto",
  "rust-embed",
  "serde",
  "serde_derive",
@@ -833,18 +834,13 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 name = "leds"
 version = "0.1.0"
 dependencies = [
- "askama",
- "form_urlencoded",
  "proto",
  "rand",
  "rusb",
- "rust-embed",
  "serde",
  "serde_derive",
  "serde_yaml",
  "term_bar",
- "tiny_http",
- "url",
 ]
 
 [[package]]

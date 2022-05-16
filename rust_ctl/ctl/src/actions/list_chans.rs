@@ -1,9 +1,9 @@
-use crate::srv::Srv;
-use crate::action::Action;
-use crate::chan_spec::ChanSpec;
-use crate::chan_description::HasChanDescriptions;
+use leds::srv::Srv;
+use leds::action::Action;
+use leds::chan_spec::ChanSpec;
+use leds::chan_description::HasChanDescriptions;
 use serde_derive::{Deserialize, Serialize};
-use crate::configuration::Configuration;
+use leds::configuration::Configuration;
 
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
 pub struct ListChans;
