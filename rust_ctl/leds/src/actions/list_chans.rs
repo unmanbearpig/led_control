@@ -3,14 +3,14 @@ use crate::action::Action;
 use crate::chan_spec::ChanSpec;
 use crate::chan_description::HasChanDescriptions;
 use serde_derive::{Deserialize, Serialize};
-use crate::config;
+use crate::configuration::Configuration;
 
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
 pub struct ListChans;
 impl Action<'_> for ListChans {
-    fn perform(&self, config: &config::Config) -> Result<(), String> {
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
         println!("chans:");
-        let srv = Srv::init_from_config(&config.configuration)?;
+        let srv = Srv::init_from_config(&config)?;
         let srv = srv.lock().map_err(|e| format!("{:?}", e))?;
         for descr in srv.chan_descriptions() {
             let mut tags = String::new();

@@ -5,7 +5,6 @@
 
 mod error;
 mod action;
-mod producer;
 mod chan;
 mod chan_spec;
 mod config;
@@ -47,7 +46,7 @@ use std::env;
 fn main() -> Result<(), String> {
     let (action, config) = config::from_args(env::args())?;
     if let Some(action) = &action {
-        action.init()?.perform(&config)?;
+        action.init()?.perform(&config.configuration)?;
     }
 
     Ok(())

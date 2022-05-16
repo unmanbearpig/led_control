@@ -10,12 +10,13 @@ use serde_derive::{Deserialize, Serialize};
 use crate::coord::Coord;
 use crate::web;
 use crate::demo;
-use crate::config;
+use crate::configuration::Configuration;
 
+// TODO the only thing that "needs" the full Config
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
 pub struct PrintConfig;
 impl Action<'_> for PrintConfig {
-    fn perform(&self, config: &config::Config,) -> Result<(), String> {
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
         println!(
             "{}",
             serde_yaml::to_string(&config).map_err(|e| format!("{:?}", e))?
@@ -27,11 +28,11 @@ impl Action<'_> for PrintConfig {
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
 pub struct Web { pub listen_addr: Option<String> }
 impl Action<'_> for Web {
-    fn perform(&self, config: &config::Config,) -> Result<(), String> {
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
         let config = config.clone();
         let mut web = web::Web::new(self.listen_addr.clone())?;
 
-        let srv = Srv::init_from_config(&config.configuration)?;
+        let srv = Srv::init_from_config(&config)?;
         web.run(srv, config)
     }
 }
@@ -43,10 +44,10 @@ pub struct Space {
     pub brightness: f32,
 }
 impl Action<'_> for Space {
-    fn perform(&self, config: &config::Config) -> Result<(), String> {
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
         println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
 
-        let srv = Srv::init_from_config(&config.configuration)?;
+        let srv = Srv::init_from_config(&config)?;
         demo::space::run(
             srv,
             demo::space::Config {
@@ -61,9 +62,9 @@ impl Action<'_> for Space {
 #[derive(Clone, std::fmt::Debug, Serialize, Deserialize)]
 pub struct Set(pub ChanSpec);
 impl Action<'_> for Set {
-    fn perform( &self, config: &config::Config) -> Result<(), String> {
+    fn perform( &self, config: &Configuration) -> Result<(), String> {
         set::run_msg(
             &self.0,
-            Srv::init_from_config(&config.configuration)?)
+            Srv::init_from_config(&config)?)
     }
 }

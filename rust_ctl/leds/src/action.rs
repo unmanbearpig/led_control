@@ -1,13 +1,5 @@
-use crate::config;
-use crate::producer::Producer;
+use crate::configuration::Configuration;
 
 pub trait Action<'a>: std::fmt::Debug {
-    fn perform(&self, config: &config::Config) -> Result<(), String>;
-}
-
-impl<'a, T> Action<'_> for T
-where T: Producer<'a> {
-    fn perform(&self, config: &config::Config) -> Result<(), String> {
-        todo!()
-    }
+    fn perform(&self, config: &Configuration) -> Result<(), String>;
 }

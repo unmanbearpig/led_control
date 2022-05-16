@@ -1,6 +1,7 @@
 use crate::frame::Frame;
 
 use std::fmt::Display;
+use std::sync::{Arc, Mutex};
 
 pub trait DevNumChans {
     fn num_chans(&self) -> u16;
@@ -28,6 +29,5 @@ where
 
 pub trait Dev
 where
-    Self: DevNumChans + DevRead + DevWrite + Display + Send,
-{
+    Self: DevNumChans + DevRead + DevWrite + Display + Send, {
 }

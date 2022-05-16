@@ -10,7 +10,7 @@ use std::io::{Write, Cursor};
 
 use crate::actions;
 use crate::chan_spec::{ChanSpec, ChanSpecGeneric};
-use crate::config;
+use crate::configuration::Configuration;
 use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use crate::dev::Dev;
@@ -99,7 +99,7 @@ struct WebState<T: fmt::Debug> {
     output: Arc<Mutex<T>>,
 
     #[allow(dead_code)]
-    output_config: config::Config,
+    output_config: Configuration,
 
     http: tiny_http::Server,
     task: Option<Task>,
@@ -560,7 +560,7 @@ impl Web {
     pub fn run<T: 'static + MsgHandler + Dev>(
         &mut self,
         srv: Arc<Mutex<T>>,
-        config: config::Config,
+        config: Configuration,
     ) -> Result<(), String> {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
             .map_err(|e| format!("server err: {:?}", e))?;

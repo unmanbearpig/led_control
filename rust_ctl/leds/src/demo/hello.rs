@@ -6,15 +6,15 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time;
 use crate::action::Action;
-use crate::config::Config;
+use crate::configuration::Configuration;
 use crate::srv::Srv;
 
 #[derive(Clone, std::fmt::Debug,
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct Hello;
 impl Action<'_> for Hello {
-    fn perform(&self, config: &Config) -> Result<(), String> {
-        run(Srv::init_from_config(&config.configuration)?)
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
+        run(Srv::init_from_config(&config)?)
     }
 }
 

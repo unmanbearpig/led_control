@@ -9,9 +9,10 @@ use std::sync::{Arc, Mutex};
 use crate::task::TaskMsg;
 use crate::runner::Runner;
 use crate::action::Action;
-use crate::config::Config;
+use crate::configuration::Configuration;
 use crate::srv::Srv;
 use crate::wrapper::{Wrapper};
+use crate::dev_stats::DevStats;
 
 #[derive(Debug, Clone)]
 pub struct FadeSpec {
@@ -23,12 +24,12 @@ pub struct FadeSpec {
 }
 
 impl Action<'_> for FadeSpec {
-    fn perform(&self, config: &Config) -> Result<(), String> {
+    fn perform(&self, config: &Configuration) -> Result<(), String> {
         let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
-        let out = Srv::init_from_config(&config.configuration)?;
+        let out = Srv::init_from_config(&config)?;
         let fade = Fade::new(out, self.clone());
-        Fade::run(Arc::new(Mutex::new(fade)), receiver)
+        <Fade<DevStats<Srv>> as Runner>::run(Arc::new(Mutex::new(fade)), receiver)
     }
 }
 
