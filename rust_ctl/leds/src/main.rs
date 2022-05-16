@@ -19,8 +19,6 @@ mod dev;
 mod dev_stats;
 mod filters;
 mod msg_handler;
-// mod old_proto;
-// mod proto;
 mod runner;
 mod srv;
 mod task;
@@ -47,8 +45,8 @@ extern crate rust_embed;
 use std::env;
 
 fn main() -> Result<(), String> {
-    let config = config::Config::from_args(env::args())?;
-    if let Some(action) = &config.action {
+    let (action, config) = config::from_args(env::args())?;
+    if let Some(action) = &action {
         action.init()?.perform(&config)?;
     }
 

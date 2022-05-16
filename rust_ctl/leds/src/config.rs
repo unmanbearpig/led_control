@@ -74,9 +74,211 @@ Other
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub action: Option<ActionSpec>,
     pub templates: Option<Vec<Template>>,
     pub configuration: Configuration,
+}
+
+pub fn from_args(mut args: env::Args)
+        -> Result<(Option<ActionSpec>, Config), String> {
+    let mut action: Option<ActionSpec> = None;
+    let mut configuration = Configuration::default();
+    let mut cfg: Option<Config> = None;
+
+    args.next(); // remove the executable name from args
+
+    let mut skip_default_config: bool = false;
+
+    loop {
+        let arg = args.next();
+        println!("arg = {arg:?}");
+
+        if arg.is_none() {
+            print_help();
+            break;
+        }
+        let arg = arg.unwrap();
+
+        match arg.as_ref() {
+            "--help" => {
+                print_help();
+            },
+            "--cfg" => {
+                let filename = args.next();
+                if filename.is_none() {
+                    return Err("--cfg requires config filename"
+                               .to_string());
+                }
+                cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
+            }
+            "--no-cfg" => {
+                skip_default_config = true;
+            }
+            "--dev" => {
+                let dev_arg = args.next();
+                if dev_arg.is_none() {
+                    return Err("No device specified for --dev option"
+                               .to_string());
+                }
+                let dev_arg = dev_arg.unwrap();
+                configuration.devs.push(DevChanConfig::parse(dev_arg)?);
+            }
+            "ls" => action = Some(ActionSpec::ListChans),
+            "print_cfg" => action = Some(ActionSpec::PrintConfig),
+            "srv" => {
+                let listen_arg = args.next();
+                let (listen_ip, listen_port) = match listen_arg {
+                    Some(arg) => {
+                        let parts: Vec<&str> = arg.split(':').collect();
+                        let (ip, port) =
+                            parse_ip_port(&parts[0..2.min(parts.len())])?;
+                        (Some(ip), port)
+                    }
+                    None => (None, None),
+                };
+
+                action = Some(ActionSpec::Srv {
+                    listen_ip,
+                    listen_port,
+                });
+
+                if args.len() != 0 {
+                    return Err("too many args for srv".to_string());
+                }
+            }
+            "set" => {
+                let setarg = args.next();
+                if setarg.is_none() {
+                    return Err(
+                        "set requires an argument: either 'f32' or 'u16'"
+                        .to_string());
+                }
+                let setarg = setarg.unwrap();
+                let chan_spec_arg = args.next();
+                if chan_spec_arg.is_none() {
+                    return Err(format!("set {} requires chan spec argument",
+                                       setarg));
+                }
+                let chan_spec_arg = chan_spec_arg.unwrap();
+
+                let chan_spec = match setarg.as_ref() {
+                    "f32" => ChanSpec::parse_f32(chan_spec_arg.as_ref()),
+                    "u16" => ChanSpec::parse_u16(chan_spec_arg.as_ref()),
+                    other => {
+                        return Err(format!(
+                                "set only supports f32 and u16, got '{}'",
+                                other))
+                    }
+                }?;
+                action = Some(ActionSpec::Set(chan_spec));
+            }
+            "web" => {
+                action = Some(ActionSpec::Web {
+                    listen_addr: args.next(),
+                })
+            }
+            "space" => {
+                let location = match args.next() {
+                    None => {
+                        return Err(
+                            "space needs: location (x,y,z) \
+                            radius brightness".to_string()
+                            )
+                    }
+                    Some(loc) => loc,
+                };
+
+                let loc_parts: Vec<&str> = location.split(',').collect();
+                if loc_parts.len() != 3 {
+                    return Err("location coordinates needs to be x,y,z"
+                               .to_string());
+                }
+                let loc_parts: Vec<f32> = loc_parts
+                    .iter()
+                    .map(|x| x.parse().map_err(|e| format!("{:?}", e)))
+                    .collect::<Result<Vec<f32>, String>>()?;
+
+                let radius = match args.next() {
+                    None => return Err(
+                        "space needs: location (x,y,z) radius (missing) \
+                        brightness (missing)"
+                        .to_string(),
+                        ),
+                    Some(br) => br,
+                };
+                let radius: f32 = radius
+                    .parse()
+                    .map_err(|e: ParseFloatError| return format!("{:?}", e))?;
+
+                let brightness = match args.next() {
+                    None => {
+                        return Err("space needs: location (x,y,z) \
+                                   radius brightness (missing)"
+                                   .to_string())
+                    }
+                    Some(br) => br,
+                };
+                let brightness: f32 = brightness
+                    .parse()
+                    .map_err(|e: ParseFloatError|
+                             return format!("{:?}", e))?;
+
+                action = Some(ActionSpec::Space {
+                    location: Coord {
+                        x: loc_parts[0],
+                        y: loc_parts[1],
+                        z: loc_parts[2],
+                    },
+                    radius,
+                    brightness,
+                })
+            }
+            "demo" => {
+                let demo_arg = args.next();
+                if demo_arg.is_none() {
+                    return Err("demo requires an argument".to_string());
+                }
+                let demo_arg = demo_arg.unwrap();
+                match demo_arg.as_ref() {
+                    "test_seq" => action = Some(ActionSpec::TestSeq),
+                    "glitch" => action = Some(ActionSpec::Glitch),
+                    "hello" => action = Some(ActionSpec::Hello),
+                    "fade" => action = Some(ActionSpec::Fade),
+                    "whoosh" => action = Some(ActionSpec::Whoosh),
+                    other => return Err(
+                        format!("demo \"{}\" does not exist", other)),
+                }
+            }
+            other => return Err(format!("Unknown arg \"{}\"", other)),
+        }
+    }
+
+    if cfg.is_none() && !skip_default_config {
+        match fs::metadata(DEFAULT_CONFIG_PATH) {
+            Ok(_) => cfg = Some(Config::from_file(DEFAULT_CONFIG_PATH)?),
+            Err(e) => {
+                if e.kind() != io::ErrorKind::NotFound {
+                    return Err(
+                        format!("Could not read {}: {:?}",
+                                DEFAULT_CONFIG_PATH, e));
+                }
+            }
+        }
+    }
+
+    let cfg = match cfg {
+        Some(mut cfg) => {
+            cfg.configuration.devs.extend(configuration.devs);
+            Config {
+                templates: cfg.templates,
+                configuration: cfg.configuration,
+            }
+        }
+        None => {
+            Config { configuration, templates: None }
+        }
+    };
+
+    Ok((action, cfg))
 }
 
 impl<'a> Config {
@@ -92,206 +294,5 @@ impl<'a> Config {
         Ok(cfg)
     }
 
-    pub fn from_args(mut args: env::Args) -> Result<Self, String> {
-        let mut action: Option<ActionSpec> = None;
-        let mut configuration = Configuration::default();
-        let mut cfg: Option<Config> = None;
 
-        args.next(); // remove the executable name from args
-
-        let mut skip_default_config: bool = false;
-
-        loop {
-            let arg = args.next();
-            println!("arg = {arg:?}");
-
-            if arg.is_none() {
-                print_help();
-                break;
-            }
-            let arg = arg.unwrap();
-
-            match arg.as_ref() {
-                "--help" => {
-                    print_help();
-                },
-                "--cfg" => {
-                    let filename = args.next();
-                    if filename.is_none() {
-                        return Err("--cfg requires config filename"
-                                   .to_string());
-                    }
-                    cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
-                }
-                "--no-cfg" => {
-                    skip_default_config = true;
-                }
-                "--dev" => {
-                    let dev_arg = args.next();
-                    if dev_arg.is_none() {
-                        return Err("No device specified for --dev option"
-                                   .to_string());
-                    }
-                    let dev_arg = dev_arg.unwrap();
-                    configuration.devs.push(DevChanConfig::parse(dev_arg)?);
-                }
-                "ls" => action = Some(ActionSpec::ListChans),
-                "print_cfg" => action = Some(ActionSpec::PrintConfig),
-                "srv" => {
-                    let listen_arg = args.next();
-                    let (listen_ip, listen_port) = match listen_arg {
-                        Some(arg) => {
-                            let parts: Vec<&str> = arg.split(':').collect();
-                            let (ip, port) =
-                                parse_ip_port(&parts[0..2.min(parts.len())])?;
-                            (Some(ip), port)
-                        }
-                        None => (None, None),
-                    };
-
-                    action = Some(ActionSpec::Srv {
-                        listen_ip,
-                        listen_port,
-                    });
-
-                    if args.len() != 0 {
-                        return Err("too many args for srv".to_string());
-                    }
-                }
-                "set" => {
-                    let setarg = args.next();
-                    if setarg.is_none() {
-                        return Err(
-                            "set requires an argument: either 'f32' or 'u16'"
-                                .to_string());
-                    }
-                    let setarg = setarg.unwrap();
-                    let chan_spec_arg = args.next();
-                    if chan_spec_arg.is_none() {
-                        return Err(format!("set {} requires chan spec argument",
-                                           setarg));
-                    }
-                    let chan_spec_arg = chan_spec_arg.unwrap();
-
-                    let chan_spec = match setarg.as_ref() {
-                        "f32" => ChanSpec::parse_f32(chan_spec_arg.as_ref()),
-                        "u16" => ChanSpec::parse_u16(chan_spec_arg.as_ref()),
-                        other => {
-                            return Err(format!(
-                                "set only supports f32 and u16, got '{}'",
-                                other))
-                        }
-                    }?;
-                    action = Some(ActionSpec::Set(chan_spec));
-                }
-                "web" => {
-                    action = Some(ActionSpec::Web {
-                        listen_addr: args.next(),
-                    })
-                }
-                "space" => {
-                    let location = match args.next() {
-                        None => {
-                            return Err(
-                                "space needs: location (x,y,z) \
-                                 radius brightness".to_string()
-                            )
-                        }
-                        Some(loc) => loc,
-                    };
-
-                    let loc_parts: Vec<&str> = location.split(',').collect();
-                    if loc_parts.len() != 3 {
-                        return Err("location coordinates needs to be x,y,z"
-                                   .to_string());
-                    }
-                    let loc_parts: Vec<f32> = loc_parts
-                        .iter()
-                        .map(|x| x.parse().map_err(|e| format!("{:?}", e)))
-                        .collect::<Result<Vec<f32>, String>>()?;
-
-                    let radius = match args.next() {
-                        None => return Err(
-                            "space needs: location (x,y,z) radius (missing) \
-                             brightness (missing)"
-                                .to_string(),
-                        ),
-                        Some(br) => br,
-                    };
-                    let radius: f32 = radius
-                        .parse()
-                        .map_err(|e: ParseFloatError| return format!("{:?}", e))?;
-
-                    let brightness = match args.next() {
-                        None => {
-                            return Err("space needs: location (x,y,z) \
-                                        radius brightness (missing)"
-                                .to_string())
-                        }
-                        Some(br) => br,
-                    };
-                    let brightness: f32 = brightness
-                        .parse()
-                        .map_err(|e: ParseFloatError|
-                                 return format!("{:?}", e))?;
-
-                    action = Some(ActionSpec::Space {
-                        location: Coord {
-                            x: loc_parts[0],
-                            y: loc_parts[1],
-                            z: loc_parts[2],
-                        },
-                        radius,
-                        brightness,
-                    })
-                }
-                "demo" => {
-                    let demo_arg = args.next();
-                    if demo_arg.is_none() {
-                        return Err("demo requires an argument".to_string());
-                    }
-                    let demo_arg = demo_arg.unwrap();
-                    match demo_arg.as_ref() {
-                        "test_seq" => action = Some(ActionSpec::TestSeq),
-                        "glitch" => action = Some(ActionSpec::Glitch),
-                        "hello" => action = Some(ActionSpec::Hello),
-                        "fade" => action = Some(ActionSpec::Fade),
-                        "whoosh" => action = Some(ActionSpec::Whoosh),
-                        other => return Err(
-                            format!("demo \"{}\" does not exist", other)),
-                    }
-                }
-                other => return Err(format!("Unknown arg \"{}\"", other)),
-            }
-        }
-
-        if cfg.is_none() && !skip_default_config {
-            match fs::metadata(DEFAULT_CONFIG_PATH) {
-                Ok(_) => cfg = Some(Self::from_file(DEFAULT_CONFIG_PATH)?),
-                Err(e) => {
-                    if e.kind() != io::ErrorKind::NotFound {
-                        return Err(
-                            format!("Could not read {}: {:?}",
-                                    DEFAULT_CONFIG_PATH, e));
-                    }
-                }
-            }
-        }
-
-        let cfg = match cfg {
-            Some(mut cfg) => {
-                cfg.configuration.devs.extend(configuration.devs);
-                Config {
-                    action,
-                    templates: cfg.templates,
-                    configuration: cfg.configuration,
-                }
-            }
-            None => {
-                Config { action, configuration, templates: None }
-            }
-        };
-
-        Ok(cfg)
-    }
 }
