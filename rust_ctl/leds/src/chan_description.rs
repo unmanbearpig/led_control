@@ -1,5 +1,5 @@
-use proto::v1::{ChanId};
-use crate::tag::{self};
+use proto::v1::ChanId;
+use crate::tag;
 use crate::chan::ChanConfig;
 
 #[derive(Clone)]

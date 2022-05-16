@@ -6,7 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+proto = { path = "../proto" }
+leds = { path = "../leds" }
+
 eframe = "0.18.0"
 egui = "0.18.1"
 epaint = "0.18.1"
-leds = { path = "../leds" }

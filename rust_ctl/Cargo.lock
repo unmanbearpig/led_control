@@ -736,6 +736,7 @@ dependencies = [
  "egui",
  "epaint",
  "leds",
+ "proto",
 ]
 
 [[package]]

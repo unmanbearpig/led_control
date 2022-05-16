@@ -50,6 +50,7 @@ impl UdpSrv {
         loop {
             match self.recv() {
                 Ok(msg) => {
+                    // println!("UDP: {msg:?}");
                     let mut output = match self.output.lock() {
                         Ok(output) => output,
                         Err(err) => {

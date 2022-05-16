@@ -1,6 +1,0 @@
-Action::perform -- get rid of config
-
-move action and action_spec to ctl
-
-Move Config to ctl
-Do we need impl Action for demos like Set or Fade?
