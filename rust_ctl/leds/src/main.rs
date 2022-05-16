@@ -5,6 +5,7 @@
 
 mod error;
 mod action;
+mod producer;
 mod chan;
 mod chan_spec;
 mod config;
@@ -38,6 +39,7 @@ mod frame;
 mod chan_description;
 mod tag;
 mod template;
+mod wrapper;
 
 #[macro_use]
 extern crate rust_embed;

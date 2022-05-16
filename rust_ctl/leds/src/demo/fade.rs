@@ -11,6 +11,7 @@ use crate::runner::Runner;
 use crate::action::Action;
 use crate::config::Config;
 use crate::srv::Srv;
+use crate::wrapper::{Wrapper};
 
 #[derive(Debug, Clone)]
 pub struct FadeSpec {
@@ -88,10 +89,11 @@ impl<T: HasChanDescriptions + DevNumChans + DevRead + fmt::Debug> Fade<T> {
     }
 }
 
-impl<T: HasChanDescriptions> DevNumChans for Fade<T> {
-    fn num_chans(&self) -> u16 {
-        let dev = self.output.lock().unwrap();
-        dev.chans().len() as u16
+impl<T> Wrapper for Fade<T> {
+    type Output = T;
+
+    fn output(&self) -> Arc<Mutex<T>> {
+        self.output.clone()
     }
 }
 
@@ -129,20 +131,6 @@ impl<T: DevRead + DevWrite> Fade<T> {
         }
 
         Ok(())
-    }
-}
-
-impl<T: HasChanDescriptions> HasChanDescriptions for Fade<T> {
-    fn chans(&self) -> Vec<(ChanId, String)> {
-        let output = self.output.clone();
-        let output = output.lock().unwrap();
-        output.chans()
-    }
-
-    fn chan_descriptions(&self) -> Vec<ChanDescription> {
-        let output = self.output.clone();
-        let output = output.lock().unwrap();
-        output.chan_descriptions()
     }
 }
 

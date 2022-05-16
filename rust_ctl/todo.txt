@@ -1,1 +1,7 @@
-do we need impl Action for demos like Set or Fade?
+Runner2
+Fade::perform
+
+move action and action_spec to ctl
+
+Move Config to ctl
+Do we need impl Action for demos like Set or Fade?

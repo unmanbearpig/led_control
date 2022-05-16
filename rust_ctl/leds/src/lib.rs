@@ -3,6 +3,8 @@
 
 mod error;
 mod action;
+mod wrapper;
+mod producer;
 mod actions;
 mod action_spec;
 mod chan;

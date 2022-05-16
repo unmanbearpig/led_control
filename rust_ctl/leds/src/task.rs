@@ -9,6 +9,8 @@ pub enum TaskMsg {
 
     // Does nothing
     Ping,
+
+    // Quit
     Stop,
 }
 

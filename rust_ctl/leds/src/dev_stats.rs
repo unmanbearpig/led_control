@@ -4,6 +4,7 @@ use proto::v1::{ChanId, ChanVal, Msg, Val};
 use term_bar;
 use crate::dev::{Dev, DevNumChans, DevRead, DevWrite};
 use crate::frame::Frame;
+use crate::wrapper::Wrapper;
 
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
@@ -189,19 +190,6 @@ impl DevWriteStats {
         }
     }
 
-    // fn frame_complete(&mut self) {
-    //     if self.stats.len() < self.incomplete_frame.vals.len() {
-    //         self.stats.resize_with(self.incomplete_frame.vals.len(),
-    //                                Default::default);
-    //     }
-
-    //     for (cid, val) in self.incomplete_frame.iter_some() {
-    //         self.stats[cid as usize].add(*val as f64);
-    //     }
-
-    //     self.incomplete_frame.clear();
-    // }
-
     fn print(&mut self) {
         for (i, chan) in self.stats.iter().enumerate() {
             println!("Chan {}: {}", i, chan);
@@ -290,28 +278,17 @@ impl<D: MsgHandler + Sync> MsgHandler for DevStats<D> {
     }
 }
 
-impl<D: HasChanDescriptions> HasChanDescriptions for DevStats<D> {
-    fn chans(&self) -> Vec<(ChanId, String)> {
-        let dev = self.dev.lock().unwrap();
-        dev.chans()
-    }
+impl<D> Wrapper for DevStats<D> {
+    type Output = D;
 
-    fn chan_descriptions(&self) -> Vec<ChanDescription> {
-        let dev = self.dev.lock().unwrap();
-        dev.chan_descriptions()
+    fn output(&self) -> Arc<Mutex<D>> {
+        self.dev.clone()
     }
 }
 
 impl<D> fmt::Display for DevStats<D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
-    }
-}
-
-impl<D: DevNumChans> DevNumChans for DevStats<D> {
-    fn num_chans(&self) -> u16 {
-        let dev = self.dev.lock().unwrap();
-        dev.num_chans()
     }
 }
 
@@ -331,28 +308,9 @@ impl<D: DevWrite> DevWrite for DevStats<D> {
         self.msg_stats.msg_cnt += 1;
         res
     }
-
-    // fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
-    //     self.dev_write_stats.incomplete_frame
-    //         .set(chan, val);
-
-    //     let mut dev = self.dev.lock().unwrap();
-    //     dev.set_f32(chan, val)
-    // }
-
-    // fn sync(&mut self) -> Result<(), String> {
-    //     let res = {
-    //         let mut dev = self.dev.lock().unwrap();
-    //         dev.sync()
-    //     };
-    //     self.msg_stats.msg_cnt += 1;
-    //     self.dev_write_stats.frame_complete();
-    //     res
-    // }
 }
 
-impl<D: Dev> Dev for DevStats<D> {
-}
+impl<D: Dev> Dev for DevStats<D> {}
 
 pub fn start_mon<D: 'static + Send>(
     dev: Arc<Mutex<DevStats<D>>>,

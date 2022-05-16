@@ -24,7 +24,7 @@ use std::thread;
 use crate::demo::{Fade, FadeSpec};
 use std::time::Duration;
 
-use crate::runner::Runner;
+use crate::runner::{Runner};
 
 // TODO we send messages to all devices even when setting only 1 channel
 // TODO do we send messages to devices in parallel?
