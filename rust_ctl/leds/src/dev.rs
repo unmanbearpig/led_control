@@ -1,7 +1,6 @@
 use crate::frame::Frame;
 
 use std::fmt::Display;
-use std::sync::{Arc, Mutex};
 
 pub trait DevNumChans {
     fn num_chans(&self) -> u16;

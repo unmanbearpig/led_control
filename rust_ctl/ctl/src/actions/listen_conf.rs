@@ -1,6 +1,5 @@
 use leds::srv::Srv;
 use leds::action::Action;
-use leds::chan_spec::ChanSpec;
 use leds::udp_srv;
 use leds::configuration::Configuration;
 
@@ -14,7 +13,7 @@ pub struct ListenConf {
 }
 impl Action<'_> for ListenConf {
     fn perform(&self, config: &Configuration) -> Result<(), String> {
-        let srv = Srv::init_from_config(&config)?;
+        let srv = Srv::init_from_config(config)?;
         let mut udp = udp_srv::UdpSrv::new(
             self.listen_ip, self.listen_port, srv)?;
         udp.run();

@@ -1,9 +1,6 @@
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-use crate::dev::{DevNumChans};
-use crate::chan_description::{HasChanDescriptions};
-
 use crate::task::TaskMsg;
 
 pub trait Runner {

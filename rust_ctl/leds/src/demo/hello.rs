@@ -14,7 +14,7 @@ use crate::srv::Srv;
 pub struct Hello;
 impl Action<'_> for Hello {
     fn perform(&self, config: &Configuration) -> Result<(), String> {
-        run(Srv::init_from_config(&config)?)
+        run(Srv::init_from_config(config)?)
     }
 }
 

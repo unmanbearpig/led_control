@@ -34,6 +34,7 @@ struct SrvDev {
     frame: Frame<f32>,
 }
 
+#[derive(Default)]
 pub struct Srv {
     devs: Vec<SrvDev>,
     chans: Vec<SrvChan>,
@@ -48,12 +49,9 @@ impl fmt::Debug for Srv {
     }
 }
 
-impl<'a> Srv {
+impl Srv {
     pub fn new() -> Self {
-        Srv {
-            devs: Vec::new(),
-            chans: Vec::new(),
-        }
+        Srv::default()
     }
 
     pub fn init_from_config(config: &configuration::Configuration) ->

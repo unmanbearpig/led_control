@@ -47,7 +47,7 @@ impl Action<'_> for Space {
     fn perform(&self, config: &Configuration) -> Result<(), String> {
         println!("!!!!!!!!Hello from space!!!!!!!!!! (TODO)");
 
-        let srv = Srv::init_from_config(&config)?;
+        let srv = Srv::init_from_config(config)?;
         demo::space::run(
             srv,
             demo::space::Config {
@@ -65,6 +65,6 @@ impl Action<'_> for Set {
     fn perform( &self, config: &Configuration) -> Result<(), String> {
         set::run_msg(
             &self.0,
-            Srv::init_from_config(&config)?)
+            Srv::init_from_config(config)?)
     }
 }

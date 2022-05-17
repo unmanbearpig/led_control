@@ -281,7 +281,7 @@ pub fn from_args(mut args: env::Args)
     Ok((action, cfg))
 }
 
-impl<'a> Config {
+impl Config {
     fn from_file(filename: &str) -> Result<Self, String> {
         let mut file = File::open(filename).map_err(|e| format!("{:?}", e))?;
         let mut buf = String::new();

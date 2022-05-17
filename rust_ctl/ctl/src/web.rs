@@ -532,7 +532,7 @@ impl<T: 'static + Dev + HasChanDescriptions + fmt::Debug> WebState<T> {
             (tiny_http::Method::Get, Some("")) => self.home(),
             (tiny_http::Method::Get, Some("assets")) => {
                 let segments = path_segments.collect();
-                println!("");
+                println!();
                 // TODO: check it's a GET request
                 // TODO: HEAD request
                 self.handle_static_asset(segments)
@@ -592,9 +592,8 @@ impl Web {
             output_config: config,
             http,
             task: None,
-
-            fader: fader,
-            fade_task: fade_task,
+            fader,
+            fade_task,
         };
 
         server.run();

@@ -21,7 +21,6 @@ pub mod msg_handler;
 pub mod runner;
 pub mod srv;
 pub mod task;
-mod term_bar;
 mod test_dev;
 pub mod udp_srv;
 mod udpv1_dev;

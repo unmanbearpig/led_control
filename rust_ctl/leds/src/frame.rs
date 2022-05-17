@@ -1,5 +1,4 @@
 use proto::v1::{Val, ChanVal, ChanId, Msg};
-use term_bar;
 
 use std::ops::{Add};
 

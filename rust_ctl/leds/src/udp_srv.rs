@@ -1,5 +1,4 @@
 use crate::msg_handler::MsgHandler;
-use proto;
 use std::net;
 use std::sync::{Arc, Mutex};
 

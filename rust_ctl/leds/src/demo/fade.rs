@@ -1,8 +1,7 @@
 use std::sync::mpsc;
 use std::fmt;
 use crate::dev::{DevNumChans, DevRead, DevWrite};
-use crate::chan_description::{ChanDescription, HasChanDescriptions};
-use proto::v1::{ChanId};
+use crate::chan_description::{HasChanDescriptions};
 use crate::frame::Frame;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
@@ -27,7 +26,7 @@ impl Action<'_> for FadeSpec {
     fn perform(&self, config: &Configuration) -> Result<(), String> {
         let (_sender, receiver) = mpsc::channel::<TaskMsg>();
 
-        let out = Srv::init_from_config(&config)?;
+        let out = Srv::init_from_config(config)?;
         let fade = Fade::new(out, self.clone());
         <Fade<DevStats<Srv>> as Runner>::run(Arc::new(Mutex::new(fade)), receiver)
     }
@@ -79,13 +78,13 @@ impl<T: HasChanDescriptions + DevNumChans + DevRead + fmt::Debug> Fade<T> {
         };
 
         Fade {
-            output:        output,
-            settings:      settings,
+            output,
+            settings,
             target_time:   now + fade_duration,
             start_time:    now,
-            target_frame:  target_frame,
+            target_frame,
             from_frame:    current_frame.clone(),
-            current_frame: current_frame,
+            current_frame,
         }
     }
 }

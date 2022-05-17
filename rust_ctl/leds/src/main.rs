@@ -3,6 +3,8 @@
 
 #![allow(clippy::redundant_field_names)]
 
+#![allow(dead_code)]
+
 mod error;
 mod action;
 mod chan;
@@ -20,7 +22,6 @@ mod msg_handler;
 mod runner;
 mod srv;
 mod task;
-mod term_bar;
 mod test_dev;
 mod udp_srv;
 mod udpv1_dev;
@@ -33,8 +34,6 @@ mod chan_description;
 mod tag;
 mod template;
 mod wrapper;
-
-use std::env;
 
 fn main() -> Result<(), String> {
     Err("Use ctl binary instead".to_string())

@@ -122,7 +122,7 @@ impl UdpV2Dev {
             ip,
             port,
             socket,
-            num_chans: num_chans,
+            num_chans,
             msg: Msg {
                 seq_num: 0,
                 timestamp: time::SystemTime::now(),

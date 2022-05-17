@@ -6,7 +6,6 @@ use eframe::egui;
 use egui::color::{Color32};
 use egui::{Sense, Response, Vec2, Painter, Ui, Rect};
 
-use leds;
 use leds::msg_handler::MsgHandler;
 use leds::chan_description::{ChanDescription, HasChanDescriptions};
 use leds::chan::ChanConfig;
@@ -62,9 +61,9 @@ impl ChanValue {
     }
 }
 
-impl Into<Color32> for ChanValue {
-    fn into(self) -> Color32 {
-        match self {
+impl From<ChanValue> for Color32 {
+    fn from(chanval: ChanValue) -> Color32 {
+        match chanval {
             ChanValue::Rgb(col) => col,
             ChanValue::BlackAndWhite(val)
                 => Color32::from_rgb(val, val, val),
@@ -78,9 +77,9 @@ struct Channel {
     value: ChanValue,
 }
 
-impl Into<Color32> for &Channel {
-    fn into(self) -> Color32 {
-        self.value.into()
+impl From<&Channel> for Color32 {
+    fn from(chan: &Channel) -> Color32 {
+        chan.value.into()
     }
 }
 
@@ -110,27 +109,25 @@ impl Channel {
 
 struct LedReceiver {
     chans: Vec<Channel>,
-    update_callback: Option<Box<dyn Fn() -> () + Send + Sync>>,
+    update_callback: Option<Box<dyn Fn() + Send + Sync>>,
 }
 impl LedReceiver {
     fn new(
         chans: Vec<Channel>,
-        update_callback: Option<Box<dyn Fn() -> () + Send + Sync>>
+        update_callback: Option<Box<dyn Fn() + Send + Sync>>
     ) -> Self {
         LedReceiver { chans, update_callback }
     }
 
     fn get_cid_index(&self, cid: u16) -> Option<(u16, u8)> {
-        let mut index: u16 = 0;
-
         for (ii, ch) in self.chans.iter().enumerate() {
+            let ii = ii as u16;
+
             let subchans = ch.num_subchans();
 
-            if cid >= index && cid < (index + subchans) {
-                return Some((ii as u16, (cid - index) as u8))
+            if cid >= ii && cid < (ii + subchans) {
+                return Some((ii, (cid - ii) as u8))
             }
-
-            index += 1;
         }
 
         None
@@ -193,7 +190,7 @@ impl HasChanDescriptions for LedReceiver {
         let mut ret = Vec::new();
 
         for (ii, _rgb_chan) in self.chans.iter().enumerate() {
-            ret.push((ChanId( (ii * 3 + 0) as u16 ), format!("RGB {} R", ii)));
+            ret.push((ChanId( (ii * 3)     as u16 ), format!("RGB {} R", ii)));
             ret.push((ChanId( (ii * 3 + 2) as u16 ), format!("RGB {} B", ii)));
         }
 
@@ -205,7 +202,7 @@ impl HasChanDescriptions for LedReceiver {
 
         for (ii, _rgb_chan) in self.chans.iter().enumerate() {
             ret.push(ChanDescription::new(
-                    (ii * 3 + 0) as u16,
+                    (ii * 3) as u16,
                     format!("RGB chan {} R", ii),
                     ChanConfig::default()));
             ret.push(ChanDescription::new(
@@ -281,11 +278,10 @@ impl GuiApp {
         visuals.faint_bg_color = Color32::from_rgb(0,0,0);
         visuals.extreme_bg_color = Color32::from_rgb(0,0,0);
         visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(0,0,0);
-        let mut style = egui::Style::default();
-        style.visuals = visuals;
+        let style = egui::Style { visuals, ..Default::default() };
         ctx.set_style(style);
 
-        let lctx = ctx.clone();
+        let lctx = ctx;
         let leds = Arc::new(Mutex::new(
                 LedReceiver::new(
                     chans, Some(Box::new(move || lctx.request_repaint())))));

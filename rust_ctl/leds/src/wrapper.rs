@@ -12,13 +12,13 @@ impl<W: Wrapper> HasChanDescriptions for W where
     W::Output: HasChanDescriptions
 {
     fn chans(&self) -> Vec<(ChanId, String)> {
-        let output = self.output().clone();
+        let output = self.output();
         let output = output.lock().unwrap();
         output.chans()
     }
 
     fn chan_descriptions(&self) -> Vec<ChanDescription> {
-        let output = self.output().clone();
+        let output = self.output();
         let output = output.lock().unwrap();
         output.chan_descriptions()
     }
@@ -28,7 +28,7 @@ impl<W: Wrapper> DevNumChans for W where
     W::Output: DevNumChans
 {
     fn num_chans(&self) -> u16 {
-        let output = self.output().clone();
+        let output = self.output();
         let output = output.lock().unwrap();
         output.num_chans()
     }
