@@ -3,6 +3,9 @@ use std::mem;
 use std::slice;
 use std::time::{Duration, SystemTime};
 
+use serde_derive::{Serialize, Deserialize};
+use bincode;
+
 // protocol for sending data via UDP / (or Unix sockets?)
 // not intended for SPI or USB communication with the PWM controller
 
@@ -14,7 +17,7 @@ pub const MSG_MAX_SIZE: usize = MSG_HEADER_SIZE + MSG_MAX_PAYLOAD;
 pub const MSG_MAGIC: u8 = 0x1c;
 
 #[repr(transparent)]
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ChanId(pub u16);
 
 impl fmt::Display for ChanId {
@@ -23,7 +26,7 @@ impl fmt::Display for ChanId {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Val {
     U16(u16),
     F32(f32),
@@ -44,7 +47,7 @@ pub enum SerErr {
     },
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ChanVal(pub ChanId, pub Val);
 
 impl ChanVal {
@@ -98,7 +101,7 @@ impl Default for ChanValSer {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Msg {
     pub seq_num: u16,
     pub timestamp: SystemTime,
@@ -264,6 +267,20 @@ mod tests {
         assert_eq!(msg, Msg::deserialize(&buf[0..len]).unwrap());
     }
 
+    #[test]
+    fn test_custom_serialization_is_smaller_than_bincode() {
+        let msg = Msg {
+            seq_num: 12345,
+            timestamp: SystemTime::now(),
+            vals: vec![ChanVal(ChanId(32), Val::U16(54))],
+        };
+        let buf = &mut [0u8; MSG_MAX_SIZE];
+        let custom_len = msg.serialize(buf);
+
+        let bincode_data = bincode::serialize(&msg).unwrap();
+        assert!(bincode_data.len() < custom_len);
+    }
+
     #[bench]
     #[allow(unused_must_use)]
     fn bench_msg_roundtrip(b: &mut test::Bencher) {
@@ -276,6 +293,20 @@ mod tests {
             let buf = &mut [0u8; MSG_MAX_SIZE];
             let len = msg.serialize(buf);
             Msg::deserialize(&buf[0..len]);
+        });
+    }
+
+    #[bench]
+    fn bench_msg_roundtrip_bincode(b: &mut test::Bencher) {
+        b.iter(|| {
+            let msg = Msg {
+                seq_num: 12345,
+                timestamp: SystemTime::now(),
+                vals: vec![ChanVal(ChanId(32), Val::U16(54))],
+            };
+            let buf = &mut [0u8; MSG_MAX_SIZE];
+            let data: Vec<u8> = bincode::serialize(&msg).unwrap();
+            let msg2: Msg = bincode::deserialize(&data).unwrap();
         });
     }
 }

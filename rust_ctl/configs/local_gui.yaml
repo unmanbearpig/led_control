@@ -1,0 +1,10 @@
+---
+room_scale: [ 0.6, 0.5, 1.0 ]
+
+configuration:
+  devs:
+    - dev:
+        UdpV2:
+          ip: 127.0.0.1
+          port: 12344
+          chans: 4

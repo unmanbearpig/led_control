@@ -2,7 +2,7 @@
 
 pub mod old_proto;
 pub mod v1;
-// pub mod proto3;
+pub mod proto3;
 
 #[cfg(test)]
 mod tests {
