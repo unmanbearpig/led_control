@@ -26,7 +26,7 @@ pub enum ActionSpec {
 
 impl ActionSpec {
     pub fn run(&self, config: &Configuration) -> Result<(), String> {
-        let mux = leds::srv::Srv::init_from_config(config)?;
+        let mux = leds::mux::Mux::init_from_config(config)?;
 
         match self {
             ActionSpec::ListChans => {

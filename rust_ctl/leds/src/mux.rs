@@ -11,6 +11,13 @@ use std::time::Duration;
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
 
+/// Combines multiple devices and channels into a single device
+#[derive(Default)]
+pub struct Mux {
+    devs: Vec<MuxDev>,
+    chans: Vec<MuxChan>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DevId(u16);
 
@@ -22,42 +29,36 @@ impl Display for DevId {
 }
 
 #[derive(Debug)]
-struct SrvChan {
+struct MuxChan {
     devid: DevId,
     pub cfg: ChanConfig,
     prev_val_f32: f32,
 }
 
-struct SrvDev {
+struct MuxDev {
     dev: Arc<Mutex<dyn Dev>>,
     dirty: bool,
     frame: Frame<f32>,
 }
 
-#[derive(Default)]
-pub struct Srv {
-    devs: Vec<SrvDev>,
-    chans: Vec<SrvChan>,
-}
-
-impl fmt::Debug for Srv {
+impl fmt::Debug for Mux {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Srv")
+        f.debug_struct("Mux")
             .field("devs", &format!("<{} devs>", self.devs.len()))
             .field("chans", &format!("<{} chans>", self.chans.len()))
             .finish()
     }
 }
 
-impl Srv {
+impl Mux {
     pub fn new() -> Self {
-        Srv::default()
+        Mux::default()
     }
 
     pub fn init_from_config(config: &configuration::Configuration) ->
-            Result<Arc<Mutex<dev_stats::DevStats<Srv>>>, String> {
+            Result<Arc<Mutex<dev_stats::DevStats<Mux>>>, String> {
         let devs = init_devs::init_devs(config)?; // dyn
-        let mut srv = Srv::new();
+        let mut srv = Mux::new();
         for (dev, chancfg) in devs.into_iter() {
             srv.add_dev(dev, chancfg.map(|c| c.into_iter()));
         }
@@ -100,7 +101,7 @@ impl Srv {
                 // }
 
                 for chan in chancfgs {
-                    self.chans.push(SrvChan {
+                    self.chans.push(MuxChan {
                         devid: dev_id,
                         cfg: chan,
                         prev_val_f32: 0.0,
@@ -114,7 +115,7 @@ impl Srv {
                         ..Default::default()
                     };
 
-                    self.chans.push(SrvChan {
+                    self.chans.push(MuxChan {
                         devid: dev_id,
                         cfg: cc,
                         prev_val_f32: 0.0,
@@ -124,7 +125,7 @@ impl Srv {
         };
 
         let frame = Frame::empty();
-        self.devs.push(SrvDev { dev, dirty: true, frame });
+        self.devs.push(MuxDev { dev, dirty: true, frame });
 
         dev_id
     }
@@ -135,7 +136,7 @@ impl Srv {
     }
 }
 
-impl MsgHandler for Srv {
+impl MsgHandler for Mux {
     fn handle_msg(&mut self, msg: &Msg) -> Result<(), String> {
         for ChanVal(ChanId(cid), val) in msg.vals.iter() {
             match val {
@@ -144,7 +145,7 @@ impl MsgHandler for Srv {
                         eprintln!("srv: chan {cid} out of bounds");
                         return Ok(())
                     }
-                    let chan: &mut SrvChan = &mut self.chans[*cid as usize];
+                    let chan: &mut MuxChan = &mut self.chans[*cid as usize];
                     if *fval == chan.prev_val_f32 {
                         // skip it when trying to set to the previous value
                         continue;
@@ -173,13 +174,13 @@ impl MsgHandler for Srv {
     }
 }
 
-impl HasChanDescriptions for Srv {
+impl HasChanDescriptions for Mux {
     fn chans(&self) -> Vec<(ChanId, String)> {
         self.chans
             .as_slice()
             .iter()
             .enumerate()
-            .map(|(chan_id, SrvChan { devid, .. })| {
+            .map(|(chan_id, MuxChan { devid, .. })| {
                 let dev = self.get_dev(devid);
                 let dev = dev.lock().unwrap();
                 (
@@ -205,7 +206,7 @@ impl HasChanDescriptions for Srv {
     }
 }
 
-impl Display for Srv {
+impl Display for Mux {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut res = String::new();
         for dev in self.devs.iter() {
@@ -213,24 +214,24 @@ impl Display for Srv {
             let dev = dev.lock().unwrap();
             res += format!("{} ", dev).as_str();
         }
-        write!(f, "Srv {}", res)
+        write!(f, "Mux {}", res)
     }
 }
 
-impl DevNumChans for Srv {
+impl DevNumChans for Mux {
     fn num_chans(&self) -> u16 {
         self.chans.len() as u16
     }
 }
 
-impl Srv {
+impl Mux {
     fn set_f32(&mut self, chan: u16, val: f32) -> Result<(), String> {
         if chan as usize >= self.chans.len() {
             eprintln!("srv: chan {chan} out of bounds");
             return Ok(())
         }
 
-        let chan: &mut SrvChan = &mut self.chans[chan as usize];
+        let chan: &mut MuxChan = &mut self.chans[chan as usize];
         // it doesn't work too well because of float precision
         // it things the value is changed when it didn't
         if val == chan.prev_val_f32 {
@@ -269,9 +270,9 @@ impl Srv {
     }
 }
 
-impl DevWrite for Srv {
+impl DevWrite for Mux {
     fn set_frame(&mut self, frame: &Frame<f32>) -> Result<(), String> {
-        // eprintln!("Srv set_frame {frame:?}");
+        // eprintln!("Mux set_frame {frame:?}");
         for (cid, val) in frame.vals.iter().enumerate() {
             let cid = cid as u16;
             if let Some(val) = val {
@@ -282,9 +283,9 @@ impl DevWrite for Srv {
     }
 }
 
-impl DevRead for Srv {
+impl DevRead for Mux {
     fn get_f32(&self, chan: u16) -> Result<f32, String> {
-        let chan: &SrvChan = &self.chans[chan as usize];
+        let chan: &MuxChan = &self.chans[chan as usize];
         let dev = &self.devs[chan.devid.0 as usize];
 
         let dev = dev.dev.lock().unwrap();
@@ -293,7 +294,7 @@ impl DevRead for Srv {
     }
 }
 
-impl Dev for Srv {}
+impl Dev for Mux {}
 
 #[cfg(test)]
 mod tests {
@@ -306,7 +307,7 @@ mod tests {
 
     #[bench]
     fn bench_srv_dev_with_chan_config(b: &mut Bencher) {
-        let mut srv = Srv::new();
+        let mut srv = Mux::new();
         let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
         let chan_cfgs = vec![
@@ -340,7 +341,7 @@ mod tests {
 
     #[bench]
     fn bench_srv_dev_without_chan_config(b: &mut Bencher) {
-        let mut srv = Srv::new();
+        let mut srv = Mux::new();
         let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
 
@@ -357,7 +358,7 @@ mod tests {
 
         #[bench]
     fn bench_srv_handle_msg(b: &mut Bencher) {
-        let mut srv = Srv::new();
+        let mut srv = Mux::new();
         let test_dev = test_dev::TestDev::new(false);
         let sync_dev = Arc::new(Mutex::new(test_dev));
         let chan_cfgs = vec![

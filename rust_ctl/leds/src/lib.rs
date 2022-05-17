@@ -17,7 +17,7 @@ mod dev_stats;
 mod filters;
 pub mod msg_handler;
 pub mod runner;
-pub mod srv;
+pub mod mux;
 pub mod task;
 mod test_dev;
 pub mod udp_srv;
