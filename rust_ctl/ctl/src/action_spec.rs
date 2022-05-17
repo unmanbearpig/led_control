@@ -58,7 +58,7 @@ impl ActionSpec {
                 let mut web = crate::web::Web::new(listen_addr.clone())?;
                 web.run(mux, config.clone())
             },
-            ActionSpec::Set(cs) => actions::set::run_msg(&cs, mux),
+            ActionSpec::Set(cs) => actions::set::run_msg(cs, mux),
             ActionSpec::TestSeq => demo::test_seq::run(mux),
             ActionSpec::Glitch => demo::glitch::run(mux),
             ActionSpec::Whoosh => demo::whoosh::run(mux),
