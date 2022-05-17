@@ -4,7 +4,6 @@ use std::slice;
 use std::time::{Duration, SystemTime};
 
 use serde_derive::{Serialize, Deserialize};
-use bincode;
 
 // protocol for sending data via UDP / (or Unix sockets?)
 // not intended for SPI or USB communication with the PWM controller
@@ -298,6 +297,7 @@ mod tests {
 
     #[bench]
     fn bench_msg_roundtrip_bincode(b: &mut test::Bencher) {
+        use bincode;
         b.iter(|| {
             let msg = Msg {
                 seq_num: 12345,

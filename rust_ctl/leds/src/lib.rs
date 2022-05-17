@@ -2,9 +2,7 @@
 #![feature(iter_intersperse)]
 
 mod error;
-pub mod action;
 mod wrapper;
-// pub mod actions;
 pub mod chan;
 pub mod chan_spec;
 pub mod chan_description;

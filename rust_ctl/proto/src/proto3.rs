@@ -1,3 +1,6 @@
+// temoprary while working on it
+#![allow(dead_code)]
+
 #[derive(Clone, Copy)]
 pub struct ChanRange {
     start: u16,

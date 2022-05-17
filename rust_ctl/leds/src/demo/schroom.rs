@@ -7,17 +7,10 @@ use rand::{self, Rng};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time;
-use crate::action::Action;
-use crate::srv::Srv;
 
 #[derive(Clone, std::fmt::Debug,
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct Schroom;
-// impl Action<'_> for Schroom {
-//     fn perform(&self, config: &Config) -> Result<(), String> {
-//         run(Srv::init_from_config(&config.configuration)?)
-//     }
-// }
 
 const DEFAULT_FREQ_MIN: f64 = 0.002;
 const DEFAULT_FREQ_MAX: f64 = 0.1;

@@ -11,7 +11,7 @@ extern crate rust_embed;
 fn main() -> Result<(), String> {
     let (action, config) = config::from_args(env::args())?;
     if let Some(action) = &action {
-        action.init()?.perform(&config.configuration)?;
+        action.run(&config.configuration)?;
     }
 
     Ok(())

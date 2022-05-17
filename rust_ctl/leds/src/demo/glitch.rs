@@ -5,18 +5,9 @@ use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time;
 
-use crate::action::Action;
-use crate::configuration::Configuration;
-use crate::srv::Srv;
-
 #[derive(Clone, std::fmt::Debug,
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct Glitch;
-impl Action<'_> for Glitch {
-    fn perform(&self, config: &Configuration) -> Result<(), String> {
-        run(Srv::init_from_config(config)?)
-    }
-}
 
 struct DemoChan {
     freq: f64,

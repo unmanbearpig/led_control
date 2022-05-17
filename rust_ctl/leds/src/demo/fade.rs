@@ -7,11 +7,7 @@ use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use crate::task::TaskMsg;
 use crate::runner::Runner;
-use crate::action::Action;
-use crate::configuration::Configuration;
-use crate::srv::Srv;
-use crate::wrapper::{Wrapper};
-use crate::dev_stats::DevStats;
+use crate::wrapper::Wrapper;
 
 #[derive(Debug, Clone)]
 pub struct FadeSpec {
@@ -20,16 +16,6 @@ pub struct FadeSpec {
 
     /// The whole duration of the fade from start to finish
     pub fade_duration: Duration,
-}
-
-impl Action<'_> for FadeSpec {
-    fn perform(&self, config: &Configuration) -> Result<(), String> {
-        let (_sender, receiver) = mpsc::channel::<TaskMsg>();
-
-        let out = Srv::init_from_config(config)?;
-        let fade = Fade::new(out, self.clone());
-        <Fade<DevStats<Srv>> as Runner>::run(Arc::new(Mutex::new(fade)), receiver)
-    }
 }
 
 #[derive(Debug)]
