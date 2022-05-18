@@ -1,4 +1,5 @@
-use crate::msg_handler::MsgHandler;
+use crate::dev::{DevWrite, DevNumChans};
+use crate::frame::Frame;
 use proto::v1::{ChanVal, Msg, Val};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
@@ -8,51 +9,47 @@ use std::time;
          serde_derive::Serialize, serde_derive::Deserialize)]
 pub struct TestSeq;
 
-pub fn run<T: MsgHandler + ?Sized>(srv: Arc<Mutex<T>>) -> Result<(), String> {
+pub fn run<T: DevWrite + DevNumChans + ?Sized>(
+    srv: Arc<Mutex<T>>) -> Result<(), String> {
     println!("running test_seq...");
 
-    let mut msg: Msg = {
-        let srv = srv.lock().map_err(|e| format!("write lock: {:?}", e))?;
+    const MIN: f32 = 0.0;
+    const MAX: f32 = 1.0;
+    const STEP: f32 = 0.01;
+    const DELAY: time::Duration = time::Duration::from_millis(10);
 
-        let chans = srv.chans();
-        Msg {
-            seq_num: 0,
-            timestamp: time::SystemTime::now(),
-            vals: chans
-                .iter()
-                .map(|(id, _)| (ChanVal(*id, Val::F32(0.0))))
-                .collect(),
-        }
+    let num_chans = {
+        let srv = srv.lock().unwrap();
+        srv.num_chans()
     };
 
-    loop {
-        for i in 0..msg.vals.len() {
-            eprintln!("demo test_seq: chan {}", i);
-            let mut fval: f32 = 0.0;
-            let min: f32 = 0.0;
-            let max: f32 = 1.0;
-            let step: f32 = 0.01;
-            // lower delay doesn't work for local udp usb server
-            // why?
-            let delay = time::Duration::from_millis(10);
+    let mut frame = Frame::<f32>::new(num_chans);
 
-            let mut set = |fval: f32| {
-                msg.vals[i].1 = Val::F32(fval.powf(2.2));
+    loop {
+        for cid in 0..num_chans {
+            let set = |frame: &mut Frame<f32>, fval: f32| -> Result<(), String> {
+                frame.set(cid, fval);
                 {
+                    frame.set(cid, fval);
                     let srv = srv.clone();
                     let mut srv = srv.lock().unwrap();
-                    srv.handle_msg(&msg).expect("demo: handle_msg error");
+                    srv.set_frame(&frame)?;
                 }
-                sleep(delay);
+                sleep(DELAY);
+                Ok(())
             };
 
-            while fval < max {
-                fval = (fval + step).min(max);
-                set(fval);
+            frame.clear();
+            let mut fval: f32 = 0.0;
+
+            while fval < MAX {
+                fval = (fval + STEP).min(MAX);
+                set(&mut frame, fval)?;
             }
-            while fval > min {
-                fval = (fval - step).max(min);
-                set(fval);
+
+            while fval > MIN {
+                fval = (fval - STEP).max(MIN);
+                set(&mut frame, fval)?;
             }
         }
     }

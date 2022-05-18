@@ -9,7 +9,7 @@ use crate::action_spec::ActionSpec;
 use leds::chan_spec::ChanSpec;
 use leds::coord::Coord;
 use leds::template::Template;
-use leds::configuration::{Configuration, DevChanConfig};
+use leds::mux_config::{MuxConfig, DevChanConfig};
 use leds::parse_ip_port::parse_ip_port;
 
 const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
@@ -75,13 +75,13 @@ Other
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub templates: Option<Vec<Template>>,
-    pub configuration: Configuration,
+    pub configuration: MuxConfig,
 }
 
 pub fn from_args(mut args: env::Args)
         -> Result<(Option<ActionSpec>, Config), String> {
     let mut action: Option<ActionSpec> = None;
-    let mut configuration = Configuration::default();
+    let mut configuration = MuxConfig::default();
     let mut cfg: Option<Config> = None;
 
     args.next(); // remove the executable name from args

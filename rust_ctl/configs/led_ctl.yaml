@@ -4,7 +4,7 @@ action: PrintConfig
 # this transforms it into it's rough proportions
 room_scale: [ 0.6, 0.5, 1.0 ]
 
-configuration:
+mux_config:
   # Connect to all devices via UDP, so we don't interfere with running server on 
   # our computer, also we can safely reuse this config for any computer on the
   # network

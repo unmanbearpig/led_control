@@ -6,7 +6,7 @@ use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use proto::v1::{ChanId, ChanVal, Msg, Val};
 use crate::dev_stats;
 use crate::init_devs;
-use crate::configuration;
+use crate::mux_config;
 use std::time::Duration;
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
@@ -55,7 +55,7 @@ impl Mux {
         Mux::default()
     }
 
-    pub fn init_from_config(config: &configuration::Configuration) ->
+    pub fn init_from_config(config: &mux_config::MuxConfig) ->
             Result<Arc<Mutex<dev_stats::DevStats<Mux>>>, String> {
         let devs = init_devs::init_devs(config)?; // dyn
         let mut srv = Mux::new();

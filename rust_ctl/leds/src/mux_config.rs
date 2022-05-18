@@ -5,7 +5,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::net::IpAddr;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct Configuration {
+pub struct MuxConfig {
     pub devs: Vec<DevChanConfig>,
 }
 

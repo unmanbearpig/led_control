@@ -1,5 +1,5 @@
 use crate::dev;
-use crate::configuration::{Configuration, DevConfig};
+use crate::mux_config::{MuxConfig, DevConfig};
 use std::sync::{Arc, Mutex};
 use crate::chan::ChanConfig;
 use crate::test_dev;
@@ -10,7 +10,7 @@ use crate::udpv2_dev;
 
 type DevConfList = Vec<(Arc<Mutex<dyn dev::Dev>>, Option<Vec<ChanConfig>>)>;
 
-pub fn init_devs(configuration: &Configuration)
+pub fn init_devs(configuration: &MuxConfig)
       -> Result<DevConfList, String> {
     let mut devs: DevConfList = Vec::new();
 

@@ -2,7 +2,7 @@ use serde_derive::{Deserialize, Serialize};
 use leds::demo;
 use leds::chan_spec::ChanSpec;
 use leds::coord::Coord;
-use leds::configuration::Configuration;
+use leds::mux_config::MuxConfig;
 use crate::actions;
 
 use std::time::Duration;
@@ -14,6 +14,7 @@ pub enum ActionSpec {
     ListChans,
     PrintConfig,
     Srv { listen_ip: Option<IpAddr>, listen_port: Option<u16> },
+    SrvV3 { listen_ip: Option<IpAddr>, listen_port: Option<u16> },
     Set(ChanSpec),
     Web { listen_addr: Option<String> },
     Space { location: Coord, radius: f32, brightness: f32 },
@@ -25,7 +26,7 @@ pub enum ActionSpec {
 }
 
 impl ActionSpec {
-    pub fn run(&self, config: &Configuration) -> Result<(), String> {
+    pub fn run(&self, config: &MuxConfig) -> Result<(), String> {
         let mux = leds::mux::Mux::init_from_config(config)?;
 
         match self {
@@ -51,6 +52,12 @@ impl ActionSpec {
             ActionSpec::Srv { listen_ip, listen_port } => {
                 use leds::udp_srv::UdpSrv;
                 let mut udp = UdpSrv::new(*listen_ip, *listen_port, mux)?;
+                udp.run();
+                Ok(())
+            },
+            ActionSpec::SrvV3 { listen_ip, listen_port } => {
+                use leds::udp_srv_v3::UdpSrvV3;
+                let mut udp = UdpSrvV3::new(*listen_ip, *listen_port, mux)?;
                 udp.run();
                 Ok(())
             },
