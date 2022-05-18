@@ -2,7 +2,7 @@ use serde_derive::{Deserialize, Serialize};
 use leds::demo;
 use leds::chan_spec::ChanSpec;
 use leds::coord::Coord;
-use leds::mux_config::MuxConfig;
+use leds::mux;
 use crate::actions;
 
 use std::time::Duration;
@@ -26,7 +26,7 @@ pub enum ActionSpec {
 }
 
 impl ActionSpec {
-    pub fn run(&self, config: &MuxConfig) -> Result<(), String> {
+    pub fn run(&self, config: &mux::Config) -> Result<(), String> {
         let mux = leds::mux::Mux::init_from_config(config)?;
 
         match self {

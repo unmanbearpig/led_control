@@ -1,6 +1,5 @@
 use crate::dev::{DevWrite, DevNumChans};
 use crate::frame::Frame;
-use proto::v1::{ChanVal, Msg, Val};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time;

@@ -5,11 +5,13 @@ use crate::msg_handler::{MsgHandler};
 use crate::chan_description::{ChanDescription, HasChanDescriptions};
 use proto::v1::{ChanId, ChanVal, Msg, Val};
 use crate::dev_stats;
-use crate::init_devs;
-use crate::mux_config;
 use std::time::Duration;
 use std::fmt::{self, Display, Formatter};
 use std::sync::{Arc, Mutex};
+
+mod init_devs;
+pub mod config;
+pub use config::{Config, DevConfig, DevChanConfig};
 
 /// Combines multiple devices and channels into a single device
 #[derive(Default)]
@@ -55,7 +57,7 @@ impl Mux {
         Mux::default()
     }
 
-    pub fn init_from_config(config: &mux_config::MuxConfig) ->
+    pub fn init_from_config(config: &Config) ->
             Result<Arc<Mutex<dev_stats::DevStats<Mux>>>, String> {
         let devs = init_devs::init_devs(config)?; // dyn
         let mut srv = Mux::new();

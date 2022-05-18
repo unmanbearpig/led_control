@@ -11,7 +11,7 @@ use std::io::{Write, Cursor};
 use crate::actions;
 
 use leds::chan_spec::{ChanSpec, ChanSpecGeneric};
-use leds::mux_config::MuxConfig;
+use leds::mux;
 use leds::msg_handler::{MsgHandler};
 use leds::chan_description::{ChanDescription, HasChanDescriptions};
 use leds::dev::Dev;
@@ -98,7 +98,7 @@ struct WebState<T: fmt::Debug> {
     output: Arc<Mutex<T>>,
 
     #[allow(dead_code)]
-    output_config: MuxConfig,
+    output_config: mux::Config,
 
     http: tiny_http::Server,
     task: Option<Task>,
@@ -559,7 +559,7 @@ impl Web {
     pub fn run<T: 'static + MsgHandler + Dev>(
         &mut self,
         srv: Arc<Mutex<T>>,
-        config: MuxConfig,
+        config: mux::Config,
     ) -> Result<(), String> {
         let http = tiny_http::Server::http::<&str>(self.listen_addr.as_ref())
             .map_err(|e| format!("server err: {:?}", e))?;
