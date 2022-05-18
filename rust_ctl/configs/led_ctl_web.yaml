@@ -7,218 +7,219 @@ room_scale: [ 0.6, 0.5, 1.0 ]
 # Connect to all devices via UDP, so we don't interfere with running server on 
 # our computer, also we can safely reuse this config for any computer on the
 # network
-devs:
-  # Window, aka macbook for now
-  - dev:
-      UdpV2:
-        ip: 192.168.0.112
-        port: 8932
-        chans: 4
-    chans:
-      - index: 2
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["blue", "rgb", "window"]
-        disco_config:
-          freq_min: 0.01
-          freq_max: 0.1
-          min: 0.1
-          max: 1.0
-          adjustment: 1.5
-        # from room's window top left corner x y z coordinates
-        # when looking at the window:
-        #   x: left-right, left is 0
-        #   y: up-down, ceiling is 0, floor is 1
-        #   z: distance from the window into the room, window is 0
-        cuboid:
-          start:
-            x: 0.15
-            y: 0.1
-            z: 0.001
-          end:
-            x: 0.9
-            y: 0.1
-            z: 0.002
-      - index: 1
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["green", "rgb", "window"]
-        disco_config:
-          freq_min: 0.01
-          freq_max: 0.1
-          min: 0.01
-          max: 1.0
-          adjustment: 1.5
-        # the same as first channel
-        cuboid:
-          start:
-            x: 0.15
-            y: 0.1
-            z: 0.001
-          end:
-            x: 0.9
-            y: 0.1
-            z: 0.002
-
-      - index: 0
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        # the same as first channel
-        tags: ["red", "rgb", "window"]
-        disco_config:
-          freq_min: 0.01
-          freq_max: 0.1
-          min: 0.3
-          max: 1.0
-          adjustment: 1.5
-        cuboid:
-          start:
-            x: 0.15
-            y: 0.1
-            z: 0.001
-          end:
-            x: 0.9
-            y: 0.1
-            z: 0.002
-      - index: 3
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        # the same as first channel
-        tags: ["white", "pinboard"]
-        disco_config:
-          freq_min: 0.05
-          freq_max: 0.2
+mux:
+  devs:
+    # Window, aka macbook for now
+    - dev:
+        UdpV2:
+          ip: 192.168.0.112
+          port: 8932
+          chans: 4
+      chans:
+        - index: 2
           min: 0.0
           max: 1.0
-          adjustment: 1.0
-        cuboid:
-          start:
-            x: 0.15
-            y: 0.1
-            z: 0.001
-          end:
-            x: 0.9
-            y: 0.1
-            z: 0.002
-
-  # Wall, aka old atom
-  - dev:
-      UdpV2:
-        ip: 127.0.0.1
-        port: 8932
-        chans: 3
-    chans:
-      - index: 0
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["white", "top", "wall"]
-        cuboid:
-          start:
-            x: 0.0
-            y: 0.4
-            z: 0.15
-          end:
-            x: 0.01
-            y: 0.95
-            z: 0.7
-      - index: 1
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["white", "bottom", "wall"]
-        cuboid:
-          start:
-            x: 0.0
-            y: 0.01
-            z: 0.1
-          end:
-            x: 0.01
-            y: 0.95
-            z: 0.70
-      - index: 2
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["white", "scorpion", "bed", "wall"]
-        cuboid:
-          start:
-            x: 0.0
-            y: 0.04
-            z: 1.0
-          end:
-            x: 0.01
-            y: 0.95
-            z: 0.7
-
-  - dev:
-      UdpV2:
-        ip: 192.168.0.110
-        port: 8932
-        chans: 3
-    chans:
-      - index: 0
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["white", "door", "ceiling"]
-        disco_config:
-          freq_min: 0.01
-          freq_max: 0.1
-          min: 0.3
-          max: 0.6
-          adjustment: 2.0
-        cuboid:
-          start:
-            x: 0.7
-            y: 0.8
-            z: 0.9
-          end:
-            x: 0.9
-            y: 1.0
-            z: 1.0
-      - index: 1
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["white", "bed", "ceiling"]
-        disco_config:
-          freq_min: 0.01
-          freq_max: 0.1
-          min: 0.3
-          max: 0.6
-          adjustment: 2.0
-        cuboid:
-          start:
-            x: 0.8
-            y: 0.8
-            z: 0.9
-          end:
-            x: 1.0
-            y: 1.0
-            z: 1.0
-      - index: 2
-        min: 0.0
-        max: 1.0
-        exp: 1.0
-        tags: ["green", "projectors"]
-        disco_config:
-          freq_min: 0.05
-          freq_max: 0.4
-          min: 0.1
+          exp: 1.0
+          tags: ["blue", "rgb", "window"]
+          disco_config:
+            freq_min: 0.01
+            freq_max: 0.1
+            min: 0.1
+            max: 1.0
+            adjustment: 1.5
+          # from room's window top left corner x y z coordinates
+          # when looking at the window:
+          #   x: left-right, left is 0
+          #   y: up-down, ceiling is 0, floor is 1
+          #   z: distance from the window into the room, window is 0
+          cuboid:
+            start:
+              x: 0.15
+              y: 0.1
+              z: 0.001
+            end:
+              x: 0.9
+              y: 0.1
+              z: 0.002
+        - index: 1
+          min: 0.0
           max: 1.0
-          adjustment: 0.5
-        cuboid:
-          start:
-            x: 0.8
-            y: 0.8
-            z: 0.9
-          end:
-            x: 1.0
-            y: 1.0
-            z: 1.0
-
+          exp: 1.0
+          tags: ["green", "rgb", "window"]
+          disco_config:
+            freq_min: 0.01
+            freq_max: 0.1
+            min: 0.01
+            max: 1.0
+            adjustment: 1.5
+          # the same as first channel
+          cuboid:
+            start:
+              x: 0.15
+              y: 0.1
+              z: 0.001
+            end:
+              x: 0.9
+              y: 0.1
+              z: 0.002
+  
+        - index: 0
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          # the same as first channel
+          tags: ["red", "rgb", "window"]
+          disco_config:
+            freq_min: 0.01
+            freq_max: 0.1
+            min: 0.3
+            max: 1.0
+            adjustment: 1.5
+          cuboid:
+            start:
+              x: 0.15
+              y: 0.1
+              z: 0.001
+            end:
+              x: 0.9
+              y: 0.1
+              z: 0.002
+        - index: 3
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          # the same as first channel
+          tags: ["white", "pinboard"]
+          disco_config:
+            freq_min: 0.05
+            freq_max: 0.2
+            min: 0.0
+            max: 1.0
+            adjustment: 1.0
+          cuboid:
+            start:
+              x: 0.15
+              y: 0.1
+              z: 0.001
+            end:
+              x: 0.9
+              y: 0.1
+              z: 0.002
+  
+    # Wall, aka old atom
+    - dev:
+        UdpV2:
+          ip: 127.0.0.1
+          port: 8932
+          chans: 3
+      chans:
+        - index: 0
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["white", "top", "wall"]
+          cuboid:
+            start:
+              x: 0.0
+              y: 0.4
+              z: 0.15
+            end:
+              x: 0.01
+              y: 0.95
+              z: 0.7
+        - index: 1
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["white", "bottom", "wall"]
+          cuboid:
+            start:
+              x: 0.0
+              y: 0.01
+              z: 0.1
+            end:
+              x: 0.01
+              y: 0.95
+              z: 0.70
+        - index: 2
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["white", "scorpion", "bed", "wall"]
+          cuboid:
+            start:
+              x: 0.0
+              y: 0.04
+              z: 1.0
+            end:
+              x: 0.01
+              y: 0.95
+              z: 0.7
+  
+    - dev:
+        UdpV2:
+          ip: 192.168.0.110
+          port: 8932
+          chans: 3
+      chans:
+        - index: 0
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["white", "door", "ceiling"]
+          disco_config:
+            freq_min: 0.01
+            freq_max: 0.1
+            min: 0.3
+            max: 0.6
+            adjustment: 2.0
+          cuboid:
+            start:
+              x: 0.7
+              y: 0.8
+              z: 0.9
+            end:
+              x: 0.9
+              y: 1.0
+              z: 1.0
+        - index: 1
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["white", "bed", "ceiling"]
+          disco_config:
+            freq_min: 0.01
+            freq_max: 0.1
+            min: 0.3
+            max: 0.6
+            adjustment: 2.0
+          cuboid:
+            start:
+              x: 0.8
+              y: 0.8
+              z: 0.9
+            end:
+              x: 1.0
+              y: 1.0
+              z: 1.0
+        - index: 2
+          min: 0.0
+          max: 1.0
+          exp: 1.0
+          tags: ["green", "projectors"]
+          disco_config:
+            freq_min: 0.05
+            freq_max: 0.4
+            min: 0.1
+            max: 1.0
+            adjustment: 0.5
+          cuboid:
+            start:
+              x: 0.8
+              y: 0.8
+              z: 0.9
+            end:
+              x: 1.0
+              y: 1.0
+              z: 1.0
+  

@@ -1,7 +1,7 @@
 ---
 room_scale: [ 0.6, 0.5, 1.0 ]
 
-mux_config:
+mux:
   devs:
     - dev:
         UdpV2:

@@ -12,6 +12,8 @@ use leds::template::Template;
 use leds::mux;
 use leds::parse_ip_port::parse_ip_port;
 
+use std::path::Path;
+
 const DEFAULT_CONFIG_PATH: &str = "/etc/led_ctl.yaml";
 
 fn print_help() {
@@ -75,13 +77,13 @@ Other
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub templates: Option<Vec<Template>>,
-    pub configuration: mux::Config,
+    pub mux: mux::Config,
 }
 
 pub fn from_args(mut args: env::Args)
         -> Result<(Option<ActionSpec>, Config), String> {
     let mut action: Option<ActionSpec> = None;
-    let mut configuration = mux::Config::default();
+    let mut mux_cfg = mux::Config::default();
     let mut cfg: Option<Config> = None;
 
     args.next(); // remove the executable name from args
@@ -108,7 +110,7 @@ pub fn from_args(mut args: env::Args)
                     return Err("--cfg requires config filename"
                                .to_string());
                 }
-                cfg = Some(Config::from_file(filename.unwrap().as_ref())?);
+                cfg = Some(Config::from_file(filename.unwrap())?);
             }
             "--no-cfg" => {
                 skip_default_config = true;
@@ -120,7 +122,7 @@ pub fn from_args(mut args: env::Args)
                                .to_string());
                 }
                 let dev_arg = dev_arg.unwrap();
-                configuration.devs.push(mux::DevChanConfig::parse(dev_arg)?);
+                mux_cfg.devs.push(mux::DevChanConfig::parse(dev_arg)?);
             }
             "ls" => action = Some(ActionSpec::ListChans),
             "print_cfg" => action = Some(ActionSpec::PrintConfig),
@@ -267,14 +269,14 @@ pub fn from_args(mut args: env::Args)
 
     let cfg = match cfg {
         Some(mut cfg) => {
-            cfg.configuration.devs.extend(configuration.devs);
+            cfg.mux.devs.extend(mux_cfg.devs);
             Config {
                 templates: cfg.templates,
-                configuration: cfg.configuration,
+                mux: cfg.mux,
             }
         }
         None => {
-            Config { configuration, templates: None }
+            Config { mux: mux_cfg, templates: None }
         }
     };
 
@@ -282,7 +284,7 @@ pub fn from_args(mut args: env::Args)
 }
 
 impl Config {
-    fn from_file(filename: &str) -> Result<Self, String> {
+    fn from_file<T: AsRef<Path>>(filename: T) -> Result<Self, String> {
         let mut file = File::open(filename).map_err(|e| format!("{:?}", e))?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)
@@ -295,4 +297,22 @@ impl Config {
     }
 
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_all_configs() {
+        use std::fs;
+
+        for dir in fs::read_dir("../configs").unwrap() {
+            let path = dir.unwrap().path();
+
+            if let Err(err) = Config::from_file(&path) {
+                panic!("Error parsing config {path:?}: {err}")
+            }
+        }
+    }
 }

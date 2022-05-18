@@ -102,7 +102,7 @@ impl DevChanConfig {
 
 #[cfg(test)]
 mod dev_config_test {
-    use crate::configuration::{DevChanConfig, DevConfig};
+    use crate::mux::{DevChanConfig, DevConfig};
 
     #[test]
     fn parse_dev_arg() {
